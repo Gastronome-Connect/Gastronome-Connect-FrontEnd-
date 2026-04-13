@@ -1,39 +1,61 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { FaRegCommentDots } from "react-icons/fa";
-import LikeButton    from "./LikeButton";
+import LikeButton from "./LikeButton";
 import DislikeButton from "./DislikeButton";
-import RepostButton  from "./RepostButton";
+import RepostButton from "./RepostButton";
 
 const PostActions = ({ post, onComment, commentsOpen = false }) => {
-  const [liked,        setLiked]        = useState(false);
-  const [disliked,     setDisliked]     = useState(false);
-  const [likes,        setLikes]        = useState(post.likes    ?? 0);
-  const [reposted,     setReposted]     = useState(false);
-  const [repostCount,  setRepostCount]  = useState(post.reposts  ?? 0);
-  const [commentCount]                  = useState(post.comments ?? 0);
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
+  const [likes, setLikes] = useState(
+    Array.isArray(post.likes) ? post.likes.length : (post.likes ?? 0),
+  );
+  const [reposted, setReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(
+    Array.isArray(post.reposts) ? post.reposts.length : (post.reposts ?? 0),
+  );
+  const [commentCount] = useState(
+    Array.isArray(post.comments) ? post.comments.length : (post.comments ?? 0),
+  );
 
   const handleLike = () => {
-    if (liked) { setLiked(false); setLikes((c) => c - 1); }
-    else { setLiked(true); setLikes((c) => c + 1); setDisliked(false); }
+    if (liked) {
+      setLiked(false);
+      setLikes((c) => c - 1);
+    } else {
+      setLiked(true);
+      setLikes((c) => c + 1);
+      setDisliked(false);
+    }
   };
 
   const handleDislike = () => {
-    if (disliked) { setDisliked(false); }
-    else { setDisliked(true); if (liked) { setLiked(false); setLikes((c) => c - 1); } }
+    if (disliked) {
+      setDisliked(false);
+    } else {
+      setDisliked(true);
+      if (liked) {
+        setLiked(false);
+        setLikes((c) => c - 1);
+      }
+    }
   };
 
   const handleRepost = () => {
-    setReposted((prev) => { setRepostCount((c) => (prev ? c - 1 : c + 1)); return !prev; });
+    setReposted((prev) => {
+      setRepostCount((c) => (prev ? c - 1 : c + 1));
+      return !prev;
+    });
   };
 
   return (
     <div className="px-3 sm:px-4 pt-2 pb-1 flex items-center gap-2 sm:gap-3">
       {/* Like + Dislike grouped */}
       <div className="flex items-center bg-gray-100 rounded-full px-3 sm:px-5 py-2.5 sm:py-3 gap-2 sm:gap-3">
-        <LikeButton    liked={liked}       count={likes} onToggle={handleLike} />
+        <LikeButton liked={liked} count={likes} onToggle={handleLike} />
         <div className="w-[1px] h-4 sm:h-5 bg-gray-300" />
-        <DislikeButton disliked={disliked}              onToggle={handleDislike} />
+        <DislikeButton disliked={disliked} onToggle={handleDislike} />
       </div>
 
       {/* Comment button */}
@@ -51,7 +73,7 @@ const PostActions = ({ post, onComment, commentsOpen = false }) => {
         <motion.span
           animate={{
             rotate: commentsOpen ? [0, -15, 15, 0] : 0,
-            scale:  commentsOpen ? [1, 1.2, 1]     : 1,
+            scale: commentsOpen ? [1, 1.2, 1] : 1,
           }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
@@ -69,7 +91,11 @@ const PostActions = ({ post, onComment, commentsOpen = false }) => {
         </motion.span>
       </motion.button>
 
-      <RepostButton reposted={reposted} count={repostCount} onToggle={handleRepost} />
+      <RepostButton
+        reposted={reposted}
+        count={repostCount}
+        onToggle={handleRepost}
+      />
     </div>
   );
 };

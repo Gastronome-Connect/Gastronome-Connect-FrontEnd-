@@ -34,18 +34,16 @@ export default function Features() {
               Key Features
             </h2>
             <p className="text-base sm:text-lg text-gray-600 max-w-lg leading-relaxed border-l-4 border-[#E67E22] pl-4 sm:pl-6">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-              tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-              veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.
+Gastronome Connect combines intelligent recipe generation with interactive social features, allowing users to discover, create, and share meals effortlessly in one unified platform.
             </p>
           </div>
 
           <div className="flex flex-col gap-5 sm:gap-8">
             {[
-              { id: 1, title: "Seamless Integration", desc: "Connect your existing tools with our one-click API sync." },
-              { id: 2, title: "Real-time Analytics", desc: "Track every metric as it happens with our live engine." },
-              { id: 3, title: "Advanced Security", desc: "Rest easy with enterprise-grade encryption on every layer." },
-              { id: 4, title: "Cloud Scalability", desc: "Grow your business without limits automatically." },
+              { id: 1, title: "AI-Powered Recipe Generation", desc: "An intelligent engine that suggests complete recipes based on your on-hand ingredients, specific dietary needs, and personal taste preferences." },
+              { id: 2, title: "Social Culinary Ecosystem", desc: "Connect with fellow food enthusiasts and share your culinary creations." },
+              { id: 3, title: "Community-Driven \"Top 10\" Feed", desc: "A weekly refreshed showcase of the world's most popular dishes, determined by real-time community engagement, likes, and feedback." },
+              { id: 4, title: "Integrated Recipe Archive", desc: "A centralized \"vault\" for saving AI-generated suggestions and community favorites, ensuring your personal culinary library is always accessible." },
             ].map((item, index) => (
               <div
                 key={item.id}

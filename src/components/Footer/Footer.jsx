@@ -13,17 +13,27 @@ export default function Footer() {
       >
         {/* Grid — single column on mobile, 3 cols on md+ */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 mb-10 sm:mb-12">
-
           {/* Brand */}
           <div className="space-y-3 sm:space-y-4">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">GastronomeConnect</h2>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+              GastronomeConnect
+            </h2>
             <p className="text-orange-100 text-sm leading-relaxed max-w-xs">
               Elevating your kitchen game with AI-driven culinary inspiration.
             </p>
             <div className="flex gap-4 pt-1 text-white/80">
-              <Twitter size={18} className="hover:text-white cursor-pointer transition-colors" />
-              <Instagram size={18} className="hover:text-white cursor-pointer transition-colors" />
-              <Github size={18} className="hover:text-white cursor-pointer transition-colors" />
+              <Twitter
+                size={18}
+                className="hover:text-white cursor-pointer transition-colors"
+              />
+              <Instagram
+                size={18}
+                className="hover:text-white cursor-pointer transition-colors"
+              />
+              <Github
+                size={18}
+                className="hover:text-white cursor-pointer transition-colors"
+              />
             </div>
           </div>
 
@@ -33,8 +43,16 @@ export default function Footer() {
               Resources
             </h3>
             <ul className="space-y-2 sm:space-y-3 text-orange-50/80 text-sm">
-              <li><a href="#" className="hover:text-white transition-all">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-all">Terms of Use</a></li>
+              <li>
+                <a href="/privacy" className="hover:text-white transition-all">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="/terms" className="hover:text-white transition-all">
+                  Terms of Use
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -46,9 +64,11 @@ export default function Footer() {
             <div className="space-y-2 sm:space-y-3 text-orange-50/80 text-sm">
               <p className="flex items-center gap-2 font-medium flex-wrap">
                 <Mail size={15} className="shrink-0" />
-                support@gastronomeconnect.com
+                gastronome.connect@gmail.com
               </p>
-              <p className="cursor-pointer hover:text-white transition-colors">Help Center</p>
+              <p className="cursor-pointer hover:text-white transition-colors">
+                Help Center
+              </p>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Flame } from "lucide-react";
 import PopularRecipeCard from "../Cards/PopularRecipeCard";
+import { SkeletonLoader } from "../Skeletons";
 
 import Karekare  from "../Assets/Kare-kare.png";
 import Sisig     from "../Assets/Sisig.png";
@@ -25,15 +26,33 @@ const recipes = [
   { name: "Lechon Manok",  author: "Andok's Style",  img: Lechon    },
 ];
 
-/**
- * PopularRecipes
- * Panel container for the weekly top 10 recipe list.
- */
+// Skeleton row that mirrors PopularRecipeCard's layout
+const SkeletonPopularRow = () => (
+  <div className="flex items-center gap-4 p-3 rounded-[22px] border border-transparent">
+    {/* Rank */}
+    <SkeletonLoader width="20px" height="14px" borderRadius="4px" />
+    {/* Thumbnail */}
+    <SkeletonLoader width="56px" height="56px" borderRadius="16px" />
+    {/* Text */}
+    <div className="flex-1 flex flex-col gap-1.5">
+      <SkeletonLoader width="70%" height="14px" borderRadius="4px" />
+      <SkeletonLoader width="50%" height="11px" borderRadius="4px" />
+    </div>
+  </div>
+);
+
 export default function PopularRecipes() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate data fetch — replace with real API call if needed
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="bg-white p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 flex flex-col h-full min-h-0 shadow-[0_20px_40px_-15px_rgba(0,96,169,0.08)] relative overflow-hidden">
 
-      {/* Decorative glows */}
       <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#0060A9]/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#F57600]/5 rounded-full blur-[80px] pointer-events-none" />
 
@@ -54,9 +73,12 @@ export default function PopularRecipes() {
 
       {/* List */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 sm:pr-3 custom-scrollbar space-y-2 sm:space-y-3 relative z-10">
-        {recipes.map((recipe, index) => (
-          <PopularRecipeCard key={index} recipe={recipe} index={index} />
-        ))}
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => <SkeletonPopularRow key={i} />)
+          : recipes.map((recipe, index) => (
+              <PopularRecipeCard key={index} recipe={recipe} index={index} />
+            ))
+        }
       </div>
 
       <style jsx global>{`

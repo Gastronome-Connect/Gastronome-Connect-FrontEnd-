@@ -199,11 +199,11 @@ const AuthPage = () => {
   const [loginEmailError, setLoginEmailError] = useState("");
   const [loginPasswordError, setLoginPasswordError] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
-  const [loginError, setLoginError] = useState("");
+  const [, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
   // ── SignUp state ─────────────────────────────────────────────
-  const [emailSent, setEmailSent] = useState(false);
+  const [emailSent] = useState(false);
   const [signupUsername, setSignupUsername] = useState("");
   const [signupUsernameError, setSignupUsernameError] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -794,12 +794,6 @@ const AuthPage = () => {
                               </div>
                             }
                           />
-                          {/* (i) outside-left — desktop only */}
-                          {!mobile && (
-                            <div className="absolute top-1/2 -translate-y-1/2 -left-6">
-                              <PasswordTooltip forceShow={showPasswordHint} />
-                            </div>
-                          )}
                         </div>
                         {signupPasswordError && (
                           <p className="text-red-500 text-xs mt-1">

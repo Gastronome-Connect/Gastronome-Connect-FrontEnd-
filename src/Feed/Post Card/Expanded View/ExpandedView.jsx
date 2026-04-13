@@ -271,13 +271,32 @@ const ExpandedView = ({
                 onComment={() => setShowComments((s) => !s)}
                 commentsOpen={showComments}
               />
-              <button
-                onClick={() => navigate("/chatbot", { state: { prefill: post.caption || post.title || "" } })}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
-              >
-                <Bot size={13} />
-                <span className="hidden xs:inline">Chatbot</span>
-              </button>
+<button
+  onClick={() => {
+    const title = post.title ? ` ${post.title}\n` : "";
+    const ingredients =
+      post.ingredients && post.ingredients.length > 0
+        ? "\n Ingredients:\n" +
+          post.ingredients
+            .map((ing) => {
+              const measure =
+                ing.unit === "to taste"
+                  ? "to taste"
+                  : [ing.amount, ing.unit].filter(Boolean).join(" ");
+              const optional = ing.optional ? " (optional)" : "";
+              return `• ${measure ? `${measure} ` : ""}${ing.name}${optional}`;
+            })
+            .join("\n")
+        : "";
+    const description = post.caption ? `\n\n Description:\n${post.caption}` : "";
+    const prefill = `${title}${ingredients}${description}`.trim();
+    navigate("/chatbot", { state: { prefill } });
+  }}
+  className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
+>
+  <Bot size={13} />
+  <span className="hidden xs:inline">Chatbot</span>
+</button>
             </div>
 
             {showComments && (

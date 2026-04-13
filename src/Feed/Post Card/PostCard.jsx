@@ -1,30 +1,76 @@
+// src/components/Post Card/PostCard.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 add this
-import PostHeader    from "../Post Card/Post Header/PostHeader";
-import PostContent   from "../Post Card/Post Content/PostContent";
-import PostActions   from "../Post Card/Post Action/PostActions";
-import ExpandedView  from "../Post Card/Expanded View/ExpandedView";
+import { useNavigate } from "react-router-dom";
+import PostHeader from "../Post Card/Post Header/PostHeader";
+import PostContent from "../Post Card/Post Content/PostContent";
+import PostActions from "../Post Card/Post Action/PostActions";
+import ExpandedView from "../Post Card/Expanded View/ExpandedView";
 import PostCommentModal from "../../components/Modals/PostModalComment";
-import { DeleteConfirmModal, ArchiveConfirmModal, EditPostModal, ReportModal } from "../../components/Modals";
+import {
+  DeleteConfirmModal,
+  ArchiveConfirmModal,
+  EditPostModal,
+  ReportModal,
+} from "../../components/Modals";
 
-const PostCard = ({ post: initialPost, isOwner = false, onDelete, onUpdate }) => {
-  const [post, setPost]                           = useState(initialPost);
-  const [expandedIndex, setExpandedIndex]         = useState(null);
-  const [showCommentModal, setShowCommentModal]   = useState(false);
+/**
+ * @param {{ post, isOwner, onDelete, onUpdate, viewerProfile }} props
+ *
+ * viewerProfile (optional) – the currently logged-in user's profile object:
+ *   {
+ *     allergens:     string[],
+ *     dislikes:      string[],
+ *     flavors:       string[],
+ *     cookingStyles: string[],
+ *   }
+ *
+ * Typically you'd pull this from a context/store at a higher level and pass
+ * it once at the feed level so every PostCard receives it automatically.
+ */
+const normalizePost = (p = {}) => {
+  const out = { ...p };
+  // id fallback
+  out.id = out.id ?? out._id ?? out._id?._str ?? out._id?.$oid ?? out._id;
+  // counts may be arrays (backend) or numbers (older shape)
+  out._likesCount = Array.isArray(out.likes)
+    ? out.likes.length
+    : typeof out.likes === "number"
+      ? out.likes
+      : 0;
+  out._commentsCount = Array.isArray(out.comments)
+    ? out.comments.length
+    : typeof out.comments === "number"
+      ? out.comments
+      : 0;
+  out._repostsCount = Array.isArray(out.reposts)
+    ? out.reposts.length
+    : typeof out.reposts === "number"
+      ? out.reposts
+      : 0;
+  return out;
+};
+
+const PostCard = ({
+  post: initialPost,
+  isOwner = false,
+  onDelete,
+  onUpdate,
+  viewerProfile = null,
+}) => {
+  const [post, setPost] = useState(() => normalizePost(initialPost));
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [showCommentModal, setShowCommentModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-  const [showEditModal, setShowEditModal]         = useState(false);
-  const [showReportModal, setShowReportModal]     = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
-  const navigate = useNavigate(); // 👈 add this
+  const navigate = useNavigate();
 
-  // 👇 navigate to the post owner's profile page
-  const handleVisitProfile = () => {
-    navigate(`/profile/${post.userId}`); // adjust the route to match yours
-  };
+  const handleVisitProfile = () => navigate(`/profile/${post.userId}`);
 
   const handleSaveEdit = (updated) => {
-    setPost(updated);
+    setPost(normalizePost(updated));
     onUpdate?.(updated);
   };
 
@@ -40,35 +86,40 @@ const PostCard = ({ post: initialPost, isOwner = false, onDelete, onUpdate }) =>
 
   const ownerHandlers = isOwner
     ? {
-        onEdit:    () => setShowEditModal(true),
-        onDelete:  () => setShowDeleteConfirm(true),
+        onEdit: () => setShowEditModal(true),
+        onDelete: () => setShowDeleteConfirm(true),
         onArchive: () => setShowArchiveConfirm(true),
-        onReport:  undefined,
+        onReport: undefined,
       }
     : {
-        onEdit:    undefined,
-        onDelete:  undefined,
+        onEdit: undefined,
+        onDelete: undefined,
         onArchive: undefined,
-        onReport:  () => setShowReportModal(true),
+        onReport: () => setShowReportModal(true),
       };
 
   return (
     <>
       <div
         className="bg-white rounded-3xl border border-gray-100 mb-5 overflow-hidden"
-        style={{ boxShadow: "0 4px 24px 0 rgba(245, 118, 0, 0.10), 0 1.5px 6px 0 rgba(245, 118, 0, 0.07)" }}
+        style={{
+          boxShadow:
+            "0 4px 24px 0 rgba(245, 118, 0, 0.10), 0 1.5px 6px 0 rgba(245, 118, 0, 0.07)",
+        }}
       >
         <div className="p-4 pb-3">
           <PostHeader
             post={post}
             isOwner={isOwner}
-            onVisitProfile={handleVisitProfile} // 👈 pass it down
+            onVisitProfile={handleVisitProfile}
             {...ownerHandlers}
           />
 
+          {/* ↓ viewerProfile threaded through so pills appear in the card */}
           <PostContent
             post={post}
             onExpand={(index) => setExpandedIndex(index)}
+            viewerProfile={viewerProfile}
           />
         </div>
 
@@ -81,7 +132,7 @@ const PostCard = ({ post: initialPost, isOwner = false, onDelete, onUpdate }) =>
         <div className="pb-1" />
       </div>
 
-      {/* ── Modals ─────────────────────────────────────────────────────── */}
+      {/* ── Modals ── */}
 
       {expandedIndex !== null && (
         <ExpandedView
@@ -89,6 +140,7 @@ const PostCard = ({ post: initialPost, isOwner = false, onDelete, onUpdate }) =>
           startIndex={expandedIndex}
           isOwner={isOwner}
           onClose={() => setExpandedIndex(null)}
+          viewerProfile={viewerProfile}
           {...ownerHandlers}
         />
       )}
@@ -98,9 +150,23 @@ const PostCard = ({ post: initialPost, isOwner = false, onDelete, onUpdate }) =>
           post={post}
           isOwner={isOwner}
           onClose={() => setShowCommentModal(false)}
-          onVisitProfile={handleVisitProfile} // 👈 also pass here if modal shows the avatar too
-          onEdit={isOwner ? () => { setShowCommentModal(false); setShowEditModal(true); } : undefined}
-          onDelete={isOwner ? () => { setShowCommentModal(false); setShowDeleteConfirm(true); } : undefined}
+          onVisitProfile={handleVisitProfile}
+          onEdit={
+            isOwner
+              ? () => {
+                  setShowCommentModal(false);
+                  setShowEditModal(true);
+                }
+              : undefined
+          }
+          onDelete={
+            isOwner
+              ? () => {
+                  setShowCommentModal(false);
+                  setShowDeleteConfirm(true);
+                }
+              : undefined
+          }
           onArchive={isOwner ? () => setShowArchiveConfirm(true) : undefined}
           onReport={!isOwner ? () => setShowReportModal(true) : undefined}
         />

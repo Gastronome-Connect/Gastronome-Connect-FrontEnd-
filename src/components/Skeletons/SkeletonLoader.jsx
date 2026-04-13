@@ -2,48 +2,44 @@ import React from "react";
 
 /**
  * SkeletonLoader
- * Base skeleton component with pulse animation
- * Usage: <SkeletonLoader width="100%" height="200px" borderRadius="12px" />
+ * Base skeleton component with Facebook-style shimmer animation.
+ * All other skeleton components use this as their base — updating
+ * this file automatically updates every skeleton in the app.
  */
 const SkeletonLoader = ({
   width = "100%",
   height = "20px",
   borderRadius = "8px",
   className = "",
-  variant = "default", // default, circle, rect
+  variant = "default", // "default" | "circle" | "rect"
 }) => {
-  const baseStyles = {
-    width,
-    height,
-    borderRadius,
-    animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-  };
-
-  const variantStyles = {
-    default: { backgroundColor: "#e5e7eb" }, // gray-200
-    circle: {
-      borderRadius: "50%",
-      backgroundColor: "#e5e7eb",
-      width: height, // Make circle square
-    },
-    rect: { backgroundColor: "#e5e7eb" },
-  };
-
-  const animationKeyframes = `
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-  `;
+  const isCircle = variant === "circle";
 
   return (
     <>
-      <style>{animationKeyframes}</style>
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -800px 0; }
+          100% { background-position:  800px 0; }
+        }
+        .skeleton-shimmer {
+          background: linear-gradient(
+            90deg,
+            #f0f0f0 25%,
+            #e0e0e0 37%,
+            #f0f0f0 63%
+          );
+          background-size: 800px 100%;
+          animation: shimmer 1.4s ease infinite;
+        }
+      `}</style>
       <div
-        className={className}
+        className={`skeleton-shimmer ${className}`}
         style={{
-          ...baseStyles,
-          ...variantStyles[variant],
+          width:        isCircle ? height : width, // keep circle square
+          height,
+          borderRadius: isCircle ? "50%" : borderRadius,
+          flexShrink:   0,
         }}
       />
     </>

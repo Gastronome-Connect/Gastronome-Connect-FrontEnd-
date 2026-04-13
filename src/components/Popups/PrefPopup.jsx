@@ -30,7 +30,7 @@ const AccountCreatedPopup = ({ isOpen, onContinue }) => {
             </div>
 
             <div className="p-12 text-center">
-              <p className="text-gray-500 text-sm leading-relaxed mb-8">Your culinary journey starts now. Ready to explore authentic Filipino flavors?</p>
+              <p className="text-gray-500 text-sm leading-relaxed mb-8">Your culinary journey starts now. Are ready to explore new flavors?</p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

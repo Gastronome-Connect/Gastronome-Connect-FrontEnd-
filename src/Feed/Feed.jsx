@@ -10,14 +10,10 @@ import PostCard            from "../Feed/Post Card/PostCard";
 import UploadProgressToast from "../components/Toast/UploadProgressToast";
 import UploadFailedModal   from "../components/Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../Hooks/UseUpload";
+import { SkeletonPostList } from "../components/Skeletons";
 
 const PAGE_SIZE = 10;
 
-/**
- * LazyItem
- * Defers mounting children until the placeholder scrolls within 300px of
- * the viewport. Uses a stable minHeight so the scroll position doesn't jump.
- */
 const LazyItem = ({ children, placeholderHeight = 320 }) => {
   const ref             = useRef(null);
   const [show, setShow] = useState(false);
@@ -25,17 +21,10 @@ const LazyItem = ({ children, placeholderHeight = 320 }) => {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShow(true);
-          observer.disconnect();
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting) { setShow(true); observer.disconnect(); } },
       { rootMargin: "300px 0px" }
     );
-
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -47,24 +36,16 @@ const LazyItem = ({ children, placeholderHeight = 320 }) => {
   );
 };
 
-/**
- * InfiniteScrollTrigger
- * An invisible sentinel div. Calls onTrigger() when near the viewport.
- */
 const InfiniteScrollTrigger = ({ onTrigger, hasMore, isLoading }) => {
   const ref = useRef(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || !hasMore || isLoading) return;
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) onTrigger();
-      },
+      ([entry]) => { if (entry.isIntersecting) onTrigger(); },
       { rootMargin: "400px 0px" }
     );
-
     observer.observe(el);
     return () => observer.disconnect();
   }, [onTrigger, hasMore, isLoading]);
@@ -86,24 +67,15 @@ export default function GCFeed() {
   const [page, setPage]                 = useState(1);
   const [hasMore, setHasMore]           = useState(true);
   const [isFetching, setIsFetching]     = useState(false);
+  // ── NEW: tracks whether the very first page has ever loaded ──
+  const [initialLoading, setInitialLoading] = useState(true);
   const [chatExpanded, setChatExpanded] = useState(false);
   const mainRef                         = useRef(null);
 
-  const {
-    uploadState,
-    progress,
-    startUpload,
-    retryUpload,
-    cancelUpload,
-    resetUpload,
-  } = useUpload();
+  const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
 
   const handleNewPost = useCallback(
-    (newPost) => {
-      startUpload(newPost, (posted) => {
-        setPosts((prev) => [posted, ...prev]);
-      });
-    },
+    (newPost) => { startUpload(newPost, (posted) => { setPosts((prev) => [posted, ...prev]); }); },
     [startUpload]
   );
 
@@ -111,33 +83,25 @@ export default function GCFeed() {
     if (isFetching) return;
     setIsFetching(true);
     try {
-      const res  = await fetch(
-        `http://localhost:3000/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`
-      );
+      const res  = await fetch(`http://localhost:3000/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`);
       const data = await res.json();
-
       const incoming  = Array.isArray(data) ? data : (data.posts ?? []);
-      const morePages = Array.isArray(data)
-        ? incoming.length === PAGE_SIZE
-        : (data.hasMore ?? false);
-
+      const morePages = Array.isArray(data) ? incoming.length === PAGE_SIZE : (data.hasMore ?? false);
       setPosts((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
-        const fresh = incoming.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...fresh];
+        return [...prev, ...incoming.filter((p) => !existingIds.has(p.id))];
       });
       setHasMore(morePages);
     } catch (err) {
       console.error("Failed to fetch posts:", err);
     } finally {
       setIsFetching(false);
+      // First page done — hide skeleton
+      if (pageNum === 1) setInitialLoading(false);
     }
   }, [isFetching]);
 
-  useEffect(() => {
-    fetchPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { fetchPage(1); }, []); // eslint-disable-line
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isFetching) return;
@@ -150,19 +114,10 @@ export default function GCFeed() {
     <div className="flex h-screen w-full bg-gray-50">
       <Sidebar onNewPost={handleNewPost} />
 
-      {/* ── Main scrollable area ──
-          scrollbar-gutter: stable — reserves scrollbar space even when the
-          scrollbar isn't visible yet, preventing the layout-width shift/shake
-          that happens when posts load in and the scrollbar suddenly appears.   */}
-      <main
-        ref={mainRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden"
-        style={{ scrollbarGutter: "stable" }}
-      >
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarGutter: "stable" }}>
         <div className="p-4 sm:p-6 xl:pr-[432px] max-w-[1600px] mx-auto pb-24 lg:pb-6">
           <div className="flex flex-col gap-5 min-w-0">
 
-            {/* Searchbar — desktop only */}
             <div className="sticky top-0 z-10 py-2 hidden sm:block">
               <Searchbar scrollContainer={mainRef} />
             </div>
@@ -170,41 +125,32 @@ export default function GCFeed() {
             <HeroBanner />
             <Recommendation />
 
-            {/* Empty state */}
-            {!isFetching && posts.length === 0 && (
+            {/* ── Skeleton shown only on first load ── */}
+            {initialLoading && <SkeletonPostList count={3} />}
+
+            {/* ── Empty state (after load, no posts) ── */}
+            {!initialLoading && posts.length === 0 && (
               <p className="text-center text-gray-400 py-16">
                 No posts yet. Share your first recipe!
               </p>
             )}
 
-            {/* Post list */}
-            {posts.map((post) => (
+            {/* ── Post list ── */}
+            {!initialLoading && posts.map((post) => (
               <LazyItem key={post.id} placeholderHeight={320}>
                 <PostCard
                   post={post}
                   isOwner
-                  onDelete={(id) =>
-                    setPosts((prev) => prev.filter((p) => p.id !== id))
-                  }
-                  onUpdate={(updated) =>
-                    setPosts((prev) =>
-                      prev.map((p) => (p.id === updated.id ? updated : p))
-                    )
-                  }
+                  onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                  onUpdate={(updated) => setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
                 />
               </LazyItem>
             ))}
 
-            {/* Infinite scroll sentinel */}
             {posts.length > 0 && (
-              <InfiniteScrollTrigger
-                onTrigger={handleLoadMore}
-                hasMore={hasMore}
-                isLoading={isFetching}
-              />
+              <InfiniteScrollTrigger onTrigger={handleLoadMore} hasMore={hasMore} isLoading={isFetching} />
             )}
 
-            {/* End of feed */}
             {!hasMore && posts.length > 0 && (
               <p className="text-center text-xs text-gray-300 py-4 select-none">
                 You've reached the end of your feed.
@@ -214,7 +160,6 @@ export default function GCFeed() {
         </div>
       </main>
 
-      {/* ── Right column ── */}
       <div
         className="hidden xl:flex flex-col gap-4 fixed top-6 bottom-6 right-6 w-[400px] z-30"
         style={{ height: "calc(100vh - 3rem)" }}
@@ -227,16 +172,8 @@ export default function GCFeed() {
         </div>
       </div>
 
-      <UploadProgressToast
-        uploadState={uploadState === "failed" ? "idle" : uploadState}
-        progress={progress}
-        onDone={resetUpload}
-      />
-      <UploadFailedModal
-        isOpen={uploadState === "failed"}
-        onRetry={retryUpload}
-        onCancel={cancelUpload}
-      />
+      <UploadProgressToast uploadState={uploadState === "failed" ? "idle" : uploadState} progress={progress} onDone={resetUpload} />
+      <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
     </div>
   );
 }

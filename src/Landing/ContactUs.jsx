@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../Landing/NavigationBar";
 import Footer from "../components/Footer/Footer";
 import mail from "../components/Assets/MailContact.png";
-import name from "../components/Assets/Portrait.png";
 import contact from "../components/Assets/PhoneContact.png";
 import pencil from "../components/Assets/Pencil.png";
 

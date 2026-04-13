@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
-import Porm from "./Likes";
+import Porm from "./Preferences";
 import ResendPopup from "../components/Popups/ResendPopup";
 
 const STYLES = `
@@ -43,7 +43,9 @@ const VerificationPage = () => {
     if (mobile) return undefined; // handled by CSS centering
     const panelW = Math.min(480, window.innerWidth - 48);
     const rightX = window.innerWidth - panelW - 60;
-    return sourceFlow === "forgotpassword" ? "translateX(60px)" : `translateX(${rightX}px)`;
+    return sourceFlow === "forgotpassword"
+      ? "translateX(60px)"
+      : `translateX(${rightX}px)`;
   };
 
   useEffect(() => {
@@ -69,7 +71,10 @@ const VerificationPage = () => {
     if (!isTimerRunning || timer === 0) return;
     const interval = setInterval(() => {
       setTimer((prev) => {
-        if (prev === 1) { setIsTimerRunning(false); clearInterval(interval); }
+        if (prev === 1) {
+          setIsTimerRunning(false);
+          clearInterval(interval);
+        }
         return prev - 1;
       });
     }, 1000);
@@ -81,7 +86,8 @@ const VerificationPage = () => {
       const newCode = [...code];
       newCode[index] = value.slice(-1);
       setCode(newCode);
-      if (value && index < 5) document.getElementById(`code-${index + 1}`).focus();
+      if (value && index < 5)
+        document.getElementById(`code-${index + 1}`).focus();
       setError("");
     }
   };
@@ -95,7 +101,10 @@ const VerificationPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const enteredCode = code.join("");
-    if (enteredCode.length < 6) { setError("Please enter the complete 6-digit code."); return; }
+    if (enteredCode.length < 6) {
+      setError("Please enter the complete 6-digit code.");
+      return;
+    }
     try {
       const response = await fetch("http://localhost:3000/api/verify-otp", {
         method: "POST",
@@ -109,7 +118,7 @@ const VerificationPage = () => {
       localStorage.removeItem("sourceFlow");
 
       if (sourceFlow === "forgotpassword") navigate("/login");
-      else navigate("/likes");
+      else navigate("/preferences");
     } catch (error) {
       setError(error.message);
     }
@@ -117,7 +126,10 @@ const VerificationPage = () => {
 
   const handleResend = async () => {
     if (timer === 0 && !isTimerRunning) {
-      if (!email) { setError("Session expired. Please restart the verification process."); return; }
+      if (!email) {
+        setError("Session expired. Please restart the verification process.");
+        return;
+      }
       try {
         const response = await fetch("http://localhost:3000/api/send-otp", {
           method: "POST",
@@ -125,7 +137,8 @@ const VerificationPage = () => {
           body: JSON.stringify({ email }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to resend OTP");
+        if (!response.ok)
+          throw new Error(data.message || "Failed to resend OTP");
         setTimer(300);
         setIsTimerRunning(true);
         setShowResendPopup(true);
@@ -147,33 +160,63 @@ const VerificationPage = () => {
   if (showPorm) return <Porm />;
 
   const panelStyle = mobile
-    ? { width: "calc(100vw - 32px)", maxWidth: "480px", height: "auto", minHeight: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
-    : { width: "min(480px, calc(100vw - 48px))", height: "calc(100vh - 48px)", marginLeft: "0px", transform: getPanelTransform() };
+    ? {
+        width: "calc(100vw - 32px)",
+        maxWidth: "480px",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
+        maxHeight: "calc(100vh - 32px)",
+      }
+    : {
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+        marginLeft: "0px",
+        transform: getPanelTransform(),
+      };
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden">
       <style>{STYLES}</style>
       <BackgroundCarousel />
 
-      <div className={mobile ? "absolute inset-0 flex items-center justify-center pointer-events-none" : "absolute inset-0 flex items-center pointer-events-none"}>
+      <div
+        className={
+          mobile
+            ? "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center pointer-events-none"
+        }
+      >
         <div
           className="pointer-events-auto bg-white rounded-3xl shadow-2xl overflow-hidden"
           style={panelStyle}
         >
           <div className="overflow-y-auto h-full">
-            <div className="content-in h-full" style={{ willChange: "opacity, transform" }}>
+            <div
+              className="content-in h-full"
+              style={{ willChange: "opacity, transform" }}
+            >
               <div
                 className="relative flex flex-col justify-center px-6 sm:px-8 py-8"
-                style={{ minHeight: mobile ? "calc(100vh - 32px)" : "calc(100vh - 48px)" }}
+                style={{
+                  minHeight: mobile
+                    ? "calc(100vh - 32px)"
+                    : "calc(100vh - 48px)",
+                }}
               >
                 {/* Logo */}
                 <div className="flex justify-center mb-2">
-                  <img src={LogoImage} alt="Gastronome Connect Logo" className="h-16 sm:h-20 w-auto object-contain" />
+                  <img
+                    src={LogoImage}
+                    alt="Gastronome Connect Logo"
+                    className="h-16 sm:h-20 w-auto object-contain"
+                  />
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-sfpro font-bold text-center text-black mb-1">
                   VERIFI
-                  <span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">C</span>
+                  <span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">
+                    C
+                  </span>
                   ATION
                 </h1>
                 <p className="text-center text-gray-500 text-sm mb-6">
@@ -200,23 +243,31 @@ const VerificationPage = () => {
                     ))}
                   </div>
 
-                  {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+                  {error && (
+                    <p className="text-red-500 text-xs text-center">{error}</p>
+                  )}
 
                   <div className="flex items-center justify-between text-sm flex-wrap gap-y-1">
                     <div>
-                      <span className="text-gray-600">Didn't receive Code?</span>
+                      <span className="text-gray-600">
+                        Didn't receive Code?
+                      </span>
                       <button
                         type="button"
                         onClick={handleResend}
                         disabled={timer !== 0 || isTimerRunning}
                         className={`ml-1 font-semibold hover:underline outline-none ${
-                          timer === 0 && !isTimerRunning ? "text-[#F57600] cursor-pointer" : "text-gray-400 cursor-not-allowed"
+                          timer === 0 && !isTimerRunning
+                            ? "text-[#F57600] cursor-pointer"
+                            : "text-gray-400 cursor-not-allowed"
                         }`}
                       >
                         Request again
                       </button>
                     </div>
-                    <span className="text-gray-500 font-medium tabular-nums">{formatTimer()}</span>
+                    <span className="text-gray-500 font-medium tabular-nums">
+                      {formatTimer()}
+                    </span>
                   </div>
 
                   <button

@@ -15,8 +15,8 @@ import Feed from "./Feed/Feed";
 
 // Create Account
 import Verification from "./userAuth/Verification";
-import Likes from "./userAuth/Likes";
-import Dislikes from "./userAuth/Dislikes";
+import Preferences from "./userAuth/Preferences";
+import Allergens from "./userAuth/Allergens";
 import Buffer from "./components/Loading Pages/buffer";
 import Error from "./components/Loading Pages/error";
 
@@ -76,58 +76,58 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       // Landing
-      { index: true,              Component: Home },
-      { path: "home",             Component: Home },
-      { path: "about-us",         Component: AboutUs },
-      { path: "contact-us",       Component: ContactUs },
+      { index: true, Component: Home },
+      { path: "home", Component: Home },
+      { path: "about-us", Component: AboutUs },
+      { path: "contact-us", Component: ContactUs },
 
       // Auth
-      { path: "login",            Component: LogIn },
-      { path: "signup",           Component: SignUp },
-      { path: "verification",     Component: Verification },
-      { path: "likes",            Component: Likes },
-      { path: "dislikes",         Component: Dislikes },
-      { path: "forgot-password",  Component: ForgotPassword },
-      { path: "reset-password",   Component: ResetPassword },
-      { path: "profchangepass",   Component: ProfChangePassword },
+      { path: "login", Component: LogIn },
+      { path: "signup", Component: SignUp },
+      { path: "verification", Component: Verification },
+      { path: "preferences", Component: Preferences },
+      { path: "allergens", Component: Allergens },
+      { path: "forgot-password", Component: ForgotPassword },
+      { path: "reset-password", Component: ResetPassword },
+      { path: "profchangepass", Component: ProfChangePassword },
 
       // Feed
-      { path: "feed",             Component: Feed },
-      { path: "sidebar",          Component: SideBar },
-      { path: "searchbar",        Component: SearchBar },
-      { path: "navigationbar",    Component: NavigationBar },
+      { path: "feed", Component: Feed },
+      { path: "sidebar", Component: SideBar },
+      { path: "searchbar", Component: SearchBar },
+      { path: "navigationbar", Component: NavigationBar },
 
       // User Pages
-      { path: "profile",          Component: GCProfile },
-      { path: "history",          Component: History },
-      { path: "favorites",        Component: Favorites },
-      { path: "archives",         Component: Archives },
-      { path: "chatbot",          Component: ChatbotPage },
-      { path: "notifications",    Component: NotificationsPage },
+      { path: "profile", Component: GCProfile },
+      { path: "history", Component: History },
+      { path: "favorites", Component: Favorites },
+      { path: "archives", Component: Archives },
+      { path: "chatbot", Component: ChatbotPage },
+      { path: "notifications", Component: NotificationsPage },
 
       // Utility
-      { path: "buffer",           Component: Buffer },
-      { path: "error",            Component: Error },
+      { path: "buffer", Component: Buffer },
+      { path: "error", Component: Error },
 
       // Admin — own ErrorBoundary so it's isolated
       {
         path: "admin",
         Component: AdminLayoutWithBoundary,
         children: [
-          { index: true,             Component: AdminDashboard },
-          { path: "timeout",         Component: TimeoutUsers },
-          { path: "restore",         Component: RestoreAccounts },
-          { path: "flagged",         Component: FlaggedPosts },
-          { path: "reported",        Component: ReportedComments },
-          { path: "statistics",      Component: Statistics },
+          { index: true, Component: AdminDashboard },
+          { path: "timeout", Component: TimeoutUsers },
+          { path: "restore", Component: RestoreAccounts },
+          { path: "flagged", Component: FlaggedPosts },
+          { path: "reported", Component: ReportedComments },
+          { path: "statistics", Component: Statistics },
         ],
       },
 
       // Error Pages
-      { path: "401",              Component: Error401 },
-      { path: "403",              Component: Error403 },
-      { path: "500",              Component: Error500 },
-      { path: "*",                Component: Error404 },
+      { path: "401", Component: Error401 },
+      { path: "403", Component: Error403 },
+      { path: "500", Component: Error500 },
+      { path: "*", Component: Error404 },
     ],
   },
 ]);

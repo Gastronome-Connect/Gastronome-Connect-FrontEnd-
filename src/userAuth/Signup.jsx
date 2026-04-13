@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
@@ -7,7 +7,7 @@ import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
 
 const SignUp = () => {
-  const [emailSent, setEmailSent] = useState(false);
+  const [emailSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

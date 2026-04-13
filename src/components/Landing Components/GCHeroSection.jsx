@@ -64,7 +64,7 @@ export default function Hero() {
           </h1>
 
           <p className="mb-8 sm:mb-10 text-sm sm:text-xl md:text-2xl text-gray-300 max-w-xs sm:max-w-2xl font-light leading-relaxed">
-            Bringing world-class culinary experiences to your digital doorstep.
+            Elevating Every Ingredient. Connecting Every Kitchen.
           </p>
 
           <div className="flex items-center">

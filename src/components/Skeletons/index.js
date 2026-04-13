@@ -1,23 +1,31 @@
-// Base Skeleton Component
+// Base
 export { default as SkeletonLoader } from "./SkeletonLoader";
 
-// Card Skeletons
-export { default as SkeletonRecipeCard } from "./SkeletonRecipeCard";
-export { default as SkeletonPostCard } from "./SkeletonPostCard";
-export { default as SkeletonNotificationCard } from "./SkeletonNotificationCard";
-export { default as SkeletonProfileCard } from "./SkeletonProfileCard";
-export { default as SkeletonCommentSection } from "./SkeletonCommentSection";
+// Card & Content
+export { default as SkeletonRecipeCard }        from "./SkeletonRecipeCard";
+export { default as SkeletonPostCard }          from "./SkeletonPostCard";
+export { default as SkeletonNotificationCard }  from "./SkeletonNotificationCard";
+export { default as SkeletonProfileCard }       from "./SkeletonProfileCard";
+export { default as SkeletonCommentSection }    from "./SkeletonCommentSection";
 
-// Feed & Content Skeletons
-export { default as SkeletonFeedHero } from "./SkeletonFeedHero";
-export { default as SkeletonRecommendation } from "./SkeletonRecommendation";
-export { default as SkeletonPostList } from "./SkeletonPostList";
+// Profile page panels
+export { default as SkeletonProfilePanel }      from "./SkeletonProfilePanel";
+export { default as SkeletonPreferencesPanel }  from "./SkeletonPreferencesPanel";
+export { default as SkeletonAllergensPanel }    from "./SkeletonAllergensPanel";
 
-// Layout Skeletons
-export { default as SkeletonSidebar } from "./SkeletonSidebar";
-export { default as SkeletonGridCards } from "./SkeletonGridCards";
+// Feed & Content
+export { default as SkeletonFeedHero }          from "./SkeletonFeedHero";
+export { default as SkeletonRecommendation }    from "./SkeletonRecommendation";
+export { default as SkeletonPostList }          from "./SkeletonPostList";
 
-// Feature Skeletons
-export { default as SkeletonChatbot } from "./SkeletonChatbot";
-export { default as SkeletonTable } from "./SkeletonTable";
-export { default as SkeletonStats } from "./SkeletonStats";
+// Recipe grid (Favorites / Archives / History)
+export { default as SkeletonRecipeGrid }        from "./SkeletonRecipeGrid";
+
+// Layout
+export { default as SkeletonSidebar }           from "./SkeletonSidebar";
+export { default as SkeletonGridCards }         from "./SkeletonGridCards";
+
+// Features
+export { default as SkeletonChatbot }           from "./SkeletonChatbot";
+export { default as SkeletonTable }             from "./SkeletonTable";
+export { default as SkeletonStats }             from "./SkeletonStats";
