@@ -465,17 +465,17 @@ const AuthPage = () => {
     }
 
     try {
-      const validateResponse = await apiFetch("/api/validate", {
-        method: "POST",
-        body: JSON.stringify({ email: signupEmail }),
-      });
-      const validateData = await validateResponse.json();
-      if (!validateResponse.ok) {
+      const validateData = await authAPI.validateEmail(signupEmail);
+      if (!validateData.valid) {
         setSignupEmailError(validateData.message || "Email validation failed");
         setSignupLoading(false);
         return;
-      }Data = await authAPI.validateEmail(signupEmail);
-      if (!validateData.valid
+      }
+
+      sessionStorage.setItem("pendingEmail", signupEmail);
+      sessionStorage.setItem("sourceFlow", "signup");
+      sessionStorage.setItem(
+        "tempSignupData",
         JSON.stringify({
           username: signupUsername.trim(),
           email: signupEmail,
