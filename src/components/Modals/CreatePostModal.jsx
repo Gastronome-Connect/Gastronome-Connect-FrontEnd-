@@ -8,6 +8,7 @@ import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
 import useDraft from "../Modals/Draft";
+import { buildApiUrl } from "../../utils/api";
 
 const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
@@ -29,7 +30,6 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const hasMultiple = mediaItems.length > 1;
   const captionedCount = mediaItems.filter((m) => m.title || m.caption).length;
 
-  // ingredients.length > 0 now counts as "has content" → triggers draft prompt
   const hasContent = !!(
     title.trim() ||
     postText.trim() ||
@@ -89,7 +89,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   if (!isOpen) return null;
 
   const handleSaveDraft = () => {
-    saveDraft({ title, postText, mediaItems, ingredients }); // ingredients persisted in draft
+    saveDraft({ title, postText, mediaItems, ingredients });
     setTitle("");
     setPostText("");
     setMediaItems([]);
@@ -145,16 +145,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
       if (item.file) formData.append("media", item.file);
     });
 
-    console.log("Decoded token:", decoded);
-    console.log("Request payload:", {
-      title,
-      caption: postText,
-      userId: decoded.userId || decoded.id,
-      ingredients,
-      mediaItems,
-    });
-
-    const response = await fetch("http://localhost:3000/api/posts", {
+    const response = await fetch(buildApiUrl("/api/posts"), {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -163,7 +154,15 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || "Failed to create post");
 
-    if (typeof onPost === "function") onPost({ ...data, ingredients });
+    if (typeof onPost === "function") {
+      onPost({
+        ...data,
+        title,
+        caption: postText,
+        ingredients,
+        mediaItems: mediaItems.map(({ file, ...rest }) => rest),
+      });
+    }
 
     clearDraft();
     setTitle("");
@@ -246,6 +245,10 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
             mediaItems={mediaItems}
             onBack={() => setStep(STEP_COMPOSE)}
             onCaptionsChange={setMediaItems}
+            ingredients={ingredients}
+            setIngredients={setIngredients}
+            skipIngredientPrompt={skipIngredientPrompt}
+            setSkipIngredientPrompt={setSkipIngredientPrompt}
           />
         )}
       </div>

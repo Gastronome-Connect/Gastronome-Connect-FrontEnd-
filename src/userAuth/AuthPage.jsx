@@ -7,7 +7,8 @@ import BackgroundCarousel from "../components/Carousel Background/BackgroundCaro
 import LogoImage from "../components/Assets/Gastro.png";
 import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
-import { apiFetch } from "../utils/api";
+import { apiFetch, setAccessToken } from "../utils/api";
+import { authAPI } from "../utils/apiService";
 
 const FloatingInput = ({
   type,
@@ -18,6 +19,7 @@ const FloatingInput = ({
   error,
   label,
   rightEl,
+  autoComplete,
 }) => (
   <div className="relative">
     <input
@@ -27,6 +29,7 @@ const FloatingInput = ({
       onChange={onChange}
       onBlur={onBlur}
       placeholder=" "
+      autoComplete={autoComplete}
       className={`peer block w-full px-3 py-3 border ${
         error ? "border-red-500" : "border-gray-300"
       } rounded-lg focus:outline-none focus:border-[#0060A9] text-sm bg-transparent transition-colors`}
@@ -158,7 +161,7 @@ const AuthPage = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const getInitialX = () => {
-    if (isMobile()) return null; // null = use CSS centering
+    if (isMobile()) return null;
     if (!initialIsLogin) {
       const panelWidth = Math.min(480, window.innerWidth - 48);
       const margin = 60;
@@ -172,13 +175,11 @@ const AuthPage = () => {
   const [contentVisible, setContentVisible] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
 
-  // Track resize to switch between mobile/desktop layout
   useEffect(() => {
     const onResize = () => {
       const nowMobile = isMobile();
       setMobile(nowMobile);
       if (!nowMobile) {
-        // Re-compute correct desktop position
         const panelWidth = Math.min(480, window.innerWidth - 48);
         const margin = 60;
         setPanelX(
@@ -226,7 +227,6 @@ const AuthPage = () => {
     const fadeDuration = 260;
 
     if (isMobile()) {
-      // On mobile just fade content, no slide
       setContentVisible(false);
       navigate(goToLogin ? "/login?mode=login" : "/login?mode=signup", {
         replace: true,
@@ -278,17 +278,22 @@ const AuthPage = () => {
   };
 
   // ── Login validation ─────────────────────────────────────────
-  const validateLoginEmail = () => {
-    if (!loginEmail.trim()) {
+  const validateLoginIdentifier = () => {
+    const value = loginEmail.trim();
+    if (!value) {
       setLoginEmailError("This field can't be empty");
       return false;
     }
-    const emailRegex =
-      /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\.[a-zA-Z]{2})?$/;
-    if (!emailRegex.test(loginEmail)) {
-      setLoginEmailError("Invalid Email Format");
-      return false;
+
+    if (value.includes("@")) {
+      const emailRegex =
+        /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\.[a-zA-Z]{2})?$/;
+      if (!emailRegex.test(value)) {
+        setLoginEmailError("Invalid Email Format");
+        return false;
+      }
     }
+
     setLoginEmailError("");
     return true;
   };
@@ -296,14 +301,6 @@ const AuthPage = () => {
   const validateLoginPassword = () => {
     if (!loginPassword.trim()) {
       setLoginPasswordError("This field can't be empty");
-      return false;
-    }
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_])[A-Za-z\d@$!%*?&#_]{8,}$/;
-    if (!passwordRegex.test(loginPassword)) {
-      setLoginPasswordError(
-        "Password must be at least 8 characters, include uppercase, lowercase, a number, and a special character",
-      );
       return false;
     }
     setLoginPasswordError("");
@@ -314,25 +311,35 @@ const AuthPage = () => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
-    const isEmailValid = validateLoginEmail();
+    const isEmailValid = validateLoginIdentifier();
     const isPasswordValid = validateLoginPassword();
     if (isEmailValid && isPasswordValid) {
       try {
-        const response = await apiFetch("/api/login", {
-          method: "POST",
-          body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "");
-        localStorage.setItem("accessToken", data.accessToken);
+        const isAdminLogin = !loginEmail.trim().includes("@");
+        const data = isAdminLogin
+          ? await authAPI.login(loginEmail.trim(), loginPassword)
+          : await authAPI.login(loginEmail.trim(), loginPassword);
+        
+        if (isAdminLogin) {
+          localStorage.setItem("adminAccessToken", data.accessToken);
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("userId");
+          navigate("/admin");
+        } else {
+          setAccessToken(data.accessToken);
+          localStorage.removeItem("adminAccessToken");
+          if (data?.user?._id) {
+            localStorage.setItem("userId", data.user._id);
+          }
+          navigate("/feed");
+        }
         setLoginError("");
         setLoginEmailError("");
         setLoginPasswordError("");
-        navigate("/feed");
       } catch (error) {
         console.error("Login error:", error);
-        setLoginEmailError("Incorrect Email or Password");
-        setLoginPasswordError("Incorrect Email or Password");
+        setLoginEmailError("Incorrect username/email or password");
+        setLoginPasswordError("Incorrect username/email or password");
         setLoginError(error.message || "");
       }
     }
@@ -435,7 +442,7 @@ const AuthPage = () => {
     return true;
   };
 
-  const handleVerify = () => navigate("/verification");
+  const handleVerify = () => navigate("/verification", { replace: true });
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -467,41 +474,25 @@ const AuthPage = () => {
         setSignupEmailError(validateData.message || "Email validation failed");
         setSignupLoading(false);
         return;
-      }
-
-      const response = await apiFetch("/api/register", {
-        method: "POST",
-        body: JSON.stringify({
+      }Data = await authAPI.validateEmail(signupEmail);
+      if (!validateData.valid
+        JSON.stringify({
           username: signupUsername.trim(),
           email: signupEmail,
           password: signupPassword,
           confirmPassword,
         }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        if (data.message?.toLowerCase().includes("username"))
-          setSignupUsernameError(data.message);
-        else if (data.message?.toLowerCase().includes("email"))
-          setSignupEmailError(data.message);
-        else setSignupError(data.message || "Sign Up Failed");
-        setSignupLoading(false);
-        return;
-      }
+      );
 
-      localStorage.setItem("accessToken", data.accessToken);
-      // Removed storing refreshToken for security
-      localStorage.setItem("pendingEmail", signupEmail);
-      localStorage.setItem("sourceFlow", "signup");
-      navigate("/verification");
+      navigate("/verification", { replace: true });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Sign up preparation error:", error);
       setSignupError(error.message || "An unexpected error occurred");
       setSignupLoading(false);
     }
   };
 
-  /* ─── Panel style: desktop uses translateX, mobile uses centering ── */
+  /* ─── Panel style ───────────────────────────────────────────── */
   const panelStyle = mobile
     ? {
         width: "calc(100vw - 32px)",
@@ -524,8 +515,6 @@ const AuthPage = () => {
       <style>{STYLES}</style>
       <BackgroundCarousel />
 
-      {/* ── Desktop wrapper: absolute + flex align-center (original) ── */}
-      {/* ── Mobile wrapper: flex center both axes ─────────────────── */}
       <div
         className={
           mobile
@@ -581,13 +570,13 @@ const AuthPage = () => {
                     >
                       <div>
                         <FloatingInput
-                          type="email"
+                          type="text"
                           id="login-email"
                           value={loginEmail}
                           onChange={(e) => setLoginEmail(e.target.value)}
-                          onBlur={validateLoginEmail}
+                          onBlur={validateLoginIdentifier}
                           error={loginEmailError}
-                          label="Email address"
+                          label="Email address or admin username"
                         />
                         {loginEmailError && (
                           <p className="text-red-500 text-xs mt-1">
@@ -605,6 +594,7 @@ const AuthPage = () => {
                           onBlur={validateLoginPassword}
                           error={loginPasswordError}
                           label="Password"
+                          autoComplete="current-password"
                           rightEl={
                             <button
                               type="button"
@@ -648,37 +638,6 @@ const AuthPage = () => {
                         className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                       >
                         {loginLoading ? <Buffer /> : "Log In"}
-                      </button>
-
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-xs text-gray-400">or</span>
-                        <div className="flex-1 h-px bg-gray-200" />
-                      </div>
-
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 active:scale-[0.98] transition-all outline-none shadow-sm"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 18 18">
-                          <path
-                            fill="#4285F4"
-                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                          />
-                          <path
-                            fill="#34A853"
-                            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
-                          />
-                          <path
-                            fill="#FBBC05"
-                            d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"
-                          />
-                          <path
-                            fill="#EA4335"
-                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
-                          />
-                        </svg>
-                        Log In with Google
                       </button>
 
                       <div className="pt-2 border-t border-orange-200 text-center">
@@ -761,7 +720,6 @@ const AuthPage = () => {
                         )}
                       </div>
 
-                      {/* Password — (i) icon: outside-left on desktop, inside-right on mobile */}
                       <div>
                         <div className="relative">
                           <FloatingInput
@@ -772,6 +730,7 @@ const AuthPage = () => {
                             onBlur={validateSignupPassword}
                             error={signupPasswordError}
                             label="Password"
+                            autoComplete="new-password"
                             rightEl={
                               <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1.5">
                                 <PasswordTooltip forceShow={showPasswordHint} />
@@ -811,6 +770,7 @@ const AuthPage = () => {
                           onBlur={validateConfirmPassword}
                           error={confirmPasswordError}
                           label="Confirm Password"
+                          autoComplete="new-password"
                           rightEl={
                             <button
                               type="button"
@@ -843,37 +803,6 @@ const AuthPage = () => {
                         className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {signupLoading ? <Buffer /> : "Sign Up"}
-                      </button>
-
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-xs text-gray-400">or</span>
-                        <div className="flex-1 h-px bg-gray-200" />
-                      </div>
-
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 active:scale-[0.98] transition-all outline-none shadow-sm"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 18 18">
-                          <path
-                            fill="#4285F4"
-                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                          />
-                          <path
-                            fill="#34A853"
-                            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
-                          />
-                          <path
-                            fill="#FBBC05"
-                            d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"
-                          />
-                          <path
-                            fill="#EA4335"
-                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
-                          />
-                        </svg>
-                        Sign Up with Google
                       </button>
 
                       <div className="pt-2 border-t border-orange-200 text-center">

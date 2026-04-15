@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaEnvelope } from "react-icons/fa";
 import ChangePassword from "../userAuth/ProfChangePass";
+import ChangePopup from "../components/Popups/SavePopup";
+import { buildApiUrl } from "../utils/api";
 
 const Account = () => {
   const [email, setEmail] = useState("");
@@ -10,15 +12,20 @@ const Account = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
+    if (!token) return;
 
-    if (token && token.split(".").length === 3) {
-      try {
-        const decodedToken = JSON.parse(atob(token.split(".")[1]));
-        setEmail(decodedToken.email);
-      } catch (error) {
-        console.error("Failed to decode token:", error);
-      }
-    }
+    fetch(buildApiUrl("/api/user"), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user?.email) {
+          setEmail(data.user.email);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch user info:", error);
+      });
   }, []);
 
   const handlePasswordUpdate = (newPassword) => {

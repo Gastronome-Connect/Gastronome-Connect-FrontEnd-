@@ -5,6 +5,7 @@ import { FaChevronDown, FaChevronUp, FaTimes } from "react-icons/fa";
 import LogoImage from "../components/Assets/Gastro.png";
 import Flavor from "../components/Assets/Flavor.png";
 import CookingStyle from "../components/Assets/Cooking Style.png";
+import { buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -174,7 +175,7 @@ const Preferences = () => {
     const token = localStorage.getItem("accessToken");
     const userId = localStorage.getItem("userId");
     if (!token || !userId) {
-      localStorage.setItem(
+      sessionStorage.setItem(
         "tempPreferences",
         JSON.stringify({ flavors, cookingStyles }),
       );
@@ -182,7 +183,7 @@ const Preferences = () => {
     }
     try {
       const response = await fetch(
-        `http://localhost:3000/api/user/preferences/${userId}`,
+        buildApiUrl(`/api/user/preferences/${userId}`),
         {
           method: "PATCH",
           headers: {
@@ -205,7 +206,7 @@ const Preferences = () => {
 
   const fetchOptions = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/options");
+      const response = await fetch(buildApiUrl("/api/options"));
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -231,12 +232,12 @@ const Preferences = () => {
       const userId = localStorage.getItem("userId");
       if (!token || !userId) return;
 
-      const tempPreferences = localStorage.getItem("tempPreferences");
+      const tempPreferences = sessionStorage.getItem("tempPreferences");
       if (tempPreferences) {
         try {
           const { flavors, cookingStyles } = JSON.parse(tempPreferences);
           const response = await fetch(
-            `http://localhost:3000/api/user/preferences/${userId}`,
+            buildApiUrl(`/api/user/preferences/${userId}`),
             {
               method: "PATCH",
               headers: {
@@ -252,7 +253,7 @@ const Preferences = () => {
             const e = await response.json();
             throw new Error(e.message || "Failed to sync preferences.");
           }
-          localStorage.removeItem("tempPreferences");
+          sessionStorage.removeItem("tempPreferences");
         } catch (error) {
           console.error("Error syncing preferences to backend:", error.message);
         }
@@ -263,7 +264,7 @@ const Preferences = () => {
         try {
           const { dislikes, allergens } = JSON.parse(tempDislikes);
           const response = await fetch(
-            `http://localhost:3000/api/user/preferences/${userId}`,
+            buildApiUrl(`/api/user/preferences/${userId}`),
             {
               method: "PATCH",
               headers: {

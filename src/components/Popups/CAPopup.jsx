@@ -1,5 +1,5 @@
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 
 const CAPopup = ({ message, onConfirm, onCancel }) => {
@@ -23,11 +23,15 @@ const CAPopup = ({ message, onConfirm, onCancel }) => {
           >
             <Trash2 size={28} className="text-white" />
           </motion.div>
-          <h2 className="text-xl font-black uppercase tracking-tight">Clear History</h2>
+          <h2 className="text-xl font-black uppercase tracking-tight">
+            Clear History
+          </h2>
         </div>
 
         <div className="p-10 text-center">
-          <p className="text-gray-500 text-sm leading-relaxed mb-8">{message}</p>
+          <p className="text-gray-500 text-sm leading-relaxed mb-8">
+            {message}
+          </p>
           <div className="flex flex-col gap-3">
             <motion.button
               whileHover={{ scale: 1.02 }}

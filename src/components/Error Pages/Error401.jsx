@@ -30,7 +30,7 @@ export default function Error401() {
 
       <div className="flex gap-4 w-full">
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => navigate("/login?mode=signup", { replace: true })}
           className="flex-1 py-4 rounded-2xl bg-[#0060A9] text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:bg-[#00B4FA] transition-all active:scale-95"
         >
           Sign In

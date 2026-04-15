@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Video, Image as ImageIcon, Plus, Play, FileImage } from "lucide-react";
+import { buildApiUrl } from "../../utils/api";
 
 export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const [title, setTitle] = useState("");
@@ -38,7 +39,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
         formData.append("media", item.file);
       });
 
-      const res = await fetch("http://localhost:3000/api/posts", {
+      const res = await fetch(buildApiUrl("/api/posts"), {
         method: "POST",
         body: formData,
       });

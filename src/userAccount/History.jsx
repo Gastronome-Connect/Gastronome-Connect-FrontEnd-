@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import NavigationBar from "../components/NavigationBar";
+import NavigationBar from "../Landing/NavigationBar";
+import { buildApiUrl } from "../utils/api";
 import logo from "../components/Assets/FoodAI.png";
 import { FaSearch } from "react-icons/fa";
 import HAFPopup from "../components/Popups/HAFPopup";
@@ -16,40 +17,39 @@ const History = () => {
   const [showClearPopup, setShowClearPopup] = useState(false);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
   const [changePopup, setChangePopup] = useState(false);
-  const [recipe, setRecipe] = useState(null);
-  const [id, setId] = useState(null);
 
   const recipesPerPage = 6;
 
   useEffect(() => {
-    if (id) {
-      fetch(`http://localhost:3000/api/recipes/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.recipe) {
-            setRecipe(data.recipe);
-          } else {
-            console.error("No recipe data found:", data);
-          }
-        })
-        .catch((err) => console.error("Failed to fetch recipe:", err));
-    }
-
-    fetch("http://localhost:3000/api/recipes/logs")
+    const token = localStorage.getItem("accessToken");
+    fetch(buildApiUrl("/api/logs"), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((res) => res.json())
       .then((data) => {
-        if (data.recipes) {
-          setRecipes(data.recipes);
-        } else {
-          console.error("No archived recipes found:", data);
-        }
+        const normalizedRecipes = Array.isArray(data.logs)
+          ? data.logs.map((log) => ({
+              id: log._id,
+              title: log.recipeName,
+              author: "RecipAI",
+              dateCreated: log.viewedAt,
+              description: log.favorite
+                ? "Saved to favorites"
+                : log.archived
+                  ? "Archived recipe"
+                  : "Recently viewed recipe",
+              image: "/FoodAI.png",
+              logId: log._id,
+            }))
+          : [];
+        setRecipes(normalizedRecipes);
         setLoading(false);
       })
       .catch((err) => {
         console.error("Failed to fetch logs:", err);
         setLoading(false);
       });
-  }, [id]);
+  }, []);
 
   const filteredRecipes = recipes.filter(
     (recipe) =>
@@ -65,10 +65,20 @@ const History = () => {
   const handleRemoveRecipe = (recipe) => {
     setShowRemovePopup({
       message: `Remove "${recipe.title}" from your history?`,
-      onConfirm: () => {
-        setRecipes((prevRecipes) => prevRecipes.filter((r) => r.id !== recipe.id));
-        setShowRemovePopup(false);
-        setChangePopup(true);
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem("accessToken");
+          await fetch(buildApiUrl(`/api/logs/${recipe.logId || recipe.id}`), {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          setRecipes((prevRecipes) => prevRecipes.filter((r) => r.id !== recipe.id));
+          setChangePopup(true);
+        } catch (err) {
+          console.error("Failed to remove history item:", err);
+        } finally {
+          setShowRemovePopup(false);
+        }
       },
     });
   };
@@ -76,10 +86,20 @@ const History = () => {
   const handleClearAll = () => {
     setShowClearPopup({
       message: "This will permanently remove all recipes from your history. Are you sure?",
-      onConfirm: () => {
-        setRecipes([]);
-        setShowClearPopup(false);
-        setChangePopup(true);
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem("accessToken");
+          await fetch(buildApiUrl("/api/logs"), {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          setRecipes([]);
+          setChangePopup(true);
+        } catch (err) {
+          console.error("Failed to clear history:", err);
+        } finally {
+          setShowClearPopup(false);
+        }
       },
     });
   };

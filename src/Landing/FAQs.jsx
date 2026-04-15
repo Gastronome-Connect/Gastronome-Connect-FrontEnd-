@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { buildApiUrl } from "../utils/api";
 
 export default function FAQ() {
   const [faqs, setFaqs] = useState([]);
@@ -20,7 +21,7 @@ export default function FAQ() {
     const fetchFAQs = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:3000/api/faqs");
+        const res = await fetch(buildApiUrl("/api/faqs"));
         if (!res.ok) throw new Error("Failed to fetch FAQs");
         const data = await res.json();
         setFaqs(data);

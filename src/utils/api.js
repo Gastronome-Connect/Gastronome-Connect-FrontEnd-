@@ -1,6 +1,10 @@
 // Centralized fetch wrapper that attaches access token and handles refresh.
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3000";
 
+function buildApiUrl(path) {
+  return path.startsWith("http") ? path : `${API_BASE}${path}`;
+}
+
 function getAccessToken() {
   try {
     return localStorage.getItem("accessToken");
@@ -50,7 +54,7 @@ async function logout() {
 }
 
 async function apiFetch(input, init = {}) {
-  const url = input.startsWith("http") ? input : `${API_BASE}${input}`;
+  const url = buildApiUrl(input);
   const opts = { credentials: "include", headers: {}, ...init };
 
   // Attach JSON header by default when body present and no header set
@@ -79,6 +83,8 @@ async function apiFetch(input, init = {}) {
 }
 
 export {
+  API_BASE,
+  buildApiUrl,
   apiFetch,
   getAccessToken,
   setAccessToken,

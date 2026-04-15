@@ -5,11 +5,11 @@ import { FaUser } from "react-icons/fa";
 import { HiChevronDown, HiChevronLeft, HiChevronRight } from "react-icons/hi"; 
 
 // Components
-import Sidebar from "../../GComponents/GCSideBar";
-import PostCard from "../../GComponents/PostCard";
-import Chatbot from "../../GComponents/ChatbotWidget";
-import ProfilePanel from "../../GComponents/ProfilePanel";
-import Account from "./Account";
+import Sidebar from "../../Feed/SideBar";
+import PostCard from "../../Feed/Post Card/PostCard";
+import Chatbot from "../../components/Feed Components/ChatbotWidget";
+import ProfilePanel from "../../components/Pages/Panels/ProfilePanel";
+import Account from "../Account";
 
 /* NOTE: If these are already in GComponents, 
   remove these local definitions and use the imports instead.

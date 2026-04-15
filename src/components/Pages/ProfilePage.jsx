@@ -12,6 +12,7 @@ import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel     from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
 import SkeletonAllergensPanel   from "../Skeletons/SkeletonAllergensPanel";
+import { buildApiUrl } from "../../utils/api";
 
 const GCProfile = () => {
   const [posts, setPosts]               = useState([]);
@@ -40,7 +41,7 @@ const GCProfile = () => {
     const fetchPosts = async () => {
       setPostsLoading(true);
       try {
-        const res  = await fetch("http://localhost:3000/api/posts");
+        const res  = await fetch(buildApiUrl("/api/posts"));
         const data = await res.json();
         setPosts(data);
       } catch (err) {

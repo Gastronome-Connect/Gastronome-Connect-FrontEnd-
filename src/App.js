@@ -1,6 +1,7 @@
 import React from "react";
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import { CarouselProvider } from "./components/Carousel Background/CarouselContext";
+import { ChatProvider } from "./Context/ChatContext";
 
 import ChatbotPage from "./components/Pages/Chatbot";
 import NotificationsPage from "./components/Pages/NotificationPage";
@@ -12,6 +13,11 @@ import ContactUs from "./Landing/ContactUs";
 import LogIn from "./userAuth/AuthPage";
 import SignUp from "./userAuth/Signup";
 import Feed from "./Feed/Feed";
+
+// Protected Route
+import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
+import FlowRoute from "./components/FlowRoute";
 
 // Create Account
 import Verification from "./userAuth/Verification";
@@ -51,15 +57,17 @@ import Statistics from "./Admin Panel/Statistic";
 import FlaggedPosts from "./Admin Panel/FlaggedPosts";
 import ReportedComments from "./Admin Panel/ReportedComments";
 
-// 👇 Error boundary
+// Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
 
-// Root layout — CarouselProvider + ErrorBoundary wrap the whole app
+// ── Root layout — ChatProvider + CarouselProvider + ErrorBoundary wrap the whole app
 const RootLayout = () => (
   <ErrorBoundary>
-    <CarouselProvider>
-      <Outlet />
-    </CarouselProvider>
+    <ChatProvider>
+      <CarouselProvider>
+        <Outlet />
+      </CarouselProvider>
+    </ChatProvider>
   </ErrorBoundary>
 );
 
@@ -70,49 +78,100 @@ const AdminLayoutWithBoundary = () => (
   </ErrorBoundary>
 );
 
+// Protected Admin layout
+const ProtectedAdminLayout = () => (
+  <ProtectedRoute Component={AdminLayoutWithBoundary} requireAdmin={true} />
+);
+
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: RootLayout,
     children: [
       // Landing
-      { index: true, Component: Home },
-      { path: "home", Component: Home },
-      { path: "about-us", Component: AboutUs },
-      { path: "contact-us", Component: ContactUs },
+      { index: true, Component: () => <PublicRoute Component={Home} /> },
+      { path: "home", Component: () => <PublicRoute Component={Home} /> },
+      {
+        path: "about-us",
+        Component: () => <PublicRoute Component={AboutUs} />,
+      },
+      {
+        path: "contact-us",
+        Component: () => <PublicRoute Component={ContactUs} />,
+      },
 
-      // Auth
-      { path: "login", Component: LogIn },
-      { path: "signup", Component: SignUp },
-      { path: "verification", Component: Verification },
-      { path: "preferences", Component: Preferences },
-      { path: "allergens", Component: Allergens },
-      { path: "forgot-password", Component: ForgotPassword },
-      { path: "reset-password", Component: ResetPassword },
-      { path: "profchangepass", Component: ProfChangePassword },
+      // Auth (Public-only - redirect to feed/admin if already logged in)
+      { path: "login", Component: () => <PublicRoute Component={LogIn} /> },
+      { path: "signup", Component: () => <PublicRoute Component={SignUp} /> },
+      {
+        path: "verification",
+        Component: () => <FlowRoute Component={Verification} />,
+      },
+      {
+        path: "preferences",
+        Component: () => <FlowRoute Component={Preferences} />,
+      },
+      {
+        path: "allergens",
+        Component: () => <FlowRoute Component={Allergens} />,
+      },
+      {
+        path: "forgot-password",
+        Component: () => <PublicRoute Component={ForgotPassword} />,
+      },
+      {
+        path: "reset-password",
+        Component: () => <PublicRoute Component={ResetPassword} />,
+      },
+      {
+        path: "reset-password/:token",
+        Component: () => <PublicRoute Component={ResetPassword} />,
+      },
+      {
+        path: "profchangepass",
+        Component: () => <ProtectedRoute Component={ProfChangePassword} />,
+      },
 
       // Feed
-      { path: "feed", Component: Feed },
+      { path: "feed", Component: () => <ProtectedRoute Component={Feed} /> },
       { path: "sidebar", Component: SideBar },
       { path: "searchbar", Component: SearchBar },
       { path: "navigationbar", Component: NavigationBar },
 
-      // User Pages
-      { path: "profile", Component: GCProfile },
-      { path: "history", Component: History },
-      { path: "favorites", Component: Favorites },
-      { path: "archives", Component: Archives },
-      { path: "chatbot", Component: ChatbotPage },
-      { path: "notifications", Component: NotificationsPage },
+      // User Pages (Protected)
+      {
+        path: "profile",
+        Component: () => <ProtectedRoute Component={GCProfile} />,
+      },
+      {
+        path: "history",
+        Component: () => <ProtectedRoute Component={History} />,
+      },
+      {
+        path: "favorites",
+        Component: () => <ProtectedRoute Component={Favorites} />,
+      },
+      {
+        path: "archives",
+        Component: () => <ProtectedRoute Component={Archives} />,
+      },
+      {
+        path: "chatbot",
+        Component: () => <ProtectedRoute Component={ChatbotPage} />,
+      },
+      {
+        path: "notifications",
+        Component: () => <ProtectedRoute Component={NotificationsPage} />,
+      },
 
       // Utility
       { path: "buffer", Component: Buffer },
       { path: "error", Component: Error },
 
-      // Admin — own ErrorBoundary so it's isolated
+      // Admin — own ErrorBoundary so it's isolated, with authentication protection
       {
         path: "admin",
-        Component: AdminLayoutWithBoundary,
+        Component: ProtectedAdminLayout,
         children: [
           { index: true, Component: AdminDashboard },
           { path: "timeout", Component: TimeoutUsers },

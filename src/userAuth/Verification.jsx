@@ -4,6 +4,7 @@ import BackgroundCarousel from "../components/Carousel Background/BackgroundCaro
 import LogoImage from "../components/Assets/Gastro.png";
 import Porm from "./Preferences";
 import ResendPopup from "../components/Popups/ResendPopup";
+import { buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -28,9 +29,9 @@ const VerificationPage = () => {
   const [showResendPopup, setShowResendPopup] = useState(false);
   const [mobile, setMobile] = useState(isMobile());
   const navigate = useNavigate();
-  const email = localStorage.getItem("pendingEmail");
+  const email = sessionStorage.getItem("pendingEmail");
 
-  const sourceFlow = localStorage.getItem("sourceFlow");
+  const sourceFlow = sessionStorage.getItem("sourceFlow");
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
@@ -51,7 +52,7 @@ const VerificationPage = () => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/send-otp", {
+        const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -106,7 +107,7 @@ const VerificationPage = () => {
       return;
     }
     try {
-      const response = await fetch("http://localhost:3000/api/verify-otp", {
+      const response = await fetch(buildApiUrl("/api/verify-otp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: enteredCode }),
@@ -114,11 +115,13 @@ const VerificationPage = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to verify OTP");
 
-      localStorage.removeItem("pendingEmail");
-      localStorage.removeItem("sourceFlow");
-
-      if (sourceFlow === "forgotpassword") navigate("/login");
-      else navigate("/preferences");
+      if (sourceFlow === "forgotpassword") {
+        sessionStorage.removeItem("pendingEmail");
+        sessionStorage.removeItem("sourceFlow");
+        navigate("/login", { replace: true });
+      } else {
+        navigate("/preferences", { replace: true });
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -131,7 +134,7 @@ const VerificationPage = () => {
         return;
       }
       try {
-        const response = await fetch("http://localhost:3000/api/send-otp", {
+        const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -155,7 +158,20 @@ const VerificationPage = () => {
   };
 
   const handleContinue = () => setShowResendPopup(false);
-  const handleBackToLogin = () => navigate("/login");
+  const handleBackToLogin = () => {
+    // Clear flow state for both signup and forgotpassword flows
+    sessionStorage.removeItem("pendingEmail");
+    sessionStorage.removeItem("sourceFlow");
+
+    // For signup flow, also clear any auth tokens and temp signup data
+    if (sourceFlow === "signup") {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      sessionStorage.removeItem("tempSignupData");
+    }
+
+    navigate("/login");
+  };
 
   if (showPorm) return <Porm />;
 
@@ -278,7 +294,12 @@ const VerificationPage = () => {
                   </button>
                 </form>
 
-                {showResendPopup && <ResendPopup onContinue={handleContinue} />}
+                {showResendPopup && (
+                  <ResendPopup
+                    isOpen={showResendPopup}
+                    onContinue={handleContinue}
+                  />
+                )}
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button

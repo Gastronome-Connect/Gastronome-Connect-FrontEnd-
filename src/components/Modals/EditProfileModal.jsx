@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { X, User, Lock, Heart, ShieldAlert, Trash2 } from "lucide-react";
@@ -12,88 +12,77 @@ import DeleteAccountPopup from "../Popups/DelPopup";
 import AvatarEditorModal from "../Modals/Edit Profile Modal Components/AvatarEditorModal";
 
 const EXISTING_NAMES = ["Juan Dela Cruz", "Gastronome01", "Tester_01"];
-const MOCK_PASSWORD  = "password123";
+const MOCK_PASSWORD = "password123";
 
 const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
 
   // ── Profile state ──
-  const [name,      setName]      = useState(initialData.name      ?? "");
+  const [name, setName] = useState(initialData.name ?? "");
   const [nameError, setNameError] = useState("");
-  const [bio,       setBio]       = useState(initialData.bio       ?? "");
+  const [bio, setBio] = useState(initialData.bio ?? "");
 
   // ── Avatar state ──
-  const [avatarSrc,       setAvatarSrc]       = useState(initialData.avatarSrc ?? null);
+  const [avatarSrc, setAvatarSrc] = useState(initialData.avatarSrc ?? null);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
-  const [avatarChanged,    setAvatarChanged]    = useState(false);
+  const [avatarChanged, setAvatarChanged] = useState(false);
 
   // ── Password state ──
-  const [oldPassword,     setOldPassword]     = useState("");
-  const [newPassword,     setNewPassword]     = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError,   setPasswordError]   = useState("");
-  const [showOld,         setShowOld]         = useState(false);
-  const [showNew,         setShowNew]         = useState(false);
-  const [showConfirm,     setShowConfirm]     = useState(false);
+  const [passwordError] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // ── Preferences / Allergens state ──
-  const [flavors,       setFlavors]       = useState(initialData.flavors       ?? []);
-  const [cookingStyles, setCookingStyles] = useState(initialData.cookingStyles ?? []);
-  const [allergens,     setAllergens]     = useState(initialData.allergens     ?? []);
-  const [dislikes,      setDislikes]      = useState(initialData.dislikes      ?? []);
+  const [flavors, setFlavors] = useState(initialData.flavors ?? []);
+  const [cookingStyles, setCookingStyles] = useState(
+    initialData.cookingStyles ?? [],
+  );
+  const [allergens, setAllergens] = useState(initialData.allergens ?? []);
+  const [dislikes, setDislikes] = useState(initialData.dislikes ?? []);
 
   // ── Delete / popups ──
   const [showDeletePopup, setShowDeletePopup] = useState(false);
-  const [deleteLoading,   setDeleteLoading]   = useState(false);
-  const [deleteError,     setDeleteError]     = useState("");
-  const [showDiscard,     setShowDiscard]     = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [showDiscard, setShowDiscard] = useState(false);
 
   // ── Save toast ──
   // saveToastVisible drives SaveToast — set true to show, SaveToast resets it via onDone
   const [saveToastVisible, setSaveToastVisible] = useState(false);
 
   // ── Helpers ──
-  const hasChangesOnCurrentTab = () => {
-    if (activeTab === "profile")
-      return name !== (initialData.name ?? "") || bio !== (initialData.bio ?? "") || avatarChanged;
-    if (activeTab === "password")
-      return oldPassword !== "" || newPassword !== "" || confirmPassword !== "";
-    if (activeTab === "preferences")
-      return (
-        JSON.stringify(flavors)       !== JSON.stringify(initialData.flavors       ?? []) ||
-        JSON.stringify(cookingStyles) !== JSON.stringify(initialData.cookingStyles ?? [])
-      );
-    if (activeTab === "allergens")
-      return (
-        JSON.stringify(allergens) !== JSON.stringify(initialData.allergens ?? []) ||
-        JSON.stringify(dislikes)  !== JSON.stringify(initialData.dislikes  ?? [])
-      );
-    return false;
-  };
-
   const hasAnyChanges = () =>
-    name !== (initialData.name ?? "")                                                        ||
-    bio  !== (initialData.bio  ?? "")                                                        ||
-    avatarChanged                                                                             ||
-    oldPassword !== "" || newPassword !== "" || confirmPassword !== ""                       ||
-    JSON.stringify(flavors)       !== JSON.stringify(initialData.flavors       ?? [])        ||
-    JSON.stringify(cookingStyles) !== JSON.stringify(initialData.cookingStyles ?? [])        ||
-    JSON.stringify(allergens)     !== JSON.stringify(initialData.allergens     ?? [])        ||
-    JSON.stringify(dislikes)      !== JSON.stringify(initialData.dislikes      ?? []);
+    name !== (initialData.name ?? "") ||
+    bio !== (initialData.bio ?? "") ||
+    avatarChanged ||
+    oldPassword !== "" ||
+    newPassword !== "" ||
+    confirmPassword !== "" ||
+    JSON.stringify(flavors) !== JSON.stringify(initialData.flavors ?? []) ||
+    JSON.stringify(cookingStyles) !==
+      JSON.stringify(initialData.cookingStyles ?? []) ||
+    JSON.stringify(allergens) !== JSON.stringify(initialData.allergens ?? []) ||
+    JSON.stringify(dislikes) !== JSON.stringify(initialData.dislikes ?? []);
 
   const handleTabChange = (nextTabId) => {
     if (activeTab === "profile") {
       setName(initialData.name ?? "");
-      setBio(initialData.bio   ?? "");
+      setBio(initialData.bio ?? "");
     } else if (activeTab === "password") {
-      setOldPassword(""); setNewPassword(""); setConfirmPassword("");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } else if (activeTab === "preferences") {
       setFlavors(initialData.flavors ?? []);
       setCookingStyles(initialData.cookingStyles ?? []);
     } else if (activeTab === "allergens") {
       setAllergens(initialData.allergens ?? []);
-      setDislikes(initialData.dislikes   ?? []);
+      setDislikes(initialData.dislikes ?? []);
     }
     setActiveTab(nextTabId);
   };
@@ -108,7 +97,15 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
 
     const changed = hasAnyChanges();
 
-    onSave({ name, bio, avatarSrc, flavors, cookingStyles, allergens, dislikes });
+    onSave({
+      name,
+      bio,
+      avatarSrc,
+      flavors,
+      cookingStyles,
+      allergens,
+      dislikes,
+    });
     setAvatarChanged(false);
 
     if (!changed) {
@@ -137,10 +134,10 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   };
 
   const tabs = [
-    { id: "profile",     label: "Profile",     icon: <User        size={14} /> },
-    { id: "password",    label: "Security",    icon: <Lock        size={14} /> },
-    { id: "preferences", label: "Preferences", icon: <Heart       size={14} /> },
-    { id: "allergens",   label: "Allergen",    icon: <ShieldAlert size={14} /> },
+    { id: "profile", label: "Profile", icon: <User size={14} /> },
+    { id: "password", label: "Security", icon: <Lock size={14} /> },
+    { id: "preferences", label: "Preferences", icon: <Heart size={14} /> },
+    { id: "allergens", label: "Allergen", icon: <ShieldAlert size={14} /> },
   ];
 
   const modal = (
@@ -156,7 +153,9 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white px-5 sm:px-8 py-4 sm:py-7 flex items-center justify-between">
           <div>
-            <h2 className="text-base sm:text-xl font-black uppercase tracking-tighter">Edit Profile</h2>
+            <h2 className="text-base sm:text-xl font-black uppercase tracking-tighter">
+              Edit Profile
+            </h2>
             <p className="text-blue-100 text-[9px] sm:text-[10px] font-bold tracking-widest uppercase opacity-80">
               Settings & Security
             </p>
@@ -176,7 +175,9 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all relative ${
-                activeTab === tab.id ? "text-[#0060A9]" : "text-gray-400 hover:text-gray-600"
+                activeTab === tab.id
+                  ? "text-[#0060A9]"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
               <span className="flex-shrink-0">{tab.icon}</span>
@@ -203,31 +204,43 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
               setBio={setBio}
               nameError={nameError}
               validateName={(v) =>
-                EXISTING_NAMES.includes(v) ? setNameError("Taken") : setNameError("")
+                EXISTING_NAMES.includes(v)
+                  ? setNameError("Taken")
+                  : setNameError("")
               }
             />
           )}
           {activeTab === "password" && (
             <PasswordTab
-              oldPassword={oldPassword}       setOldPassword={setOldPassword}
-              newPassword={newPassword}       setNewPassword={setNewPassword}
-              confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
-              showOld={showOld}               setShowOld={setShowOld}
-              showNew={showNew}               setShowNew={setShowNew}
-              showConfirm={showConfirm}       setShowConfirm={setShowConfirm}
+              oldPassword={oldPassword}
+              setOldPassword={setOldPassword}
+              newPassword={newPassword}
+              setNewPassword={setNewPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
+              showOld={showOld}
+              setShowOld={setShowOld}
+              showNew={showNew}
+              setShowNew={setShowNew}
+              showConfirm={showConfirm}
+              setShowConfirm={setShowConfirm}
               passwordError={passwordError}
             />
           )}
           {activeTab === "preferences" && (
             <PreferencesTab
-              flavors={flavors}             setFlavors={setFlavors}
-              cookingStyles={cookingStyles} setCookingStyles={setCookingStyles}
+              flavors={flavors}
+              setFlavors={setFlavors}
+              cookingStyles={cookingStyles}
+              setCookingStyles={setCookingStyles}
             />
           )}
           {activeTab === "allergens" && (
             <AllergensTab
-              allergens={allergens} setAllergens={setAllergens}
-              dislikes={dislikes}   setDislikes={setDislikes}
+              allergens={allergens}
+              setAllergens={setAllergens}
+              dislikes={dislikes}
+              setDislikes={setDislikes}
             />
           )}
         </div>
@@ -235,17 +248,26 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
         {/* Footer */}
         <div
           className="px-5 sm:px-8 py-4 sm:py-6 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between gap-2"
-          style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
+          style={{
+            paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+          }}
         >
           <button
-            onClick={() => { setDeleteError(""); setShowDeletePopup(true); }}
+            onClick={() => {
+              setDeleteError("");
+              setShowDeletePopup(true);
+            }}
             className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase border-2 transition-all
-              ${activeTab === "profile"
-                ? "text-red-400 border-red-100 hover:bg-red-50 hover:border-red-300 hover:text-red-600 cursor-pointer"
-                : "text-transparent border-transparent pointer-events-none select-none"
+              ${
+                activeTab === "profile"
+                  ? "text-red-400 border-red-100 hover:bg-red-50 hover:border-red-300 hover:text-red-600 cursor-pointer"
+                  : "text-transparent border-transparent pointer-events-none select-none"
               }`}
           >
-            <Trash2 size={12} className={activeTab === "profile" ? "" : "opacity-0"} />
+            <Trash2
+              size={12}
+              className={activeTab === "profile" ? "" : "opacity-0"}
+            />
             <span className="hidden sm:inline">Delete Account</span>
             <span className="sm:hidden">Delete</span>
           </button>
@@ -270,15 +292,17 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
       {showDiscard && (
         <DiscardChangesModal
           onDiscard={() => {
-            setName(initialData.name         ?? "");
-            setBio(initialData.bio           ?? "");
+            setName(initialData.name ?? "");
+            setBio(initialData.bio ?? "");
             setAvatarSrc(initialData.avatarSrc ?? null);
             setAvatarChanged(false);
-            setOldPassword(""); setNewPassword(""); setConfirmPassword("");
-            setFlavors(initialData.flavors         ?? []);
+            setOldPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setFlavors(initialData.flavors ?? []);
             setCookingStyles(initialData.cookingStyles ?? []);
-            setAllergens(initialData.allergens     ?? []);
-            setDislikes(initialData.dislikes       ?? []);
+            setAllergens(initialData.allergens ?? []);
+            setDislikes(initialData.dislikes ?? []);
             setShowDiscard(false);
             onClose();
           }}
@@ -309,7 +333,10 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
 
       <DeleteAccountPopup
         isOpen={showDeletePopup}
-        onCancel={() => { setShowDeletePopup(false); setDeleteError(""); }}
+        onCancel={() => {
+          setShowDeletePopup(false);
+          setDeleteError("");
+        }}
         onConfirm={handleDeleteConfirm}
         loading={deleteLoading}
         error={deleteError}
@@ -326,7 +353,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
         }}
       />
     </>,
-    document.body
+    document.body,
   );
 };
 

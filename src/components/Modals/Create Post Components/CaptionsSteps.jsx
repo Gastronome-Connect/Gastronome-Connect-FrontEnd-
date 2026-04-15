@@ -1,6 +1,7 @@
 import React from "react";
 import { X, ChevronLeft } from "lucide-react";
 import MediaCaptionEditor from "../../Editor/MediaCaptionEditor";
+import IngredientInput from "../IngredientsInput";
 
 const CaptionsStep = ({
   mediaItems,
@@ -9,6 +10,10 @@ const CaptionsStep = ({
   onAttemptClose,
   onPost,
   onCaptionsChange,
+  ingredients,
+  setIngredients,
+  skipIngredientPrompt,
+  setSkipIngredientPrompt,
 }) => {
   return (
     <div
@@ -38,6 +43,17 @@ const CaptionsStep = ({
         <p className="text-xs text-gray-400 mb-4 leading-relaxed">
           Add a title and caption to each photo or video individually.
         </p>
+
+        {/* Ingredients — shared state with ComposeStep */}
+        <div className="mb-4">
+          <IngredientInput
+            ingredients={ingredients}
+            setIngredients={setIngredients}
+            skipPromptChecked={skipIngredientPrompt}
+            onSkipChange={setSkipIngredientPrompt}
+          />
+        </div>
+
         <MediaCaptionEditor mediaItems={mediaItems} onCaptionsChange={onCaptionsChange} />
       </div>
 

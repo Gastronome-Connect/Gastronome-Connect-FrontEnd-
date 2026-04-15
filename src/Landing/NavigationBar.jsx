@@ -3,31 +3,32 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { X, Menu } from "lucide-react";
 import LogoIcon from "../components/Assets/GC Navbar Logo.png";
 
+const menuItems = [
+  { name: "Home", id: "home-section", path: "/home" },
+  { name: "About Us", path: "/about-us" },
+  { name: "Contact Us", path: "/contact-us" },
+  { name: "FAQs", id: "faq-section" },
+];
+
 export default function Navbar() {
-  const [scrolled,  setScrolled]  = useState(false);
-  const [visible,   setVisible]   = useState(true);
-  const [lastY,     setLastY]     = useState(0);
+  const [visible, setVisible] = useState(true);
+  const [lastY, setLastY] = useState(0);
   const [activeTab, setActiveTab] = useState("Home");
-  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  const menuItems = [
-    { name: "Home",       id: "home-section", path: "/home"       },
-    { name: "About Us",                       path: "/about-us"   },
-    { name: "Contact Us",                     path: "/contact-us" },
-    { name: "FAQs",       id: "faq-section"                       },
-  ];
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [location.pathname]);
   // Hide on scroll down, show on scroll up; add bg after 20px; close menu on scroll
   useEffect(() => {
     const handleScroll = () => {
       const y = window.scrollY;
-      setScrolled(y > 20);
       setVisible(y < lastY || y < 60);
       setLastY(y);
-      if (y > 10) setMenuOpen(false); // close drawer when user scrolls
+      if (y > 10) setMenuOpen(false);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -35,24 +36,28 @@ export default function Navbar() {
 
   useEffect(() => {
     const match = menuItems.find((i) => i.path === location.pathname);
-    if (match)                          setActiveTab(match.name);
+    if (match) setActiveTab(match.name);
     else if (location.pathname === "/") setActiveTab("Home");
-    else                                setActiveTab("");
+    else setActiveTab("");
   }, [location.pathname]);
 
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogoClick = () => {
     navigate("/home");
+    // scroll-to-top is handled by the pathname useEffect above,
+    // but if already on /home it won't fire — force it:
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleClick = (item) => {
     setActiveTab(item.name);
     setMenuOpen(false);
-    if (item.path) {
-      navigate(item.path);
-    } else if (item.id === "faq-section") {
+
+    if (item.id === "faq-section") {
+      // ── FAQs: scroll to section, navigate first if needed ────────────────
       const scrollTo = () => {
         const el = document.getElementById(item.id);
         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -62,6 +67,16 @@ export default function Navbar() {
         setTimeout(scrollTo, 150);
       } else {
         scrollTo();
+      }
+    } else if (item.path) {
+      // ── All other nav items: go to page + scroll to very top ─────────────
+      if (location.pathname === item.path) {
+        // Already on this page — just scroll up (pathname effect won't fire)
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        navigate(item.path);
+        // The pathname useEffect fires and calls scrollTo({ top:0, behavior:"instant" })
+        // which lands the user at the top before the new page paints.
       }
     }
   };
@@ -73,11 +88,18 @@ export default function Navbar() {
           visible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        {/* ── DESKTOP (md+): exact original layout ── */}
+        {/* ── DESKTOP (md+) ─────────────────────────────────────────────── */}
         <div className="hidden md:flex items-center justify-between px-10 py-5">
           {/* Logo */}
-          <div className="flex-1 flex items-center gap-3 cursor-pointer" onClick={handleLogoClick}>
-            <img src={LogoIcon} alt="Logo" className="w-80 h-14 object-contain" />
+          <div
+            className="flex-1 flex items-center gap-3 cursor-pointer"
+            onClick={handleLogoClick}
+          >
+            <img
+              src={LogoIcon}
+              alt="Logo"
+              className="w-80 h-14 object-contain"
+            />
           </div>
 
           {/* Nav pill */}
@@ -87,7 +109,9 @@ export default function Navbar() {
                 key={item.name}
                 onClick={() => handleClick(item)}
                 className={`cursor-pointer transition-colors duration-300 font-medium ${
-                  activeTab === item.name ? "text-[#0060A9]" : "text-black hover:text-[#0060A9]/70"
+                  activeTab === item.name
+                    ? "text-[#0060A9]"
+                    : "text-black hover:text-[#0060A9]/70"
                 }`}
               >
                 {item.name}
@@ -112,15 +136,23 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ── MOBILE: logo + hamburger ── */}
+        {/* ── MOBILE: logo + hamburger ───────────────────────────────────── */}
         <div className="md:hidden flex items-center justify-between px-5 py-4">
-          <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
-            <img src={LogoIcon} alt="Logo" className="w-52 h-11 object-contain" />
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={handleLogoClick}
+          >
+            <img
+              src={LogoIcon}
+              alt="Logo"
+              className="w-52 h-11 object-contain"
+            />
           </div>
           <button
             onClick={() => setMenuOpen((o) => !o)}
             className={`p-2 rounded-lg transition-colors ${
-              location.pathname === "/about-us" || location.pathname === "/contact-us"
+              location.pathname === "/about-us" ||
+              location.pathname === "/contact-us"
                 ? "text-gray-800 hover:bg-gray-100"
                 : "text-white hover:bg-white/10"
             }`}
@@ -131,17 +163,22 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile menu */}
+      {/* ── Mobile drawer ─────────────────────────────────────────────────── */}
       <div
         className={`fixed inset-x-0 top-0 z-40 md:hidden transition-all duration-300 ${
-          menuOpen ? "opacity-100 pointer-events-auto translate-y-0" : "opacity-0 pointer-events-none -translate-y-1"
+          menuOpen
+            ? "opacity-100 pointer-events-auto translate-y-0"
+            : "opacity-0 pointer-events-none -translate-y-1"
         }`}
       >
-        <div className={`backdrop-blur-2xl border-b shadow-lg pt-16 ${
-          location.pathname === "/about-us" || location.pathname === "/contact-us"
-            ? "bg-black/40 border-black/10"
-            : "bg-white/20 border-white/20"
-        }`}>
+        <div
+          className={`backdrop-blur-2xl border-b shadow-lg pt-16 ${
+            location.pathname === "/about-us" ||
+            location.pathname === "/contact-us"
+              ? "bg-black/40 border-black/10"
+              : "bg-white/20 border-white/20"
+          }`}
+        >
           <div className="px-4 py-3 flex flex-col gap-0.5">
             {menuItems.map((item) => (
               <button
@@ -159,16 +196,25 @@ export default function Navbar() {
 
             <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-white/20">
               <button
-                onClick={() => { setMenuOpen(false); navigate("/login?mode=signup"); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/login?mode=signup");
+                }}
                 className="w-full py-3 rounded-xl bg-[#F57600] hover:bg-[#e06a00] text-white font-bold text-sm transition-colors shadow-sm"
               >
                 Sign Up — it's free
               </button>
               <button
-                onClick={() => { setMenuOpen(false); navigate("/login?mode=login"); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/login?mode=login");
+                }}
                 className="w-full py-3 rounded-xl text-white/70 font-medium text-sm hover:text-white transition-colors"
               >
-                Already have an account? <span className="text-white font-semibold underline underline-offset-2">Log In</span>
+                Already have an account?{" "}
+                <span className="text-white font-semibold underline underline-offset-2">
+                  Log In
+                </span>
               </button>
             </div>
           </div>
@@ -176,7 +222,10 @@ export default function Navbar() {
       </div>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-30 md:hidden bg-black/10" onClick={() => setMenuOpen(false)} />
+        <div
+          className="fixed inset-0 z-30 md:hidden bg-black/10"
+          onClick={() => setMenuOpen(false)}
+        />
       )}
     </>
   );

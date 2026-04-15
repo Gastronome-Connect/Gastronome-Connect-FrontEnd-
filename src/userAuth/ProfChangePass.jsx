@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { buildApiUrl } from "../utils/api";
 
 const ChangePass = ({ onCancel, onSuccess }) => {
   const [oldPassword, setOldPassword] = useState("");
@@ -10,15 +11,16 @@ const ChangePass = ({ onCancel, onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOldPasswordVisible, setIsOldPasswordVisible] = useState(false);
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
-  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
-
-  // Same regex as backend for consistent validation
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
 
   // Password validation helper function
   const validatePassword = (password) => {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
-  if (!passwordRegex.test(password)) {
+    if (
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/.test(
+        password,
+      )
+    ) {
       return "Password must be at least 8 characters with at least one lowercase letter, one uppercase letter, one number, and one special character.";
     }
     return null;
@@ -29,7 +31,7 @@ const ChangePass = ({ onCancel, onSuccess }) => {
       // Reset messages
       setErrorMessage("");
       setSuccessMessage("");
-      
+
       // Client-side validation
       if (!oldPassword || !newPassword || !confirmPassword) {
         setErrorMessage("All fields are required.");
@@ -40,7 +42,7 @@ const ChangePass = ({ onCancel, onSuccess }) => {
         setErrorMessage("Passwords do not match.");
         return;
       }
-      
+
       const passwordValidationError = validatePassword(newPassword);
       if (passwordValidationError) {
         setErrorMessage(passwordValidationError);
@@ -48,43 +50,42 @@ const ChangePass = ({ onCancel, onSuccess }) => {
       }
 
       setIsLoading(true);
-      
-      const token = localStorage.getItem("token");
+
+      const token = localStorage.getItem("accessToken");
       if (!token) {
         throw new Error("You must be logged in to change your password");
       }
 
-      const response = await fetch("http://localhost:3000/api/update-password", {
-        method: "PUT",
+      const response = await fetch(buildApiUrl("/api/update-password"), {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           oldPassword,
-          newPassword
-        })
+          newPassword,
+        }),
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || "Failed to update password");
       }
-      
+
       // Success
       setSuccessMessage(data.message || "Password updated successfully");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      
+
       // Notify parent component about success
       if (onSuccess) {
         setTimeout(() => {
           onSuccess();
         }, 1500);
       }
-      
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -99,16 +100,23 @@ const ChangePass = ({ onCancel, onSuccess }) => {
       </h2>
 
       {errorMessage && (
-        <div className="text-red-500 text-sm mb-4 p-2 bg-red-50 rounded">{errorMessage}</div>
+        <div className="text-red-500 text-sm mb-4 p-2 bg-red-50 rounded">
+          {errorMessage}
+        </div>
       )}
 
       {successMessage && (
-        <div className="text-green-500 text-sm mb-4 p-2 bg-green-50 rounded">{successMessage}</div>
+        <div className="text-green-500 text-sm mb-4 p-2 bg-green-50 rounded">
+          {successMessage}
+        </div>
       )}
 
       {/* Old Password Input */}
       <div className="relative mb-4">
-        <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="oldPassword"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Current Password
         </label>
         <div className="relative">
@@ -124,7 +132,9 @@ const ChangePass = ({ onCancel, onSuccess }) => {
             type="button"
             onClick={() => setIsOldPasswordVisible(!isOldPasswordVisible)}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-            aria-label={isOldPasswordVisible ? "Hide password" : "Show password"}
+            aria-label={
+              isOldPasswordVisible ? "Hide password" : "Show password"
+            }
           >
             {isOldPasswordVisible ? <FaEye /> : <FaEyeSlash />}
           </button>
@@ -133,7 +143,10 @@ const ChangePass = ({ onCancel, onSuccess }) => {
 
       {/* New Password Input */}
       <div className="mb-4">
-        <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="newPassword"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           New Password
         </label>
         <div className="relative">
@@ -149,7 +162,9 @@ const ChangePass = ({ onCancel, onSuccess }) => {
             type="button"
             onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-            aria-label={isNewPasswordVisible ? "Hide password" : "Show password"}
+            aria-label={
+              isNewPasswordVisible ? "Hide password" : "Show password"
+            }
           >
             {isNewPasswordVisible ? <FaEye /> : <FaEyeSlash />}
           </button>
@@ -158,7 +173,10 @@ const ChangePass = ({ onCancel, onSuccess }) => {
 
       {/* Confirm Password Input */}
       <div className="relative mb-6">
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="confirmPassword"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Confirm New Password
         </label>
         <div className="relative">
@@ -169,16 +187,20 @@ const ChangePass = ({ onCancel, onSuccess }) => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className={`w-full border rounded-md p-2 sm:p-3 focus:outline-none focus:ring-1 focus:ring-green-500 ${
-              confirmPassword && confirmPassword !== newPassword 
-                ? "border-red-300" 
+              confirmPassword && confirmPassword !== newPassword
+                ? "border-red-300"
                 : "border-gray-300"
             }`}
           />
           <button
             type="button"
-            onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+            onClick={() =>
+              setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
+            }
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-            aria-label={isConfirmPasswordVisible ? "Hide password" : "Show password"}
+            aria-label={
+              isConfirmPasswordVisible ? "Hide password" : "Show password"
+            }
           >
             {isConfirmPasswordVisible ? <FaEye /> : <FaEyeSlash />}
           </button>

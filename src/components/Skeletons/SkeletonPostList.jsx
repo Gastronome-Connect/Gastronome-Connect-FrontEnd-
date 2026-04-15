@@ -40,7 +40,7 @@ const SkeletonPostList = ({ count = 3 }) => {
           {/* Actions */}
           <div className="px-4 py-2 border-t border-gray-100 flex justify-around">
             {[1, 2, 3, 4].map((j) => (
-              <SkeletonLoader key={j} width="50px" height="16px" borderRadius="3px" />
+              <SkeletonLoader key={`action-${i}-${j}`} width="50px" height="16px" borderRadius="3px" />
             ))}
           </div>
         </div>

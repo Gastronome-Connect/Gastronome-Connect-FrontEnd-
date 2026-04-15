@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../Landing/NavigationBar";
+import { buildApiUrl } from "../utils/api";
 import Footer from "../components/Footer/Footer";
 import mail from "../components/Assets/MailContact.png";
 import contact from "../components/Assets/PhoneContact.png";
@@ -38,7 +39,7 @@ function ContactUs() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/contact", {
+      const response = await fetch(buildApiUrl("/api/contact"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,33 +1,40 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
-  X, Plus, Play, Image as ImageIcon,
-  Video, ChevronLeft, Pencil,
-  UtensilsCrossed, ChevronDown, ChevronUp,
+  X,
+  Plus,
+  Play,
+  Image as ImageIcon,
+  Video,
+  ChevronLeft,
+  Pencil,
+  UtensilsCrossed,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import MediaCaptionEditor  from "../Editor/MediaCaptionEditor";
+import MediaCaptionEditor from "../Editor/MediaCaptionEditor";
 import DiscardChangesModal from "../Modals/DiscardChangesModal";
-import SaveToast           from "../Toast/SaveToast";
+import SaveToast from "../Toast/SaveToast";
 
-const TITLE_MAX     = 60;
-const STEP_COMPOSE  = "compose";
+const TITLE_MAX = 60;
+const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IngredientEditor — inline, same UI as ComposeStep
 // ─────────────────────────────────────────────────────────────────────────────
 const UNITS = [
-  { value: "tsp",      label: "tsp"      },
-  { value: "tbsp",     label: "tbsp"     },
-  { value: "cup",      label: "cup"      },
-  { value: "ml",       label: "ml"       },
-  { value: "l",        label: "L"        },
-  { value: "g",        label: "g"        },
-  { value: "kg",       label: "kg"       },
-  { value: "oz",       label: "oz"       },
-  { value: "lb",       label: "lb"       },
-  { value: "piece",    label: "pc"       },
-  { value: "pinch",    label: "pinch"    },
+  { value: "tsp", label: "tsp" },
+  { value: "tbsp", label: "tbsp" },
+  { value: "cup", label: "cup" },
+  { value: "ml", label: "ml" },
+  { value: "l", label: "L" },
+  { value: "g", label: "g" },
+  { value: "kg", label: "kg" },
+  { value: "oz", label: "oz" },
+  { value: "lb", label: "lb" },
+  { value: "piece", label: "pc" },
+  { value: "pinch", label: "pinch" },
   { value: "to taste", label: "to taste" },
 ];
 
@@ -43,32 +50,47 @@ const formatMeasure = (ing) => {
 
 const IngredientEditor = ({ ingredients, setIngredients }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [name,      setName]      = useState("");
-  const [amount,    setAmount]    = useState("");
-  const [unit,      setUnit]      = useState("cup");
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [unit, setUnit] = useState("cup");
   const [amountErr, setAmountErr] = useState(false);
 
   const handleAmountChange = (e) => {
     const val = e.target.value;
-    if (/^[\d\s/]*$/.test(val)) { setAmount(val); setAmountErr(false); }
+    if (/^[\d\s/]*$/.test(val)) {
+      setAmount(val);
+      setAmountErr(false);
+    }
   };
 
   const addIngredient = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (amount.trim() && !isValidAmount(amount)) { setAmountErr(true); return; }
+    if (amount.trim() && !isValidAmount(amount)) {
+      setAmountErr(true);
+      return;
+    }
     setIngredients((prev) => [
       ...prev,
-      { id: Math.random().toString(36).substr(2, 9), name: trimmed, amount: amount.trim(), unit },
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        name: trimmed,
+        amount: amount.trim(),
+        unit,
+      },
     ]);
-    setName(""); setAmount("");
+    setName("");
+    setAmount("");
   };
 
   const removeIngredient = (id) =>
     setIngredients((prev) => prev.filter((i) => i.id !== id));
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") { e.preventDefault(); addIngredient(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addIngredient();
+    }
   };
 
   return (
@@ -88,10 +110,11 @@ const IngredientEditor = ({ ingredients, setIngredients }) => {
             {ingredients.length}
           </span>
         )}
-        {collapsed
-          ? <ChevronDown size={13} className="text-orange-400 shrink-0" />
-          : <ChevronUp   size={13} className="text-orange-400 shrink-0" />
-        }
+        {collapsed ? (
+          <ChevronDown size={13} className="text-orange-400 shrink-0" />
+        ) : (
+          <ChevronUp size={13} className="text-orange-400 shrink-0" />
+        )}
       </button>
 
       {!collapsed && (
@@ -113,7 +136,9 @@ const IngredientEditor = ({ ingredients, setIngredients }) => {
                       {formatMeasure(ing)}
                     </span>
                   )}
-                  <span className="text-sm text-gray-700 flex-1 leading-snug">{ing.name}</span>
+                  <span className="text-sm text-gray-700 flex-1 leading-snug">
+                    {ing.name}
+                  </span>
                   <button
                     type="button"
                     onClick={() => removeIngredient(ing.id)}
@@ -155,7 +180,9 @@ const IngredientEditor = ({ ingredients, setIngredients }) => {
                 className="appearance-none text-xs border border-orange-200 rounded-xl pl-2.5 pr-6 py-2 bg-white focus:outline-none focus:border-[#F57600] text-gray-700 cursor-pointer h-[34px]"
               >
                 {UNITS.map((u) => (
-                  <option key={u.value} value={u.value}>{u.label}</option>
+                  <option key={u.value} value={u.value}>
+                    {u.label}
+                  </option>
                 ))}
               </select>
               <ChevronDown
@@ -180,9 +207,11 @@ const IngredientEditor = ({ ingredients, setIngredients }) => {
               onClick={addIngredient}
               disabled={!name.trim()}
               className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all self-start mt-px
-                ${name.trim()
-                  ? "bg-[#F57600] text-white hover:bg-orange-600 shadow-sm"
-                  : "bg-orange-100 text-orange-300 cursor-not-allowed"}`}
+                ${
+                  name.trim()
+                    ? "bg-[#F57600] text-white hover:bg-orange-600 shadow-sm"
+                    : "bg-orange-100 text-orange-300 cursor-not-allowed"
+                }`}
             >
               <Plus size={15} />
             </button>
@@ -204,53 +233,57 @@ const IngredientEditor = ({ ingredients, setIngredients }) => {
 // EditPostModal
 // ─────────────────────────────────────────────────────────────────────────────
 const EditPostModal = ({ post, onSave, onClose }) => {
-  const [step, setStep]             = useState(STEP_COMPOSE);
-  const [title, setTitle]           = useState(post.title   ?? "");
-  const [caption, setCaption]       = useState(post.caption ?? "");
+  const [step, setStep] = useState(STEP_COMPOSE);
+  const [title, setTitle] = useState(post.title ?? "");
+  const [caption, setCaption] = useState(post.caption ?? "");
   const [mediaItems, setMediaItems] = useState(
     (post.mediaItems ?? []).map((m) => ({
       ...m,
-      title:   m.title   ?? "",
+      title: m.title ?? "",
       caption: m.caption ?? "",
-    }))
+    })),
   );
   // ── Initialise ingredients from the existing post ──
   const [ingredients, setIngredients] = useState(
-    Array.isArray(post.ingredients) ? post.ingredients : []
+    Array.isArray(post.ingredients) ? post.ingredients : [],
   );
-  const [showDiscard,      setShowDiscard]      = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const fileInputRef = useRef(null);
 
-  const hasMultiple    = mediaItems.length >= 1;
+  const hasMultiple = mediaItems.length > 1;
   const captionedCount = mediaItems.filter((m) => m.title || m.caption).length;
 
   // ── Change detection — ingredients included ──
-  const originalIngredients = Array.isArray(post.ingredients) ? post.ingredients : [];
-  const ingredientsChanged  =
+  const originalIngredients = Array.isArray(post.ingredients)
+    ? post.ingredients
+    : [];
+  const ingredientsChanged =
     JSON.stringify(ingredients.map(({ id, ...r }) => r)) !==
     JSON.stringify(originalIngredients.map(({ id, ...r }) => r));
 
   const hasChanges =
-    title   !== (post.title   ?? "") ||
+    title !== (post.title ?? "") ||
     caption !== (post.caption ?? "") ||
     mediaItems.length !== (post.mediaItems ?? []).length ||
     ingredientsChanged;
 
-  const attemptClose = () => {
+  const attemptClose = useCallback(() => {
     if (hasChanges) setShowDiscard(true);
     else onClose();
-  };
+  }, [hasChanges, onClose]);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") attemptClose(); };
+    const onKey = (e) => {
+      if (e.key === "Escape") attemptClose();
+    };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "unset";
     };
-  }, [hasChanges]);
+  }, [attemptClose]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -258,11 +291,11 @@ const EditPostModal = ({ post, onSave, onClose }) => {
     setMediaItems((prev) => [
       ...prev,
       ...files.map((file) => ({
-        id:      Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substr(2, 9),
         file,
-        url:     URL.createObjectURL(file),
-        type:    file.type.startsWith("video") ? "video" : "image",
-        title:   "",
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith("video") ? "video" : "image",
+        title: "",
         caption: "",
       })),
     ]);
@@ -280,7 +313,7 @@ const EditPostModal = ({ post, onSave, onClose }) => {
   const handleSave = () => {
     onSave({
       ...post,
-      title:      title.trim() || null,
+      title: title.trim() || null,
       caption,
       mediaItems,
       ingredients, // ── persisted back to post
@@ -295,7 +328,8 @@ const EditPostModal = ({ post, onSave, onClose }) => {
     setSaveToastVisible(true);
   };
 
-  const modalClass = "bg-white rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col";
+  const modalClass =
+    "bg-white rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col";
   const modalStyle = { maxHeight: "calc(100dvh - 32px)" };
 
   /* ── CAPTIONS STEP ── */
@@ -306,8 +340,11 @@ const EditPostModal = ({ post, onSave, onClose }) => {
           className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={attemptClose}
         >
-          <div className={modalClass} style={modalStyle} onClick={(e) => e.stopPropagation()}>
-
+          <div
+            className={modalClass}
+            style={modalStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative px-4 py-3.5 sm:p-5 border-b-2 border-[#F57600] flex items-center justify-center shrink-0">
               <button
                 onClick={() => setStep(STEP_COMPOSE)}
@@ -315,7 +352,9 @@ const EditPostModal = ({ post, onSave, onClose }) => {
               >
                 <ChevronLeft size={18} strokeWidth={2.5} />
               </button>
-              <h2 className="text-base sm:text-xl font-bold text-gray-800">Edit Media</h2>
+              <h2 className="text-base sm:text-xl font-bold text-gray-800">
+                Edit Media
+              </h2>
               <button
                 onClick={attemptClose}
                 className="absolute right-4 sm:right-5 p-1 rounded-full bg-orange-50 text-[#F57600] hover:bg-orange-100 transition-colors"
@@ -328,7 +367,10 @@ const EditPostModal = ({ post, onSave, onClose }) => {
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">
                 Add a title and caption to each photo or video individually.
               </p>
-              <MediaCaptionEditor mediaItems={mediaItems} onCaptionsChange={setMediaItems} />
+              <MediaCaptionEditor
+                mediaItems={mediaItems}
+                onCaptionsChange={setMediaItems}
+              />
             </div>
 
             <div className="px-4 py-3 sm:p-5 border-t border-gray-100 shrink-0 flex gap-2 sm:gap-3">
@@ -367,7 +409,7 @@ const EditPostModal = ({ post, onSave, onClose }) => {
           }}
         />
       </>,
-      document.body
+      document.body,
     );
   }
 
@@ -378,11 +420,16 @@ const EditPostModal = ({ post, onSave, onClose }) => {
         className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
         onClick={attemptClose}
       >
-        <div className={modalClass} style={modalStyle} onClick={(e) => e.stopPropagation()}>
-
+        <div
+          className={modalClass}
+          style={modalStyle}
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="relative px-4 py-3.5 sm:p-5 border-b-2 border-[#F57600] flex justify-center items-center shrink-0">
-            <h2 className="text-base sm:text-xl font-bold text-gray-800">Edit Post</h2>
+            <h2 className="text-base sm:text-xl font-bold text-gray-800">
+              Edit Post
+            </h2>
             <button
               onClick={attemptClose}
               className="absolute right-4 sm:right-5 p-1 rounded-full bg-orange-50 text-[#F57600] hover:bg-orange-100 transition-colors"
@@ -395,10 +442,13 @@ const EditPostModal = ({ post, onSave, onClose }) => {
           <div className="px-4 py-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
             <div className="flex items-center gap-3 mb-4">
               <img
-                src={post.avatar || "https://i.pravatar.cc/100"} alt="User"
+                src={post.avatar || "https://i.pravatar.cc/100"}
+                alt="User"
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-100 object-cover"
               />
-              <span className="font-bold text-sm sm:text-base text-gray-800">{post.author}</span>
+              <span className="font-bold text-sm sm:text-base text-gray-800">
+                {post.author}
+              </span>
             </div>
 
             {/* 1. TITLE */}
@@ -410,7 +460,9 @@ const EditPostModal = ({ post, onSave, onClose }) => {
               className="w-full text-sm sm:text-base font-semibold text-gray-800 placeholder-gray-300 border-none focus:ring-0 outline-none"
             />
             <div className="flex justify-end mb-1">
-              <span className={`text-xs font-medium ${title.length >= TITLE_MAX ? "text-red-400" : "text-gray-300"}`}>
+              <span
+                className={`text-xs font-medium ${title.length >= TITLE_MAX ? "text-red-400" : "text-gray-300"}`}
+              >
                 {title.length}/{TITLE_MAX}
               </span>
             </div>
@@ -418,7 +470,10 @@ const EditPostModal = ({ post, onSave, onClose }) => {
 
             {/* 2. INGREDIENTS ← moved above caption */}
             <div className="mb-4">
-              <IngredientEditor ingredients={ingredients} setIngredients={setIngredients} />
+              <IngredientEditor
+                ingredients={ingredients}
+                setIngredients={setIngredients}
+              />
             </div>
 
             {/* 3. CAPTION / DESCRIPTION ← now below ingredients */}
@@ -445,12 +500,22 @@ const EditPostModal = ({ post, onSave, onClose }) => {
                       <X size={12} />
                     </button>
                     {item.type === "image" ? (
-                      <img src={item.url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={item.url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="relative w-full h-full bg-gray-900">
-                        <video src={item.url} className="w-full h-full object-cover opacity-80" />
+                        <video
+                          src={item.url}
+                          className="w-full h-full object-cover opacity-80"
+                        />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Play size={24} className="text-white fill-white opacity-90" />
+                          <Play
+                            size={24}
+                            className="text-white fill-white opacity-90"
+                          />
                         </div>
                       </div>
                     )}
@@ -473,16 +538,23 @@ const EditPostModal = ({ post, onSave, onClose }) => {
               >
                 <div className="flex gap-3">
                   <ImageIcon size={24} className="text-[#F57600]" />
-                  <Video     size={24} className="text-[#0060A9]" />
+                  <Video size={24} className="text-[#0060A9]" />
                 </div>
-                <span className="text-sm font-semibold">Add photos &amp; videos</span>
-                <span className="text-xs text-gray-300">PNG, JPEG · All video formats</span>
+                <span className="text-sm font-semibold">
+                  Add photos &amp; videos
+                </span>
+                <span className="text-xs text-gray-300">
+                  PNG, JPEG · All video formats
+                </span>
               </button>
             )}
 
             <input
-              type="file" ref={fileInputRef} className="hidden"
-              accept="image/png,image/jpeg,video/*" multiple
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/png,image/jpeg,video/*"
+              multiple
               onChange={handleFileChange}
             />
           </div>
@@ -500,7 +572,9 @@ const EditPostModal = ({ post, onSave, onClose }) => {
                     <Pencil size={11} />
                   </div>
                   <span className="text-xs sm:text-sm font-bold">
-                    {mediaItems.length === 1 ? "Edit title & caption" : "Edit titles & captions per photo"}
+                    {mediaItems.length === 1
+                      ? "Edit title & caption"
+                      : "Edit titles & captions per photo"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -551,7 +625,7 @@ const EditPostModal = ({ post, onSave, onClose }) => {
         }}
       />
     </>,
-    document.body
+    document.body,
   );
 };
 

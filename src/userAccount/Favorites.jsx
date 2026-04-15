@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
+import NavigationBar from "../Landing/NavigationBar";
 import { FaSearch } from "react-icons/fa";
 import HAFPopup from "../components/Popups/HAFPopup";
 import ChangePopup from "../components/Popups/SavePopup";
@@ -8,6 +7,7 @@ import logo from "../components/Assets/FoodAI.png";
 import RecipeCard from "../recipe/RecipeFavorites"; 
 import Loading from "../components/Loading Pages/buffer";
 import Error from "../components/Loading Pages/error";
+import { buildApiUrl } from "../utils/api";
 
 const Favorites = () => {
   const [recipes, setRecipes] = useState([]);
@@ -17,61 +17,64 @@ const Favorites = () => {
   const [changePopup, setChangePopup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [removeRecipe, setRemoveRecipe] = useState(null);
-
-  const { id } = useParams();
-  const [recipe, setRecipe] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    let timeoutId;
-    
-    if (id) {
-      // Set a timeout to trigger error if fetch takes too long
-      timeoutId = setTimeout(() => {
-        setFetchError(true);
-        setLoading(false);
-      }, 5000);
-      
-      fetch(`http://localhost:3000/api/recipes/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          clearTimeout(timeoutId); // Clear the timeout on successful fetch
-          if (data.recipe) {
-            setRecipe(data.recipe);
-          } else {
-            console.error("No recipe data found:", data);
-            setFetchError(true);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch recipe:", err);
-          setFetchError(true);
-        })
-        .finally(() => {
-          setLoading(false);
+    const loadFavorites = async () => {
+      setLoading(true);
+      setFetchError(false);
+
+      try {
+        const token = localStorage.getItem("accessToken");
+        const logsRes = await fetch(buildApiUrl("/api/logs"), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-    }
-    
-    fetch("http://localhost:3000/api/recipes/favorites")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.recipes) {
-          setRecipes(data.recipes);
-        } else {
-          console.error("No favorite recipes found:", data);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch favorites:", err))
-      .finally(() => {
+
+        const logsData = await logsRes.json();
+        const favoriteLogs = Array.isArray(logsData.logs)
+          ? logsData.logs.filter((log) => log.favorite)
+          : [];
+
+        const recipesData = await Promise.all(
+          favoriteLogs.map(async (log) => {
+            try {
+              const recipeRes = await fetch(buildApiUrl(`/api/recipes/${log.recipeId}`));
+              const recipeData = await recipeRes.json();
+              const recipe = recipeData.recipe || {};
+
+              return {
+                _id: recipe._id || log.recipeId,
+                logId: log._id,
+                title: recipe.title || recipe.recipeName || log.recipeName,
+                author: recipe.author || "RecipAI",
+                dateCreated: log.viewedAt,
+                description: recipe.summary || recipe.instructions || "Saved to favorites",
+                image: recipe.image || recipe.recipeImg || "/FoodAI.png",
+              };
+            } catch (err) {
+              return {
+                _id: log.recipeId,
+                logId: log._id,
+                title: log.recipeName,
+                author: "RecipAI",
+                dateCreated: log.viewedAt,
+                description: "Saved to favorites",
+                image: "/FoodAI.png",
+              };
+            }
+          }),
+        );
+
+        setRecipes(recipesData);
+      } catch (err) {
+        console.error("Failed to fetch favorites:", err);
+        setFetchError(true);
+      } finally {
         setLoading(false);
-      });
-      
-    // Clean up function to clear the timeout if component unmounts
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      }
     };
-  }, [id]);
+
+    loadFavorites();
+  }, []);
 
   const recipesPerPage = 6;
   const filteredRecipes = recipes.filter(
@@ -89,22 +92,27 @@ const Favorites = () => {
   const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
 
   const handleRemoveRecipe = (recipe) => {
-    setRemoveRecipe(recipe);
     setShowRemovePopup({
       message: `Are you sure you want to remove ${recipe.title}?`,
-      onConfirm: () => {
-        setRecipes((prevRecipes) => prevRecipes.filter((r) => r._id !== recipe._id));
-        setShowRemovePopup(false);
-        setChangePopup(true);
-        
-        fetch(`http://localhost:3000/api/recipes/${recipe._id}/favorite`, {
-          method: 'DELETE',
-        })
-          .then(res => res.json())
-          .then(data => {
-            console.log("Recipe removed from favorites:", data);
-          })
-          .catch(err => console.error("Error removing recipe from favorites:", err));
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem("accessToken");
+          await fetch(buildApiUrl(`/api/logs/${recipe.logId}`), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ favorite: false }),
+          });
+
+          setRecipes((prevRecipes) => prevRecipes.filter((r) => r.logId !== recipe.logId));
+          setChangePopup(true);
+        } catch (err) {
+          console.error("Error removing recipe from favorites:", err);
+        } finally {
+          setShowRemovePopup(false);
+        }
       },
     });
   };

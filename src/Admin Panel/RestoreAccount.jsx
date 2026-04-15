@@ -1,71 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import RestoreAccountCard from "./RestoreAccountCard";
-
-const MOCK_ACCOUNTS = [
-  {
-    id: 1,
-    name: "Alice Johnson",
-    email: "alice.johnson@example.com",
-    deletedDate: "March 5, 2026",
-    reason: "User requested account deletion",
-    avatar: "",
-    category: "User Request",
-  },
-  {
-    id: 2,
-    name: "Carlos Rivera",
-    email: "carlos.rivera@example.com",
-    deletedDate: "March 7, 2026",
-    reason: "Accidental deletion - restore requested",
-    avatar: "",
-    category: "Accidental",
-  },
-  {
-    id: 3,
-    name: "Emma Wilson",
-    email: "emma.wilson@example.com",
-    deletedDate: "March 8, 2026",
-    reason: "Account compromised - user wants to restore",
-    avatar: "",
-    category: "Compromised",
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    email: "david.kim@example.com",
-    deletedDate: "March 9, 2026",
-    reason: "Changed mind after deletion",
-    avatar: "",
-    category: "User Request",
-  },
-  {
-    id: 5,
-    name: "Sofia Reyes",
-    email: "sofia.reyes@example.com",
-    deletedDate: "March 10, 2026",
-    reason: "Accidental deletion during account settings update",
-    avatar: "",
-    category: "Accidental",
-  },
-];
+import adminApi from "../utils/adminApi";
 
 const CATEGORIES = ["All", "User Request", "Accidental", "Compromised"];
 
 export default function RestoreAccounts() {
-  const [accounts, setAccounts]   = useState(MOCK_ACCOUNTS);
-  const [searchTerm, setSearch]   = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [initialTotal, setInitialTotal] = useState(0);
+  const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleRestore = (id) => setAccounts((a) => a.filter((x) => x.id !== id));
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const response = await adminApi.get("/admin/deleted-accounts");
+        setAccounts(response.data);
+        setInitialTotal(response.data.length);
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to fetch accounts.");
+        setLoading(false);
+      }
+    };
+
+    fetchAccounts();
+  }, []);
+
+  const handleRestore = async (id) => {
+    try {
+      await adminApi.post("/admin/restore-account", { userId: id });
+      setAccounts((a) => a.filter((x) => x.id !== id));
+    } catch (err) {
+      alert("Failed to restore account.");
+    }
+  };
 
   const filtered = accounts.filter((a) => {
-    const matchSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        a.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch =
+      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter = activeFilter === "All" || a.category === activeFilter;
     return matchSearch && matchFilter;
   });
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFCF9] p-8">
@@ -76,17 +64,25 @@ export default function RestoreAccounts() {
       >
         {/* Header */}
         <div className="mb-8">
-          <motion.h1 initial={{ x: -20 }} animate={{ x: 0 }}
-            className="text-4xl font-black text-[#0060A9] mb-2 tracking-tighter uppercase">
+          <motion.h1
+            initial={{ x: -20 }}
+            animate={{ x: 0 }}
+            className="text-4xl font-black text-[#0060A9] mb-2 tracking-tighter uppercase"
+          >
             Restore Accounts
           </motion.h1>
-          <p className="text-gray-500 font-medium">Recover deleted accounts and restore user data</p>
+          <p className="text-gray-500 font-medium">
+            Recover deleted accounts and restore user data
+          </p>
         </div>
 
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by name or email..."
@@ -104,9 +100,11 @@ export default function RestoreAccounts() {
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all
-                ${activeFilter === cat
-                  ? "bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white shadow-sm shadow-blue-200"
-                  : "bg-white border border-gray-200 text-gray-500 hover:border-[#0060A9] hover:text-[#0060A9]"}`}
+                ${
+                  activeFilter === cat
+                    ? "bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white shadow-sm shadow-blue-200"
+                    : "bg-white border border-gray-200 text-gray-500 hover:border-[#0060A9] hover:text-[#0060A9]"
+                }`}
             >
               {cat}
               {cat !== "All" && (
@@ -121,16 +119,28 @@ export default function RestoreAccounts() {
         {/* Stats Bar */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Restore Requests</p>
-            <p className="text-2xl font-black text-[#F57600]">{accounts.length}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Restore Requests
+            </p>
+            <p className="text-2xl font-black text-[#F57600]">
+              {accounts.length}
+            </p>
           </div>
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Showing</p>
-            <p className="text-2xl font-black text-[#0060A9]">{filtered.length}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Showing
+            </p>
+            <p className="text-2xl font-black text-[#0060A9]">
+              {filtered.length}
+            </p>
           </div>
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Restored Today</p>
-            <p className="text-2xl font-black text-green-600">{MOCK_ACCOUNTS.length - accounts.length}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Restored Today
+            </p>
+            <p className="text-2xl font-black text-green-600">
+              {initialTotal - accounts.length}
+            </p>
           </div>
         </div>
 
