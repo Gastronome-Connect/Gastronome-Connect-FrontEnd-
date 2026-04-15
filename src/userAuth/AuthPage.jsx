@@ -7,7 +7,8 @@ import BackgroundCarousel from "../components/Carousel Background/BackgroundCaro
 import LogoImage from "../components/Assets/Gastro.png";
 import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
-import { apiFetch } from "../utils/api";
+import { apiFetch, setAccessToken } from "../utils/api";
+import { authAPI } from "../utils/apiService";
 
 const FloatingInput = ({
   type,
@@ -315,26 +316,17 @@ const AuthPage = () => {
     if (isEmailValid && isPasswordValid) {
       try {
         const isAdminLogin = !loginEmail.trim().includes("@");
-        const response = await apiFetch(
-          isAdminLogin ? "/api/admin/login" : "/api/login",
-          {
-            method: "POST",
-            body: JSON.stringify(
-              isAdminLogin
-                ? { username: loginEmail.trim(), password: loginPassword }
-                : { email: loginEmail.trim(), password: loginPassword },
-            ),
-          },
-        );
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "");
+        const data = isAdminLogin
+          ? await authAPI.login(loginEmail.trim(), loginPassword)
+          : await authAPI.login(loginEmail.trim(), loginPassword);
+        
         if (isAdminLogin) {
           localStorage.setItem("adminAccessToken", data.accessToken);
           localStorage.removeItem("accessToken");
           localStorage.removeItem("userId");
           navigate("/admin");
         } else {
-          localStorage.setItem("accessToken", data.accessToken);
+          setAccessToken(data.accessToken);
           localStorage.removeItem("adminAccessToken");
           if (data?.user?._id) {
             localStorage.setItem("userId", data.user._id);
@@ -482,12 +474,8 @@ const AuthPage = () => {
         setSignupEmailError(validateData.message || "Email validation failed");
         setSignupLoading(false);
         return;
-      }
-
-      sessionStorage.setItem("pendingEmail", signupEmail);
-      sessionStorage.setItem("sourceFlow", "signup");
-      sessionStorage.setItem(
-        "tempSignupData",
+      }Data = await authAPI.validateEmail(signupEmail);
+      if (!validateData.valid
         JSON.stringify({
           username: signupUsername.trim(),
           email: signupEmail,

@@ -10,7 +10,7 @@ import PauseOrPlay from "../components/Assets/PauseOrPlay.png";
 import Backward from "../components/Assets/Backward.png";
 import RecipePopup from "../components/Popups/RecipePopup";
 import Buffer from "../components/Loading Pages/buffer";
-import { buildApiUrl } from "../utils/api";
+import { recipeAPI, logAPI } from "../utils/apiService";
 
 function ViewRecipe() {
   const { id } = useParams();
@@ -23,16 +23,19 @@ function ViewRecipe() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(buildApiUrl(`/api/recipes/${id}`))
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchRecipe = async () => {
+      try {
+        const data = await recipeAPI.getRecipe(id);
         if (data.recipe) {
           setRecipe(data.recipe);
         } else {
           console.error("No recipe data found:", data);
         }
-      })
-      .catch((err) => console.error("Failed to fetch recipe:", err));
+      } catch (err) {
+        console.error("Failed to fetch recipe:", err);
+      }
+    };
+    fetchRecipe();
   }, [id]);
 
   useEffect(() => {
@@ -49,59 +52,24 @@ function ViewRecipe() {
 
   const handleRecipeComplete = async () => {
     try {
-      // Show modal first for better user experience
-      setIsModalVisible(true);
-      
-      const token = localStorage.getItem("accessToken");
-
-      const saveRes = await fetch(buildApiUrl("/api/recipes/saveRecipe"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          spoonacularId: recipe.id,
-          title: recipe.title,
-        }),
+      // ShorecipeData = await recipeAPI.saveRecipe({
+        spoonacularId: recipe.id,
+        title: recipe.title,
       });
 
-      if (!saveRes.ok) {
-        console.error("Save recipe failed with status:", saveRes.status);
-        return;
-      }
-
-      const saveData = await saveRes.json();
-      
-      // Check if we have a recipe ID to work with
-      const recipeId = saveData?.newRecipe?.id || saveData?.existingRecipe?.id || 
-                       saveData?.newRecipe?._id || saveData?.existingRecipe?._id;
+      const recipeId = recipeData?.newRecipe?.id || recipeData?.existingRecipe?.id || 
+                       recipeData?.newRecipe?._id || recipeData?.existingRecipe?._id;
       
       if (!recipeId) {
-        console.error("No recipe ID found in response:", saveData);
+        console.error("No recipe ID found in response:", recipeData);
         return;
       }
 
-      const logRes = await fetch(buildApiUrl("/api/logs"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          recipeId: recipeId,
-          recipeName: recipe.title,
-        }),
+      const logData = await logAPI.createLog({
+        recipeId: recipeId,
+        recipeName: recipe.title,
       });
-
-      if (!logRes.ok) {
-        console.error("Log creation failed with status:", logRes.status);
-        return;
-      }
-
-      const logData = await logRes.json();
       
-      // Handle both potential ID formats
       const logIdValue = logData?.log?.id || logData?.log?._id;
       
       if (logIdValue) {
@@ -109,6 +77,8 @@ function ViewRecipe() {
       } else {
         console.error("No log ID found in response:", logData);
       }
+    } catch (err) {
+      console.error("Error saving recipe or logging:", err);
     } catch (err) {
       console.error("Error saving recipe or logging:", err);
       // Keep modal visible even if there's an error
@@ -156,19 +126,7 @@ function ViewRecipe() {
       if (speechSynthesis.paused || !isSpeaking) return;
       const nextIndex = index + 1;
       setCurrentStepIndex(nextIndex);
-      speakAllStepsFrom(nextIndex);
-    };
-
-    speechSynthesis.speak(utterance);
-    setIsSpeaking(true);
-  };
-
-  const handlePlayPause = () => {
-    if (speechSynthesis.speaking && !speechSynthesis.paused) {
-      speechSynthesis.pause();
-      setIsSpeaking(false);
-    } else if (speechSynthesis.paused) {
-      speechSynthesis.resume();
+      await logAPI.updateLog(logId, { [field]: true });peechSynthesis.resume();
       setIsSpeaking(true);
     } else {
       speechSynthesis.cancel();

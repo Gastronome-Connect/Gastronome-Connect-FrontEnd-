@@ -10,7 +10,7 @@ import {
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import StatCard from "./StatCard";
-import adminApi from "../utils/adminApi";
+import { adminAPI } from "../utils/apiService";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -24,10 +24,11 @@ export default function AdminDashboard() {
       try {
         const [statsResponse, timeoutsResponse, deletedResponse] =
           await Promise.all([
-            adminApi.get("/admin/dashboard/stats"),
-            adminApi.get("/admin/timeout-users"),
-            adminApi.get("/admin/deleted-accounts"),
+            adminAPI.getDashboardStats(),
+            adminAPI.getTimeoutUsers(),
+            adminAPI.getDeletedAccounts(),
           ]);
+        
         const data = statsResponse.data;
         setStats([
           {
@@ -80,6 +81,7 @@ export default function AdminDashboard() {
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch dashboard statistics.");
+        console.error(err);
         setLoading(false);
       }
     };
