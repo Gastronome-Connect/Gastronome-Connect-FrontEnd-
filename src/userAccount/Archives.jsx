@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import NavigationBar from "../Landing/NavigationBar";
 import { FaSearch } from "react-icons/fa";
 import HAFPopup from "../components/Popups/HAFPopup";
@@ -8,69 +7,74 @@ import logo from "../components/Assets/FoodAI.png";
 import RecipeCard from "../recipe/RecipeArchive";
 import Loading from "../components/Loading Pages/buffer";
 import Error from "../components/Loading Pages/error";
+import { buildApiUrl } from "../utils/api";
 
 const Archives = () => {
-  const { id } = useParams();
-  const [recipe, setRecipe] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRemovePopup, setShowRemovePopup] = useState(false);
-  const [removeRecipe, setRemoveRecipe] = useState(null);
   const [changePopup, setChangePopup] = useState(false);
   const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    let timeoutId;
+    const loadArchives = async () => {
+      setLoading(true);
+      setFetchError(false);
 
-    if (id) {
-      // Set a timeout to trigger error if fetch takes too long
-      timeoutId = setTimeout(() => {
-        setFetchError(true);
-        setLoading(false);
-      }, 5000);
-
-      fetch(`http://localhost:3000/api/recipes/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          clearTimeout(timeoutId); // Clear the timeout on successful fetch
-          if (data.recipe) {
-            setRecipe(data.recipe);
-          } else {
-            console.error("No recipe data found:", data);
-            setFetchError(true);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch recipe:", err);
-          setFetchError(true);
-        })
-        .finally(() => {
-          setLoading(false);
+      try {
+        const token = localStorage.getItem("accessToken");
+        const logsRes = await fetch(buildApiUrl("/api/logs"), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-    }
 
-    fetch("http://localhost:3000/api/recipes/archives")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.recipes) {
-          setRecipes(data.recipes);
-        } else {
-          console.error("No archive recipes found:", data);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch archives:", err))
-      .finally(() => {
+        const logsData = await logsRes.json();
+        const archivedLogs = Array.isArray(logsData.logs)
+          ? logsData.logs.filter((log) => log.archived)
+          : [];
+
+        const recipesData = await Promise.all(
+          archivedLogs.map(async (log) => {
+            try {
+              const recipeRes = await fetch(buildApiUrl(`/api/recipes/${log.recipeId}`));
+              const recipeData = await recipeRes.json();
+              const recipe = recipeData.recipe || {};
+
+              return {
+                _id: recipe._id || log.recipeId,
+                logId: log._id,
+                title: recipe.title || recipe.recipeName || log.recipeName,
+                author: recipe.author || "RecipAI",
+                dateCreated: log.viewedAt,
+                description: recipe.summary || recipe.instructions || "Archived recipe",
+                image: recipe.image || recipe.recipeImg || "/FoodAI.png",
+              };
+            } catch (err) {
+              return {
+                _id: log.recipeId,
+                logId: log._id,
+                title: log.recipeName,
+                author: "RecipAI",
+                dateCreated: log.viewedAt,
+                description: "Archived recipe",
+                image: "/FoodAI.png",
+              };
+            }
+          }),
+        );
+
+        setRecipes(recipesData);
+      } catch (err) {
+        console.error("Failed to fetch archives:", err);
+        setFetchError(true);
+      } finally {
         setLoading(false);
-      });
-
-    // Clean up function to clear the timeout if component unmounts
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      }
     };
-  }, [id]);
+
+    loadArchives();
+  }, []);
 
   const recipesPerPage = 6;
   const filteredRecipes = recipes.filter(
@@ -89,26 +93,29 @@ const Archives = () => {
   const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
 
   const handleRemoveRecipe = (recipe) => {
-    setRemoveRecipe(recipe);
     setShowRemovePopup({
       message: `Are you sure you want to remove ${recipe.title}?`,
-      onConfirm: () => {
-        setRecipes((prevRecipes) =>
-          prevRecipes.filter((r) => r._id !== recipe._id),
-        );
-        setShowRemovePopup(false);
-        setChangePopup(true);
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem("accessToken");
+          await fetch(buildApiUrl(`/api/logs/${recipe.logId}`), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ archived: false }),
+          });
 
-        fetch(`http://localhost:3000/api/recipes/${recipe._id}/archive`, {
-          method: "DELETE",
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("Recipe removed from archives:", data);
-          })
-          .catch((err) =>
-            console.error("Error removing recipe from archives:", err),
+          setRecipes((prevRecipes) =>
+            prevRecipes.filter((r) => r.logId !== recipe.logId),
           );
+          setChangePopup(true);
+        } catch (err) {
+          console.error("Error removing recipe from archives:", err);
+        } finally {
+          setShowRemovePopup(false);
+        }
       },
     });
   };

@@ -5,7 +5,7 @@ import { FaChevronDown, FaChevronUp, FaTimes } from "react-icons/fa";
 import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
-import PrefPopup from "../components/Popups/PrefPopup";
+import { buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -158,7 +158,6 @@ const Allergens = () => {
   const [allergens, setAllergens] = useState([]);
   const [dislikes, setDislikes] = useState([]);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [showPopup, setShowPopup] = useState(false);
   const [optionsData, setOptionsData] = useState({
     allergens: [],
     dislikes: [],
@@ -174,15 +173,13 @@ const Allergens = () => {
 
   const fetchOptions = async () => {
     try {
-      const allergensResponse = await fetch(
-        "http://localhost:3000/api/allergens",
-      );
+      const allergensResponse = await fetch(buildApiUrl("/api/allergens"));
       const allergensData = allergensResponse.ok
         ? await allergensResponse.json()
         : [];
 
       const dislikesResponse = await fetch(
-        "http://localhost:3000/api/options?type=dislikes",
+        buildApiUrl("/api/options?type=dislikes"),
       );
       const dislikesData = dislikesResponse.ok
         ? await dislikesResponse.json()
@@ -206,14 +203,14 @@ const Allergens = () => {
     const token = localStorage.getItem("accessToken");
     const userId = localStorage.getItem("userId");
     if (!token || !userId) {
-      localStorage.setItem(
+      sessionStorage.setItem(
         "tempDislikes",
         JSON.stringify({ dislikes, allergens }),
       );
       return;
     }
     try {
-      await fetch(`http://localhost:3000/api/user/preferences/${userId}`, {
+      await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -223,6 +220,90 @@ const Allergens = () => {
       });
     } catch (error) {
       console.error("Error saving dislikes:", error.message);
+    }
+  };
+
+  const handleCompleteSignup = async () => {
+    try {
+      const signupDataStr = sessionStorage.getItem("tempSignupData");
+      if (!signupDataStr) {
+        console.error("No signup data found in sessionStorage");
+        return;
+      }
+
+      const signupData = JSON.parse(signupDataStr);
+      const { email, password, confirmPassword, username } = signupData;
+
+      const registerResponse = await fetch(buildApiUrl("/api/register"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username || undefined,
+          email,
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        console.error("Account creation failed:", registerData.message);
+        return;
+      }
+
+      localStorage.setItem("accessToken", registerData.accessToken);
+      localStorage.setItem("refreshToken", registerData.refreshToken);
+      if (registerData.userId) {
+        localStorage.setItem("userId", registerData.userId);
+      }
+
+      const token = registerData.accessToken;
+      const userId = registerData.userId;
+
+      const tempPreferences = sessionStorage.getItem("tempPreferences");
+      if (tempPreferences) {
+        try {
+          const { flavors, cookingStyles } = JSON.parse(tempPreferences);
+          await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              preferences: { flavors, techniques: cookingStyles },
+            }),
+          });
+          sessionStorage.removeItem("tempPreferences");
+        } catch (error) {
+          console.error("Error syncing preferences:", error.message);
+        }
+      }
+
+      try {
+        await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ dislikes, allergies: allergens }),
+        });
+      } catch (error) {
+        console.error("Error saving dislikes:", error.message);
+      }
+
+      sessionStorage.removeItem("tempSignupData");
+      sessionStorage.removeItem("tempDislikes");
+      sessionStorage.removeItem("sourceFlow");
+      sessionStorage.removeItem("pendingEmail");
+
+      navigate("/feed", { replace: true });
+    } catch (error) {
+      console.error("Error completing signup:", error);
     }
   };
 
@@ -333,10 +414,7 @@ const Allergens = () => {
                 )}
 
                 <button
-                  onClick={async () => {
-                    await saveDislikes();
-                    setShowPopup(true);
-                  }}
+                  onClick={handleCompleteSignup}
                   disabled={isDoneDisabled}
                   className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
                     isDoneDisabled
@@ -349,7 +427,7 @@ const Allergens = () => {
 
                 <button
                   className="w-full mt-3 px-4 py-2.5 text-sm font-sfpro font-bold border-2 border-[#0060A9] text-[#0060A9] rounded-lg bg-white hover:bg-gray-50 outline-none transition-all"
-                  onClick={() => setShowPopup(true)}
+                  onClick={handleCompleteSignup}
                 >
                   Skip for Now
                 </button>
@@ -370,8 +448,6 @@ const Allergens = () => {
           </div>
         </div>
       </div>
-
-      <PrefPopup isOpen={showPopup} onContinue={() => navigate("/login")} />
     </div>
   );
 };

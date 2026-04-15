@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LogoImage from "../components/Assets/Gastro.png";
 import BackgroundSlider from "../components/Carousel Background/BackgroundCarousel";
 import ResendPopup from "../components/Popups/ResendPopup";
+import { buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -22,6 +23,7 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [showResendPopup, setShowResendPopup] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [mobile, setMobile] = useState(isMobile());
 
   const navigate = useNavigate();
@@ -33,58 +35,118 @@ const ForgotPassword = () => {
   }, []);
 
   const validateEmail = () => {
-    if (!email) { setEmailError("Field can't be empty"); return false; }
+    if (!email) {
+      setEmailError("Field can't be empty");
+      return false;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { setEmailError("Invalid email format"); return false; }
-    setEmailError(""); return true;
+    if (!emailRegex.test(email)) {
+      setEmailError("Invalid email format");
+      return false;
+    }
+    setEmailError("");
+    return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitError("");
     if (!validateEmail()) return;
-    localStorage.setItem("resetPasswordEmail", email);
-    localStorage.setItem("sourceFlow", "forgotpassword");
-    setShowResendPopup(true);
+
+    try {
+      const response = await fetch(buildApiUrl("/api/forgot-password"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send reset link");
+      }
+
+      setShowResendPopup(true);
+    } catch (error) {
+      setSubmitError(error.message || "Failed to send reset link");
+    }
   };
 
   const handleConfirmRedirect = () => {
     setShowResendPopup(false);
-    navigate("/verification");
+    navigate("/login");
   };
 
   const panelStyle = mobile
-    ? { width: "calc(100vw - 32px)", maxWidth: "480px", height: "auto", minHeight: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
-    : { width: "min(480px, calc(100vw - 48px))", height: "calc(100vh - 48px)", marginLeft: "0px", transform: "translateX(60px)" };
+    ? {
+        width: "calc(100vw - 32px)",
+        maxWidth: "480px",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
+        maxHeight: "calc(100vh - 32px)",
+      }
+    : {
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+        marginLeft: "0px",
+        transform: "translateX(60px)",
+      };
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden">
       <style>{STYLES}</style>
       <BackgroundSlider />
 
-      <div className={mobile ? "absolute inset-0 flex items-center justify-center pointer-events-none" : "absolute inset-0 flex items-center pointer-events-none"}>
+      <div
+        className={
+          mobile
+            ? "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center pointer-events-none"
+        }
+      >
         <div
           className="pointer-events-auto bg-white rounded-3xl shadow-2xl overflow-hidden"
           style={panelStyle}
         >
           <div className="overflow-y-auto h-full">
-            <div className="content-in h-full" style={{ willChange: "opacity, transform" }}>
+            <div
+              className="content-in h-full"
+              style={{ willChange: "opacity, transform" }}
+            >
               <div
                 className="relative flex flex-col justify-center px-6 sm:px-8 py-8"
-                style={{ minHeight: mobile ? "calc(100vh - 32px)" : "calc(100vh - 48px)" }}
+                style={{
+                  minHeight: mobile
+                    ? "calc(100vh - 32px)"
+                    : "calc(100vh - 48px)",
+                }}
               >
                 {/* Logo */}
                 <div className="flex justify-center mb-2">
-                  <img src={LogoImage} alt="Gastronome Connect Logo" className="h-16 sm:h-20 w-auto object-contain" />
+                  <img
+                    src={LogoImage}
+                    alt="Gastronome Connect Logo"
+                    className="h-16 sm:h-20 w-auto object-contain"
+                  />
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-sfpro font-bold text-center text-black mb-1">
                   FORGOT{" "}
-                  <span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">P</span>
+                  <span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">
+                    P
+                  </span>
                   ASSWORD
                 </h1>
                 <p className="text-center text-gray-500 text-sm mb-6">
                   Enter your email to receive a reset code
                 </p>
+
+                {submitError && (
+                  <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {submitError}
+                  </div>
+                )}
 
                 <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                   <div>
@@ -109,7 +171,9 @@ const ForgotPassword = () => {
                         Email address
                       </label>
                     </div>
-                    {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
+                    {emailError && (
+                      <p className="text-red-500 text-xs mt-1">{emailError}</p>
+                    )}
                   </div>
 
                   <button
@@ -122,7 +186,7 @@ const ForgotPassword = () => {
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/login", { replace: true })}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"
                   >
                     Back to Login
@@ -134,7 +198,10 @@ const ForgotPassword = () => {
         </div>
       </div>
 
-      {showResendPopup && <ResendPopup onContinue={handleConfirmRedirect} />}
+      <ResendPopup
+        isOpen={showResendPopup}
+        onContinue={handleConfirmRedirect}
+      />
     </div>
   );
 };

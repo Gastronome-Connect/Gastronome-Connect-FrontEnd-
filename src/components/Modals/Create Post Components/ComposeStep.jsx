@@ -1,11 +1,5 @@
-/**
- * ComposeStep — UI matches EditPostModal exactly.
- * Layout order: Title → Ingredients → Description → Media grid
- *
- * Drop-in replacement. All props are identical to the original.
- */
 import { X, Plus, Play, Image as ImageIcon, Video, Pencil, ChevronLeft } from "lucide-react";
-import IngredientInput from "../IngredientsInput"; // adjust path as needed
+import IngredientInput from "../IngredientsInput";
 
 const TITLE_MAX = 60;
 
@@ -35,7 +29,7 @@ export default function ComposeStep({
       style={{ maxHeight: "calc(100dvh - 32px)" }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* ── Header — matches EditPostModal exactly ── */}
+      {/* Header */}
       <div className="relative px-4 py-3.5 sm:p-5 border-b-2 border-[#F57600] flex justify-center items-center shrink-0">
         <h2 className="text-base sm:text-xl font-bold text-gray-800">Create Post</h2>
         <button
@@ -46,7 +40,7 @@ export default function ComposeStep({
         </button>
       </div>
 
-      {/* ── Scrollable body ── */}
+      {/* Scrollable body */}
       <div className="px-4 py-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
 
         {/* Avatar + username */}
@@ -57,7 +51,7 @@ export default function ComposeStep({
           <span className="font-bold text-sm sm:text-base text-gray-800">{userName}</span>
         </div>
 
-        {/* ── 1. TITLE ── */}
+        {/* 1. Title */}
         <input
           type="text"
           value={title}
@@ -72,7 +66,7 @@ export default function ComposeStep({
         </div>
         <div className="border-b border-gray-100 mb-3" />
 
-        {/* ── 2. INGREDIENTS ── */}
+        {/* 2. Ingredients */}
         <div className="mb-4">
           <IngredientInput
             ingredients={ingredients}
@@ -82,7 +76,7 @@ export default function ComposeStep({
           />
         </div>
 
-        {/* ── 3. DESCRIPTION / caption ── */}
+        {/* 3. Description */}
         <textarea
           value={postText}
           onChange={(e) => setPostText(e.target.value)}
@@ -90,7 +84,7 @@ export default function ComposeStep({
           className="w-full min-h-[70px] sm:min-h-[90px] text-sm text-gray-700 placeholder-gray-400 border-none focus:ring-0 resize-none outline-none mb-4"
         />
 
-        {/* ── 4. MEDIA — 3-col grid with "Add More" tile ── */}
+        {/* 4. Media */}
         {mediaItems.length > 0 ? (
           <div className="grid grid-cols-3 gap-2 mb-4">
             {mediaItems.map((item) => (
@@ -130,7 +124,6 @@ export default function ComposeStep({
             </button>
           </div>
         ) : (
-          /* Empty-state upload zone */
           <button
             type="button"
             onClick={onAddMedia}
@@ -158,11 +151,11 @@ export default function ComposeStep({
         />
       </div>
 
-      {/* ── Footer — matches EditPostModal exactly ── */}
+      {/* Footer */}
       <div className="px-4 py-3 sm:p-5 border-t border-gray-100 shrink-0 flex flex-col gap-2 sm:gap-3">
 
-        {/* "Edit titles & captions" pill — shown whenever media is present */}
-        {mediaItems.length > 0 && (
+        {/* Edit titles & captions — only shown when multiple media uploaded */}
+        {hasMultiple && (
           <button
             onClick={onEditCaptions}
             className="w-full flex items-center justify-between bg-gradient-to-r from-[#F57600] to-[#F0AE35]
@@ -174,9 +167,7 @@ export default function ComposeStep({
                 <Pencil size={11} />
               </div>
               <span className="text-xs sm:text-sm font-bold">
-                {mediaItems.length === 1
-                  ? "Edit title & caption"
-                  : "Edit titles & captions per photo"}
+                Edit titles &amp; captions per photo
               </span>
             </div>
             <div className="flex items-center gap-2">

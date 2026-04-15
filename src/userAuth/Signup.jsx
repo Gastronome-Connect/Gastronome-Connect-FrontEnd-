@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { buildApiUrl } from "../utils/api";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
@@ -80,7 +81,7 @@ const SignUp = () => {
   };
 
   const handleVerify = () => {
-    navigate("/verification");
+    navigate("/verification", { replace: true });
   };
 
   const handleRegister = async (e) => {
@@ -98,59 +99,38 @@ const SignUp = () => {
     }
 
     try {
-      console.log("Validating email:", email);
-      const validateResponse = await fetch(
-        "http://localhost:3000/api/validate",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
+      const validateResponse = await fetch(buildApiUrl("/api/validate"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ email }),
+      });
 
       const validateData = await validateResponse.json();
-      console.log("Email validation response:", validateData);
-
       if (!validateResponse.ok) {
         setEmailError(validateData.message || "Email validation failed");
         setLoading(false);
         return;
       }
 
-      const response = await fetch("http://localhost:3000/api/register", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, confirmPassword }),
-      });
+      sessionStorage.setItem(
+        "tempSignupData",
+        JSON.stringify({ email, password, confirmPassword }),
+      );
+      sessionStorage.setItem("pendingEmail", email);
+      sessionStorage.setItem("sourceFlow", "signup");
 
-      const data = await response.json();
-      console.log("Registration response:", data);
-
-      if (!response.ok) {
-        if (data.message && data.message.toLowerCase().includes("email")) {
-          setEmailError(data.message);
-        } else {
-          setError(data.message || "Sign Up Failed");
-        }
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("pendingEmail", email);
-
-      navigate("/verification");
+      navigate("/verification", { replace: true });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Sign up preparation error:", error);
       setError(error.message || "An unexpected error occurred");
       setLoading(false);
+      return;
     }
+
+    setLoading(false);
   };
 
   return (
@@ -223,12 +203,13 @@ const SignUp = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       onBlur={validatePassword}
                       placeholder=" "
+                      autoComplete="new-password"
                       className={`peer block w-full px-3 py-3 border ${
                         passwordError ? "border-red-600" : "border-gray-700"
                       } rounded-md shadow-sm focus:outline-none focus:ring-[#00B4FA] focus:border-[#0060A9] text-xs sm:text-sm md:text-base bg-transparent`}
                     />
                     <label
-                      htmlFor="password"
+                      htmlFor="confirm-password"
                       className="absolute left-3 top-3 px-1 transition-all duration-200 cursor-text text-gray-500 text-xs sm:text-sm md:text-base peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:text-[#0060A9] peer-focus:bg-white peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:bg-white"
                     >
                       Password
@@ -262,6 +243,7 @@ const SignUp = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       onBlur={validateConfirmPassword}
                       placeholder=" "
+                      autoComplete="new-password"
                       className={`peer block w-full px-3 py-3 border ${
                         confirmPasswordError
                           ? "border-red-600"
@@ -313,7 +295,7 @@ const SignUp = () => {
                       Already have an account?
                     </p>
                     <button
-                      onClick={() => navigate("/login")}
+                      onClick={() => navigate("/login", { replace: true })}
                       className="text-blue-600 text-xs sm:text-sm md:text-base font-medium ml-2 hover:underline"
                     >
                       Log in

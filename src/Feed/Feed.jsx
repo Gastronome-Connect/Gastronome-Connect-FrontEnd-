@@ -11,6 +11,7 @@ import UploadProgressToast from "../components/Toast/UploadProgressToast";
 import UploadFailedModal   from "../components/Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../Hooks/UseUpload";
 import { SkeletonPostList } from "../components/Skeletons";
+import { buildApiUrl } from "../utils/api";
 
 const PAGE_SIZE = 10;
 
@@ -83,7 +84,7 @@ export default function GCFeed() {
     if (isFetching) return;
     setIsFetching(true);
     try {
-      const res  = await fetch(`http://localhost:3000/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`);
+      const res  = await fetch(buildApiUrl(`/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`));
       const data = await res.json();
       const incoming  = Array.isArray(data) ? data : (data.posts ?? []);
       const morePages = Array.isArray(data) ? incoming.length === PAGE_SIZE : (data.hasMore ?? false);

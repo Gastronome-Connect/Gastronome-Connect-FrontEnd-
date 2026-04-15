@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
+import NavigationBar from "../Landing/NavigationBar";
 import RecipeBook from "../components/Assets/RecipeBook.png";
 import AuthorsIcon from "../components/Assets/UserIcon.png";
 import Fork from "../components/Assets/Fork.png";
@@ -10,6 +10,7 @@ import PauseOrPlay from "../components/Assets/PauseOrPlay.png";
 import Backward from "../components/Assets/Backward.png";
 import RecipePopup from "../components/Popups/RecipePopup";
 import Buffer from "../components/Loading Pages/buffer";
+import { buildApiUrl } from "../utils/api";
 
 function ViewRecipe() {
   const { id } = useParams();
@@ -22,7 +23,7 @@ function ViewRecipe() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`http://localhost:3000/api/recipes/${id}`)
+    fetch(buildApiUrl(`/api/recipes/${id}`))
       .then((res) => res.json())
       .then((data) => {
         if (data.recipe) {
@@ -51,9 +52,9 @@ function ViewRecipe() {
       // Show modal first for better user experience
       setIsModalVisible(true);
       
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
 
-      const saveRes = await fetch("http://localhost:3000/api/recipes/saveRecipe", {
+      const saveRes = await fetch(buildApiUrl("/api/recipes/saveRecipe"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +82,7 @@ function ViewRecipe() {
         return;
       }
 
-      const logRes = await fetch("http://localhost:3000/api/logs", {
+      const logRes = await fetch(buildApiUrl("/api/logs"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -122,8 +123,8 @@ function ViewRecipe() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const updateRes = await fetch(`http://localhost:3000/api/logs/${logId}`, {
+      const token = localStorage.getItem("accessToken");
+      const updateRes = await fetch(buildApiUrl(`/api/logs/${logId}`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import { ShieldCheck, Monitor } from "lucide-react";
 
@@ -16,7 +16,8 @@ function MobileBlock() {
         Desktop Only
       </h1>
       <p className="text-blue-100 text-sm font-medium leading-relaxed max-w-xs">
-        The Admin Panel is only accessible on desktop. Please switch to a larger screen to continue.
+        The Admin Panel is only accessible on desktop. Please switch to a larger
+        screen to continue.
       </p>
       <div className="mt-8 px-5 py-2.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-widest">
         Gastronome · Admin Panel
@@ -26,7 +27,13 @@ function MobileBlock() {
 }
 
 export default function AdminLayout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const token =
+    localStorage.getItem("adminAccessToken") ||
+    localStorage.getItem("accessToken");
+
+  if (!token) {
+    return <Navigate to="/401" replace />;
+  }
 
   return (
     <>
@@ -37,7 +44,7 @@ export default function AdminLayout() {
 
       {/* Full admin UI — only rendered on lg+ */}
       <div className="hidden lg:flex min-h-screen bg-[#FDFCF9]">
-        <AdminSidebar onCollapse={setCollapsed} />
+        <AdminSidebar onCollapse={() => {}} />
         <main className="flex-1 overflow-auto" style={{ minWidth: 0 }}>
           <Outlet />
         </main>

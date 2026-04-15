@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MoreHorizontal, Trash2, EyeOff, Eye } from "lucide-react";
 
+/* ── All types route to /feed for now.
+      When you're ready to deep-link, just update the value per type. ── */
 const ROUTE_MAP = {
-  like: "/feed", conversation: "/feed", follow: "/profile", repost: "/feed",
+  like:         "/feed",
+  conversation: "/feed",
+  follow:       "/feed",
+  repost:       "/feed",
 };
 
 const TYPE_CONFIG = {
@@ -83,6 +88,14 @@ export default function NotificationCard({ notification, isHidden = false, onDel
   const config        = TYPE_CONFIG[type] || TYPE_CONFIG.like;
   const visibleImages = images.slice(0, 3);
   const hiddenCount   = images.length > 3 ? images.length - 3 : 0;
+  const destination   = ROUTE_MAP[type] ?? "/feed";
+
+  /* Navigate on card click — but only if the menu/dropdown wasn't the target */
+  const handleCardClick = (e) => {
+    if (buttonRef.current?.contains(e.target)) return;
+    if (dropdownRef.current?.contains(e.target)) return;
+    navigate(destination);
+  };
 
   const handleMenuToggle = (e) => {
     e.stopPropagation();
@@ -105,14 +118,15 @@ export default function NotificationCard({ notification, isHidden = false, onDel
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  /* ── Compact hidden card — only avatar + name + unhide/delete menu ── */
+  /* ── Compact hidden card ── */
   if (isHidden) {
     return (
       <>
         <motion.div
           layout
+          onClick={handleCardClick}
           whileHover={{ y: -2, boxShadow: "0 8px 20px -8px rgba(0,0,0,0.10)" }}
-          className="group relative flex items-center gap-3 w-full rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-3 cursor-default select-none transition-all duration-300"
+          className="group relative flex items-center gap-3 w-full rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-3 cursor-pointer select-none transition-all duration-300"
         >
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -121,9 +135,7 @@ export default function NotificationCard({ notification, isHidden = false, onDel
               alt={author}
               className="h-9 w-9 rounded-full border-2 border-white object-cover shadow-sm ring-1 ring-gray-100 grayscale"
             />
-            <div
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-300"
-            />
+            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-300" />
           </div>
 
           {/* Name + hidden label + caption preview */}
@@ -209,6 +221,7 @@ export default function NotificationCard({ notification, isHidden = false, onDel
     <>
       <motion.div
         layout
+        onClick={handleCardClick}
         whileHover={{ y: -4, boxShadow: "0 12px 24px -10px rgba(0, 96, 169, 0.15)" }}
         whileTap={{ scale: 0.99 }}
         className="group relative flex w-full rounded-2xl border border-gray-100 bg-white transition-all duration-300 cursor-pointer select-none"
@@ -220,7 +233,7 @@ export default function NotificationCard({ notification, isHidden = false, onDel
           style={{ backgroundColor: config.color }}
         />
 
-        {/* Options Button */}
+        {/* Options Button — stopPropagation so it never triggers card navigation */}
         <button
           ref={buttonRef}
           onClick={handleMenuToggle}
@@ -234,10 +247,7 @@ export default function NotificationCard({ notification, isHidden = false, onDel
         </button>
 
         {/* Media Grid */}
-        <div
-          className="flex-shrink-0 w-28 sm:w-36 md:w-44 lg:w-48 p-2 sm:p-3"
-          onClick={() => navigate(ROUTE_MAP[type] ?? "/feed")}
-        >
+        <div className="flex-shrink-0 w-28 sm:w-36 md:w-44 lg:w-48 p-2 sm:p-3">
           <div className="relative h-20 sm:h-24 md:h-28 lg:h-32 w-full overflow-hidden rounded-lg sm:rounded-xl bg-gray-50 shadow-sm">
             {visibleImages.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-300 text-xs italic">No media</div>
@@ -271,10 +281,7 @@ export default function NotificationCard({ notification, isHidden = false, onDel
         <div className="my-3 sm:my-4 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
 
         {/* Content */}
-        <div
-          className="flex flex-1 flex-col justify-between p-2.5 sm:p-4 min-w-0 pr-8 sm:pr-10"
-          onClick={() => navigate(ROUTE_MAP[type] ?? "/feed")}
-        >
+        <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-4 min-w-0 pr-8 sm:pr-10">
           <div>
             <div className="flex items-center mb-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -327,7 +334,6 @@ export default function NotificationCard({ notification, isHidden = false, onDel
             className="fixed w-44 sm:w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 py-1"
             style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 99999 }}
           >
-            {/* Hide / Unhide */}
             <button
               onClick={() => {
                 isHidden ? onUnhide?.() : onHide?.();
@@ -350,7 +356,6 @@ export default function NotificationCard({ notification, isHidden = false, onDel
 
             <div className="mx-3 h-px bg-gray-100" />
 
-            {/* Delete */}
             <button
               onClick={() => { setShowDelete(true); setMenuOpen(false); }}
               className="w-full flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"

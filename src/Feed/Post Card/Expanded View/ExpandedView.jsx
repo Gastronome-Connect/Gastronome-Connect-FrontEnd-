@@ -10,6 +10,23 @@ import FavoriteButton from "../Post Header/FavoriteButton";
 import PostActions from "../Post Action/PostActions";
 import CommentSection from "../Comment Section/CommentSection";
 
+/* ── Shared unit pluralizer ── */
+const pluralizeUnit = (unit, amount) => {
+  if (!unit || unit === "to taste") return unit;
+  const num = parseFloat(amount);
+  if (!num || num <= 1) return unit;
+  const plurals = {
+    cup:   "cups",
+    tsp:   "tsps",
+    tbsp:  "tbsps",
+    piece: "pieces",
+    pinch: "pinches",
+    oz:    "ozs",
+    lb:    "lbs",
+  };
+  return plurals[unit] ?? unit;
+};
+
 /* ── Inline ingredient list for the expanded panel ── */
 const IngredientList = ({ ingredients }) => {
   const [expanded, setExpanded] = useState(false);
@@ -21,7 +38,8 @@ const IngredientList = ({ ingredients }) => {
 
   const fmt = (ing) => {
     if (ing.unit === "to taste") return "to taste";
-    return [ing.amount, ing.unit].filter(Boolean).join(" ");
+    const pluralUnit = pluralizeUnit(ing.unit, ing.amount);
+    return [ing.amount, pluralUnit].filter(Boolean).join(" ");
   };
 
   return (
@@ -36,7 +54,6 @@ const IngredientList = ({ ingredients }) => {
         </span>
       </div>
 
-      {/* Scrollable list when > 4 items */}
       <ul
         className="space-y-1 overflow-y-auto pr-0.5"
         style={{ maxHeight: expanded ? "none" : undefined }}
@@ -72,6 +89,55 @@ const IngredientList = ({ ingredients }) => {
   );
 };
 
+/* ── Builds the chatbot prefill string ── */
+const buildChatbotPrefill = (post, media) => {
+  const lines = [];
+
+  const hasPerMedia = media.length > 1 && media.some((m) => m.title || m.caption);
+
+  if (!hasPerMedia) {
+    // ── Structure 1: Single media ──
+    if (post.title) lines.push(post.title);
+
+    if (post.ingredients?.length > 0) {
+      lines.push("\nIngredients:");
+      post.ingredients.forEach((ing) => {
+        const measure =
+          ing.unit === "to taste"
+            ? "to taste"
+            : [ing.amount, ing.unit].filter(Boolean).join(" ");
+        const optional = ing.optional ? " (optional)" : "";
+        lines.push(`• ${measure ? `${measure} ` : ""}${ing.name}${optional}`);
+      });
+    }
+
+    if (post.caption) lines.push(`\nDescription:\n${post.caption}`);
+
+  } else {
+    // ── Structure 2: Multiple media ──
+    if (post.ingredients?.length > 0) {
+      lines.push("Ingredients:");
+      post.ingredients.forEach((ing) => {
+        const measure =
+          ing.unit === "to taste"
+            ? "to taste"
+            : [ing.amount, ing.unit].filter(Boolean).join(" ");
+        const optional = ing.optional ? " (optional)" : "";
+        lines.push(`• ${measure ? `${measure} ` : ""}${ing.name}${optional}`);
+      });
+    }
+
+    media.forEach((m, i) => {
+      if (!m.title && !m.caption) return;
+      lines.push(`\nMedia ${i + 1}:`);
+      if (m.title)   lines.push(`Title: ${m.title}`);
+      if (m.caption) lines.push(`Description: ${m.caption}`);
+    });
+  }
+
+  return lines.join("\n").trim();
+};
+
 /* ── Main ExpandedView ── */
 const ExpandedView = ({
   post,
@@ -84,13 +150,13 @@ const ExpandedView = ({
   onReport,
 }) => {
   const navigate = useNavigate();
-  const [current, setCurrent]       = useState(startIndex);
+  const [current, setCurrent]           = useState(startIndex);
   const [showComments, setShowComments] = useState(false);
-  const [menuOpen, setMenuOpen]     = useState(false);
+  const [menuOpen, setMenuOpen]         = useState(false);
 
-  const menuRef            = useRef(null);
-  const commentSectionRef  = useRef(null);
-  const pinnedTextareaRef  = useRef(null);
+  const menuRef           = useRef(null);
+  const commentSectionRef = useRef(null);
+  const pinnedTextareaRef = useRef(null);
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media       = post.mediaItems ?? [];
@@ -264,39 +330,24 @@ const ExpandedView = ({
               );
             })()}
 
-            {/* Actions bar */}
+            {/* ── Actions bar ── */}
             <div className="sticky top-0 bg-white z-10 border-t border-b border-gray-100 flex items-center justify-between pr-3 sm:pr-5">
               <PostActions
                 post={post}
                 onComment={() => setShowComments((s) => !s)}
                 commentsOpen={showComments}
               />
-<button
-  onClick={() => {
-    const title = post.title ? ` ${post.title}\n` : "";
-    const ingredients =
-      post.ingredients && post.ingredients.length > 0
-        ? "\n Ingredients:\n" +
-          post.ingredients
-            .map((ing) => {
-              const measure =
-                ing.unit === "to taste"
-                  ? "to taste"
-                  : [ing.amount, ing.unit].filter(Boolean).join(" ");
-              const optional = ing.optional ? " (optional)" : "";
-              return `• ${measure ? `${measure} ` : ""}${ing.name}${optional}`;
-            })
-            .join("\n")
-        : "";
-    const description = post.caption ? `\n\n Description:\n${post.caption}` : "";
-    const prefill = `${title}${ingredients}${description}`.trim();
-    navigate("/chatbot", { state: { prefill } });
-  }}
-  className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
->
-  <Bot size={13} />
-  <span className="hidden xs:inline">Chatbot</span>
-</button>
+
+              <button
+                onClick={() => {
+                  const prefill = buildChatbotPrefill(post, media);
+                  navigate("/chatbot", { state: { prefill } });
+                }}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
+              >
+                <Bot size={13} />
+                <span className="hidden xs:inline">Chatbot</span>
+              </button>
             </div>
 
             {showComments && (

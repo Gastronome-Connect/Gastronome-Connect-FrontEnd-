@@ -32,7 +32,7 @@ export default function LogoutModal({ onConfirm, onCancel }) {
         {/* Body */}
         <div className="p-6 text-center">
           <p className="text-gray-500 text-sm leading-relaxed mb-6">
-            Are you sure you want to log out? You'll be redirected to the home page.
+            Are you sure you want to log out? You'll be redirected to the login page.
           </p>
           <div className="flex flex-col gap-3">
             <motion.button

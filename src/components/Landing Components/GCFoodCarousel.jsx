@@ -1,38 +1,81 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 
-import Karekare  from "../Assets/Kare-kare.png";
-import Sisig     from "../Assets/Sisig.png";
-import Adobo     from "../Assets/Adobo.png";
-import Lechon    from "../Assets/Lechong Kawali.png";
-import Sinigang  from "../Assets/Sinigang.png";
-import Bicol     from "../Assets/Bicol Express.png";
-import Pancit    from "../Assets/Pancit Canton.png";
-import Laing     from "../Assets/Laing.png";
+import Karekare from "../Assets/Kare-kare.png";
+import Sisig from "../Assets/Sisig.png";
+import Adobo from "../Assets/Adobo.png";
+import Lechon from "../Assets/Lechong Kawali.png";
+import Sinigang from "../Assets/Sinigang.png";
+import Bicol from "../Assets/Bicol Express.png";
+import Pancit from "../Assets/Pancit Canton.png";
+import Laing from "../Assets/Laing.png";
 import Binangkal from "../Assets/Binangkal.png";
 
 const dishes = [
-  { name: "Kare-Kare",          description: "A Filipino oxtail stew in peanut sauce.",            image: Karekare,  path: "../KarekareRecipe"      },
-  { name: "Classic Pork Sisig", description: "Cook with Pig ears with a mix of Pig skin.",          image: Sisig,     path: "../SisigRecipe"         },
-  { name: "Adobong Bisaya",     description: "A regional take on the classic Adobo dish.",          image: Adobo,     path: "../AdoboRecipe"         },
-  { name: "Sinigang",           description: "A sour tamarind-based soup.",                         image: Sinigang,  path: "../SinigangRecipe"      },
-  { name: "Lechong Kawali",     description: "Crispy fried pork belly.",                            image: Lechon,    path: "../LechonRecipe"        },
-  { name: "Bicol Express",      description: "A spicy coconut milk stew.",                          image: Bicol,     path: "../BicolExpressRecipe"  },
-  { name: "Pancit Canton",      description: "Stir-fried noodles with vegetables and meat.",        image: Pancit,    path: "../PancitCantonRecipe"  },
-  { name: "Laing",              description: "Taro leaves cooked in coconut milk.",                 image: Laing,     path: "../LaingRecipe"         },
-  { name: "Binagkal",           description: "Bread with sesame-seed coating.",                     image: Binangkal, path: "../BinangkalRecipe"     },
+  {
+    name: "Kare-Kare",
+    description: "A Filipino oxtail stew in peanut sauce.",
+    image: Karekare,
+    path: "../KarekareRecipe",
+  },
+  {
+    name: "Classic Pork Sisig",
+    description: "Cook with Pig ears with a mix of Pig skin.",
+    image: Sisig,
+    path: "../SisigRecipe",
+  },
+  {
+    name: "Adobong Bisaya",
+    description: "A regional take on the classic Adobo dish.",
+    image: Adobo,
+    path: "../AdoboRecipe",
+  },
+  {
+    name: "Sinigang",
+    description: "A sour tamarind-based soup.",
+    image: Sinigang,
+    path: "../SinigangRecipe",
+  },
+  {
+    name: "Lechong Kawali",
+    description: "Crispy fried pork belly.",
+    image: Lechon,
+    path: "../LechonRecipe",
+  },
+  {
+    name: "Bicol Express",
+    description: "A spicy coconut milk stew.",
+    image: Bicol,
+    path: "../BicolExpressRecipe",
+  },
+  {
+    name: "Pancit Canton",
+    description: "Stir-fried noodles with vegetables and meat.",
+    image: Pancit,
+    path: "../PancitCantonRecipe",
+  },
+  {
+    name: "Laing",
+    description: "Taro leaves cooked in coconut milk.",
+    image: Laing,
+    path: "../LaingRecipe",
+  },
+  {
+    name: "Binagkal",
+    description: "Bread with sesame-seed coating.",
+    image: Binangkal,
+    path: "../BinangkalRecipe",
+  },
 ];
 
 const RecipeCarousel = () => {
-  const navigate       = useNavigate();
-  const totalItems     = dishes.length;
-  const [currentIndex, setCurrentIndex]     = useState(totalItems);
+  const totalItems = dishes.length;
+  const [currentIndex, setCurrentIndex] = useState(totalItems);
   const [isTransitioning, setIsTransitioning] = useState(true);
-  const [isHovered, setIsHovered]           = useState(false);
-  const [isVisible, setIsVisible]           = useState(false);
-  const scrollRef            = useRef(null);
-  const isProcessingClick    = useRef(false);
-  const extendedDishes       = [...dishes, ...dishes, ...dishes];
+  const [isHovered, setIsHovered] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const scrollRef = useRef(null);
+  const isProcessingClick = useRef(false);
+  const extendedDishes = [...dishes, ...dishes, ...dishes];
 
   // Detect mobile once
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -45,7 +88,7 @@ const RecipeCarousel = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.15, rootMargin: "0px 0px -50px 0px" }
+      { threshold: 0.15, rootMargin: "0px 0px -50px 0px" },
     );
     if (scrollRef.current) observer.observe(scrollRef.current);
     return () => observer.disconnect();
@@ -56,7 +99,9 @@ const RecipeCarousel = () => {
     isProcessingClick.current = true;
     setIsTransitioning(true);
     setCurrentIndex((prev) => prev + 1);
-    setTimeout(() => { isProcessingClick.current = false; }, 700);
+    setTimeout(() => {
+      isProcessingClick.current = false;
+    }, 700);
   }, []);
 
   const handlePrev = useCallback(() => {
@@ -64,7 +109,9 @@ const RecipeCarousel = () => {
     isProcessingClick.current = true;
     setIsTransitioning(true);
     setCurrentIndex((prev) => prev - 1);
-    setTimeout(() => { isProcessingClick.current = false; }, 700);
+    setTimeout(() => {
+      isProcessingClick.current = false;
+    }, 700);
   }, []);
 
   useEffect(() => {
@@ -76,17 +123,25 @@ const RecipeCarousel = () => {
   useEffect(() => {
     let timer;
     if (currentIndex >= totalItems * 2) {
-      timer = setTimeout(() => { setIsTransitioning(false); setCurrentIndex(totalItems); }, 700);
+      timer = setTimeout(() => {
+        setIsTransitioning(false);
+        setCurrentIndex(totalItems);
+      }, 700);
     } else if (currentIndex < totalItems) {
-      timer = setTimeout(() => { setIsTransitioning(false); setCurrentIndex(totalItems * 2 - 1); }, 700);
+      timer = setTimeout(() => {
+        setIsTransitioning(false);
+        setCurrentIndex(totalItems * 2 - 1);
+      }, 700);
     }
     return () => clearTimeout(timer);
   }, [currentIndex, totalItems]);
 
   // On mobile: full-width single card layout, swipeable
   const touchStartX = useRef(null);
-  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd   = (e) => {
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 40) diff > 0 ? handleNext() : handlePrev();
@@ -94,8 +149,8 @@ const RecipeCarousel = () => {
   };
 
   // Card width: 25% on desktop, 80% on mobile (so adjacent cards peek)
-  const cardWidth  = isMobile ? 80  : 25;
-  const offsetPct  = isMobile ? 10  : 37.5; // centers the active card
+  const cardWidth = isMobile ? 80 : 25;
+  const offsetPct = isMobile ? 10 : 37.5; // centers the active card
 
   return (
     <div
@@ -121,12 +176,13 @@ const RecipeCarousel = () => {
         </p>
       </div>
 
-      <div className={`
+      <div
+        className={`
         flex flex-col items-center w-full max-w-[1400px] transition-all duration-1000 ease-out
         ${isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-20 scale-95 blur-sm"}
-      `}>
+      `}
+      >
         <div className="flex items-center w-full relative">
-
           {/* Prev arrow — desktop only */}
           <button
             onClick={handlePrev}
@@ -147,7 +203,9 @@ const RecipeCarousel = () => {
           >
             <div
               className={`flex items-center w-full h-full ${isTransitioning ? "transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]" : ""}`}
-              style={{ transform: `translateX(calc(-${currentIndex * cardWidth}% + ${offsetPct}%))` }}
+              style={{
+                transform: `translateX(calc(-${currentIndex * cardWidth}% + ${offsetPct}%))`,
+              }}
             >
               {extendedDishes.map((dish, index) => {
                 const isHighlight = index === currentIndex;
@@ -165,13 +223,14 @@ const RecipeCarousel = () => {
                       className={`
                         relative w-full rounded-[2rem] sm:rounded-[3rem] overflow-hidden transition-all duration-700 cursor-pointer
                         border-[5px] sm:border-[8px] border-[#F57600]
-                        ${isHighlight
-                          ? isMobile
-                            ? "z-30 h-[300px] opacity-100 shadow-[0_20px_40px_-10px_rgba(245,118,0,0.5)] scale-105"
-                            : "z-30 h-[480px] w-[110%] opacity-100 shadow-[0_30px_60px_-15px_rgba(245,118,0,0.5)] scale-110"
-                          : isMobile
-                            ? "z-10 h-[240px] opacity-30 scale-95"
-                            : "z-10 h-[320px] opacity-20 blur-[2px] grayscale scale-90"
+                        ${
+                          isHighlight
+                            ? isMobile
+                              ? "z-30 h-[300px] opacity-100 shadow-[0_20px_40px_-10px_rgba(245,118,0,0.5)] scale-105"
+                              : "z-30 h-[480px] w-[110%] opacity-100 shadow-[0_30px_60px_-15px_rgba(245,118,0,0.5)] scale-110"
+                            : isMobile
+                              ? "z-10 h-[240px] opacity-30 scale-95"
+                              : "z-10 h-[320px] opacity-20 blur-[2px] grayscale scale-90"
                         }
                       `}
                     >
@@ -181,9 +240,15 @@ const RecipeCarousel = () => {
                         className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ${isHighlight ? "animate-kenburns" : ""}`}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                      <div className={`absolute inset-0 flex flex-col justify-end p-5 sm:p-8 text-white transition-all duration-700 ${isHighlight ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-                        <h3 className="text-xl sm:text-3xl font-black mb-1 sm:mb-2 italic tracking-tight">{dish.name}</h3>
-                        <p className="text-white/80 text-xs sm:text-sm line-clamp-2 font-medium italic leading-relaxed">{dish.description}</p>
+                      <div
+                        className={`absolute inset-0 flex flex-col justify-end p-5 sm:p-8 text-white transition-all duration-700 ${isHighlight ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+                      >
+                        <h3 className="text-xl sm:text-3xl font-black mb-1 sm:mb-2 italic tracking-tight">
+                          {dish.name}
+                        </h3>
+                        <p className="text-white/80 text-xs sm:text-sm line-clamp-2 font-medium italic leading-relaxed">
+                          {dish.description}
+                        </p>
                       </div>
                     </div>
                   </div>

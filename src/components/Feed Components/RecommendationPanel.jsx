@@ -117,10 +117,10 @@ export default function Recommendation() {
         >
           {isLoading
             ? Array.from({ length: 5 }).map((_, i) => (
-                <SkeletonRecommendationCard key={i} />
+                <SkeletonRecommendationCard key={`skeleton-${i}`} />
               ))
             : recommendedRecipes.map((recipe, index) => (
-                <RecommendationCard key={index} recipe={recipe} />
+                <RecommendationCard key={`recipe-${recipe.name}-${index}`} recipe={recipe} />
               ))
           }
           <div className="min-w-[24px] sm:min-w-[40px] flex-shrink-0" />
@@ -137,7 +137,7 @@ export default function Recommendation() {
         )}
       </div>
 
-      <style jsx global>{`
+      <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

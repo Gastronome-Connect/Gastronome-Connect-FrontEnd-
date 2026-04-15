@@ -39,7 +39,11 @@ export default function AdminSidebar({ onCollapse }) {
 
   const handleLogout = () => {
     setShowLogout(false);
-    navigate("/home");
+    localStorage.removeItem("adminAccessToken");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userId");
+    navigate("/login?mode=login", { replace: true });
   };
 
   return (
@@ -154,6 +158,7 @@ export default function AdminSidebar({ onCollapse }) {
 
             <button
               onClick={() => setShowLogout(true)}
+              aria-label="Open admin logout modal"
               title={collapsed ? "Logout" : undefined}
               className="w-full py-2.5 rounded-xl bg-red-50 text-red-600 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-red-100 transition-all"
             >

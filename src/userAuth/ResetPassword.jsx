@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LogoImage from "../components/Assets/FoodAI.png";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LockIcon from "../components/Assets/Lock.png";
+import { buildApiUrl } from "../utils/api";
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
@@ -17,15 +18,7 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const location = useLocation();
-  const resetEmail = sessionStorage.getItem("resetEmail");
-
-  // Redirect to forgot password if no email is found
-  useEffect(() => {
-    if (!resetEmail) {
-      navigate("/forgot-password");
-    }
-  }, [resetEmail, navigate]);
+  const { token } = useParams();
 
   const validateNewPassword = () => {
     const passwordRegex =
@@ -36,7 +29,7 @@ const ResetPassword = () => {
     }
     if (!passwordRegex.test(newPassword)) {
       setNewPasswordError(
-        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character"
+        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character",
       );
       return false;
     }
@@ -72,13 +65,16 @@ const ResetPassword = () => {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/reset-password", {
+      if (!token) {
+        throw new Error("Reset token is missing or invalid");
+      }
+
+      const response = await fetch(buildApiUrl(`/api/reset-password/${token}`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: resetEmail,
           newPassword,
           confirmPassword,
         }),
@@ -90,15 +86,12 @@ const ResetPassword = () => {
         throw new Error(data.message || "Failed to reset password");
       }
 
-      // Clear reset email from session storage
-      sessionStorage.removeItem("resetEmail");
-
-      // Navigate to login with success message
       navigate("/login", {
         state: {
           successMessage:
             "Password reset successful. Please login with your new password.",
         },
+        replace: true,
       });
     } catch (error) {
       console.error("Error resetting password:", error);
@@ -128,6 +121,11 @@ const ResetPassword = () => {
                 <p className="mt-2 text-gray-600 text-sm">
                   Please enter and confirm your new password
                 </p>
+                {!token && (
+                  <p className="mt-3 text-sm text-red-600">
+                    Missing reset token. Please request a new password reset link.
+                  </p>
+                )}
               </div>
 
               {error && (
@@ -137,7 +135,6 @@ const ResetPassword = () => {
               )}
 
               <form className="space-y-6" onSubmit={handleSubmit}>
-                {/* New Password Input */}
                 <div className="space-y-2">
                   <label
                     htmlFor="newPassword"
@@ -161,7 +158,7 @@ const ResetPassword = () => {
                         newPasswordError ? "border-red-600" : "border-green-600"
                       } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm`}
                       placeholder="Enter new password"
-                      disabled={loading}
+                      disabled={loading || !token}
                     />
                     <button
                       type="button"
@@ -180,7 +177,6 @@ const ResetPassword = () => {
                   )}
                 </div>
 
-                {/* Confirm Password Input */}
                 <div className="space-y-2">
                   <label
                     htmlFor="confirmPassword"
@@ -201,18 +197,14 @@ const ResetPassword = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       onBlur={validateConfirmPassword}
                       className={`mt-1 block w-full pl-10 pr-10 py-2 border ${
-                        confirmPasswordError
-                          ? "border-red-600"
-                          : "border-green-600"
+                        confirmPasswordError ? "border-red-600" : "border-green-600"
                       } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm`}
                       placeholder="Confirm new password"
-                      disabled={loading}
+                      disabled={loading || !token}
                     />
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-3 flex items-center"
                     >
                       {showConfirmPassword ? (
@@ -223,15 +215,13 @@ const ResetPassword = () => {
                     </button>
                   </div>
                   {confirmPasswordError && (
-                    <p className="text-red-600 text-sm">
-                      {confirmPasswordError}
-                    </p>
+                    <p className="text-red-600 text-sm">{confirmPasswordError}</p>
                   )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !token}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   {loading ? (
@@ -268,7 +258,6 @@ const ResetPassword = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -289,7 +278,7 @@ const ResetPassword = () => {
               </button>
               <button
                 onClick={handleConfirmPasswordReset}
-                disabled={loading}
+                disabled={loading || !token}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
               >
                 {loading ? "Confirming..." : "Confirm Reset"}
