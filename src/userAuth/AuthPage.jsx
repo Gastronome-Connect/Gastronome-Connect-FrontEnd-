@@ -476,6 +476,23 @@ const AuthPage = () => {
         return;
       }
 
+      const registerResponse = await apiFetch("/api/register", {
+        method: "POST",
+        body: JSON.stringify({
+          username: signupUsername.trim(),
+          email: signupEmail,
+          password: signupPassword,
+          confirmPassword,
+        }),
+      });
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        setSignupError(registerData.message || "Failed to start signup");
+        setSignupLoading(false);
+        return;
+      }
+
       sessionStorage.setItem("pendingEmail", signupEmail);
       sessionStorage.setItem("sourceFlow", "signup");
       sessionStorage.setItem(
@@ -487,6 +504,28 @@ const AuthPage = () => {
           confirmPassword,
         }),
       );
+      const response = await authAPI.validateEmail(signupEmail);
+      
+      // Check if the response indicates success (HTTP 200)
+      if (response && (response.available !== false && response.message)) {
+        // Email validation successful - now send OTP with credentials
+        // The backend will temporarily store credentials and send OTP
+        try {
+          const otpResponse = await authAPI.sendOTP(signupEmail, signupUsername.trim(), signupPassword);
+          
+          if (otpResponse && otpResponse.message) {
+            // OTP sent successfully - store credentials temporarily for verification step
+            sessionStorage.setItem("pendingEmail", signupEmail);
+            sessionStorage.setItem("sourceFlow", "signup");
+            sessionStorage.setItem(
+              "tempSignupData",
+              JSON.stringify({
+                username: signupUsername.trim(),
+                email: signupEmail,
+                password: signupPassword,
+                confirmPassword,
+              }),
+            );
 
             navigate("/verification", { replace: true });
             setSignupLoading(false);
