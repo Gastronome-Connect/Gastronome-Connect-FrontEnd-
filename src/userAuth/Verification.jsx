@@ -44,7 +44,7 @@ const VerificationPage = () => {
     }
   }, [navigate]);
 
-  useBlockBrowserBack(sourceFlow === "signup");
+  useBlockBrowserBack(true);
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
@@ -53,10 +53,8 @@ const VerificationPage = () => {
   }, []);
 
   useEffect(() => {
-    if (sourceFlow === "signup") {
-      setSignupStep(SIGNUP_STEPS.VERIFICATION);
-    }
-  }, [sourceFlow]);
+    setSignupStep(SIGNUP_STEPS.VERIFICATION);
+  }, []);
 
   // Panel position: forgotpassword → left (60px), signup → right
   const getPanelTransform = () => {
@@ -128,7 +126,7 @@ const VerificationPage = () => {
         body: JSON.stringify({ email, otp: enteredCode }),
       });
 
-      const data = await response.json();
+      await response.json();
 
       if (response.status === 200) {
         // Success - clear sessionStorage and redirect to login
@@ -207,22 +205,11 @@ const VerificationPage = () => {
   };
 
   const handleContinue = () => setShowResendPopup(false);
-  const handleBackToLogin = () => {
-    // Clear flow state for both signup and forgotpassword flows
-    sessionStorage.removeItem("pendingEmail");
-    sessionStorage.removeItem("sourceFlow");
+  
+  const handleBackToSignup = () => {
+    sessionStorage.removeItem("pendingUser");
     clearSignupStep();
-
-    // For signup flow, also clear any auth tokens and temp signup data
-    if (sourceFlow === "signup") {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      sessionStorage.removeItem("tempSignupData");
-      sessionStorage.removeItem("tempPreferences");
-      sessionStorage.removeItem("tempDislikes");
-    }
-
-    navigate("/login");
+    navigate("/signup", { replace: true });
   };
 
   const panelStyle = mobile
@@ -356,6 +343,7 @@ const VerificationPage = () => {
                   <button
                     onClick={handleBackToSignup}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"
+                    type="button"
                   >
                     Back to Sign Up
                   </button>

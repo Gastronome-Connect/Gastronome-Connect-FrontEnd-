@@ -11,9 +11,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
-import adminApi from "../utils/adminApi";
 import { SkeletonAdminCardList } from "../components/Skeletons";
-import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore"; // ← adjust path
+import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
@@ -33,7 +32,7 @@ export default function FlaggedPosts() {
   const [initialTotal, setInitialTotal] = useState(() => getSnapshot().posts.length);
   const [searchTerm, setSearch]       = useState("");
   const [activeFilter, setFilter]     = useState("all");
-  const [loading, setLoading]         = useState(false); // store is synchronous
+  const [loading] = useState(false); // store is synchronous
   const [error, setError]             = useState(null);
 
   // Subscribe to store updates (fires when a new report comes in)

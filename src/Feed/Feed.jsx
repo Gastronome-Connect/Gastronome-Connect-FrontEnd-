@@ -11,7 +11,7 @@ import UploadProgressToast from "../components/Toast/UploadProgressToast";
 import UploadFailedModal   from "../components/Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../Hooks/UseUpload";
 import { SkeletonPostList } from "../components/Skeletons";
-import { buildApiUrl } from "../utils/api";
+import { postAPI } from "../utils/apiService";
 import { useUserLibrary } from "../Context/UserLibraryContext";
 
 const PAGE_SIZE = 10;

@@ -25,9 +25,9 @@ export default function AdminDashboard() {
       try {
         const [statsResponse, timeoutsResponse, deletedResponse] =
           await Promise.all([
-            adminAPI.getDashboardStats(),
-            adminAPI.getTimeoutUsers(),
-            adminAPI.getDeletedAccounts(),
+            adminApi.getDashboardStats(),
+            adminApi.getTimeoutUsers(),
+            adminApi.getDeletedAccounts(),
           ]);
         
         const data = statsResponse.data;
