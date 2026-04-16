@@ -5,6 +5,12 @@ import LogoImage from "../components/Assets/Gastro.png";
 import Porm from "./Preferences";
 import ResendPopup from "../components/Popups/ResendPopup";
 import { buildApiUrl } from "../utils/api";
+import {
+  clearSignupFlowState,
+  setSignupFlowStage,
+  setSignupLastRoute,
+  setSignupVerified,
+} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -52,6 +58,27 @@ const VerificationPage = () => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
+        if (sourceFlow === "signup") {
+          const signupDataStr = sessionStorage.getItem("tempSignupData");
+          if (!signupDataStr) {
+            throw new Error("Signup session expired. Please sign up again.");
+          }
+
+          const signupData = JSON.parse(signupDataStr);
+          const registerResponse = await fetch(buildApiUrl("/api/register"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(signupData),
+          });
+          const registerData = await registerResponse.json();
+
+          if (!registerResponse.ok) {
+            throw new Error(
+              registerData.message || "Failed to prepare signup verification",
+            );
+          }
+        }
+
         const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -62,11 +89,19 @@ const VerificationPage = () => {
         setTimer(300);
         setIsTimerRunning(true);
       } catch (error) {
+        if (
+          sourceFlow === "signup" &&
+          /User not found or already verified|sign up again|already registered/i.test(
+            error.message || "",
+          )
+        ) {
+          clearSignupFlowState();
+        }
         setError(error.message);
       }
     };
     if (email) sendOTP();
-  }, [email]);
+  }, [email, sourceFlow]);
 
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
@@ -120,9 +155,20 @@ const VerificationPage = () => {
         sessionStorage.removeItem("sourceFlow");
         navigate("/login", { replace: true });
       } else {
+        setSignupVerified(true);
+        setSignupFlowStage("preferences");
+        setSignupLastRoute("/preferences");
         navigate("/preferences", { replace: true });
       }
     } catch (error) {
+      if (
+        sourceFlow === "signup" &&
+        /User not found or already verified|sign up again/i.test(
+          error.message || "",
+        )
+      ) {
+        clearSignupFlowState();
+      }
       setError(error.message);
     }
   };
@@ -165,9 +211,7 @@ const VerificationPage = () => {
 
     // For signup flow, also clear any auth tokens and temp signup data
     if (sourceFlow === "signup") {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      sessionStorage.removeItem("tempSignupData");
+      clearSignupFlowState();
     }
 
     navigate("/login");

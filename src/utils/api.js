@@ -56,9 +56,11 @@ async function logout() {
 async function apiFetch(input, init = {}) {
   const url = buildApiUrl(input);
   const opts = { credentials: "include", headers: {}, ...init };
+  const isFormDataBody =
+    typeof FormData !== "undefined" && opts.body instanceof FormData;
 
   // Attach JSON header by default when body present and no header set
-  if (opts.body && !opts.headers["Content-Type"]) {
+  if (opts.body && !isFormDataBody && !opts.headers["Content-Type"]) {
     opts.headers["Content-Type"] = "application/json";
   }
 

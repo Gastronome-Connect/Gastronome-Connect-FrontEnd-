@@ -4,8 +4,21 @@ import { FaEdit } from "react-icons/fa";
 import { X, ZoomIn } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderImg from "../../Assets/ProfileHeader.png";
-import UserImg   from "../../Assets/Silhouette ni ano.png";
+import UserImg from "../../Assets/Silhouette ni ano.png";
 import EditProfileModal from "../../Modals/EditProfileModal";
+
+const DEFAULT_PROFILE = {
+  name: "",
+  bio: "",
+  avatarSrc: null,
+  flavors: [],
+  cookingStyles: [],
+  allergens: [],
+  dislikes: [],
+  postsCount: 0,
+  followersCount: 0,
+  followingCount: 0,
+};
 
 // ── Avatar Lightbox ────────────────────────────────────────────────────────────
 const AvatarLightbox = ({ src, alt, onClose }) =>
@@ -31,7 +44,7 @@ const AvatarLightbox = ({ src, alt, onClose }) =>
         <motion.div
           key="lightbox-image"
           initial={{ opacity: 0, scale: 0.92, y: 16 }}
-          animate={{ opacity: 1, scale: 1,    y: 0  }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.92, y: 16 }}
           transition={{ type: "spring", stiffness: 380, damping: 30 }}
           className="relative"
@@ -45,50 +58,53 @@ const AvatarLightbox = ({ src, alt, onClose }) =>
         </motion.div>
       </motion.div>
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 
 // ─────────────────────────────────────────────────────────────────────────────
-function ProfilePanel({ onProfileSave, isOwner = true }) {
-  const [profile, setProfile] = useState({
-    name:          "Juan Dela Cruz",
-    bio:           "I love Gastronome Connect Mah G!",
-    avatarSrc:     null,
-    flavors:       ["Spicy", "Sweet", "Sour", "Bitter"],
-    cookingStyles: ["Frying", "Steam", "Braising"],
-    allergens:     ["Peanut", "Citrus", "Seafoods"],
-    dislikes:      ["Beef", "Pork", "Braising"],
-  });
-
-  const [showModal,    setShowModal]    = useState(false);
+function ProfilePanel({
+  profile = DEFAULT_PROFILE,
+  onProfileSave,
+  isOwner = true,
+}) {
+  const [showModal, setShowModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
-  const [isFollowing,  setIsFollowing]  = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const handleSave = (updated) => {
-    setProfile((prev) => ({ ...prev, ...updated }));
     onProfileSave?.(updated);
   };
 
   const displayAvatar = profile.avatarSrc || UserImg;
+  const statItems = [
+    { label: "Posts", value: profile.postsCount ?? 0 },
+    { label: "Followers", value: profile.followersCount ?? 0 },
+    { label: "Following", value: profile.followingCount ?? 0 },
+  ];
 
   return (
     <>
       <div
         className="bg-white rounded-3xl border border-gray-100 mb-5 overflow-hidden transition-all duration-300"
-        style={{ boxShadow: "0 4px 24px 0 rgba(245, 118, 0, 0.10), 0 1.5px 6px 0 rgba(245, 118, 0, 0.07)" }}
+        style={{
+          boxShadow:
+            "0 4px 24px 0 rgba(245, 118, 0, 0.10), 0 1.5px 6px 0 rgba(245, 118, 0, 0.07)",
+        }}
       >
         {/* Banner */}
         <div className="relative h-32 sm:h-44 md:h-52 lg:h-64 w-full">
-          <img src={HeaderImg} alt="Banner" className="w-full h-full object-cover" />
+          <img
+            src={HeaderImg}
+            alt="Banner"
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
         </div>
 
         {/* Body */}
         <div className="relative px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 pt-2">
-
           {/* Avatar row */}
           <div className="relative -mt-12 sm:-mt-16 md:-mt-20 mb-4 sm:mb-6 flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between">
-
             {/* Clickable avatar */}
             <button
               onClick={() => setShowLightbox(true)}
@@ -146,19 +162,15 @@ function ProfilePanel({ onProfileSave, isOwner = true }) {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-6 lg:gap-8 mt-1 sm:mt-2">
             <div className="space-y-1 sm:space-y-2 text-center sm:text-left">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tighter leading-tight">
-                {profile.name}
+                {profile.name || "User"}
               </h2>
               <p className="text-slate-700 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-2xl opacity-90 mx-auto sm:mx-0">
-                {profile.bio}
+                {profile.bio || "No bio added yet."}
               </p>
             </div>
 
             <div className="flex justify-center lg:justify-end gap-6 sm:gap-8 md:gap-10 lg:gap-12 border-t lg:border-t-0 pt-5 sm:pt-6 lg:pt-0 border-slate-100 shrink-0">
-              {[
-                { label: "Posts",     value: 34  },
-                { label: "Followers", value: 198 },
-                { label: "Following", value: 231 },
-              ].map(({ label, value }) => (
+              {statItems.map(({ label, value }) => (
                 <div key={label} className="flex flex-col items-center">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
                     {value}
@@ -183,7 +195,7 @@ function ProfilePanel({ onProfileSave, isOwner = true }) {
 
       {showModal && (
         <EditProfileModal
-          initialData={{ ...profile, avatarSrc: displayAvatar }}
+          initialData={profile}
           onClose={() => setShowModal(false)}
           onSave={handleSave}
         />

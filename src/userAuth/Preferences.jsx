@@ -6,6 +6,11 @@ import LogoImage from "../components/Assets/Gastro.png";
 import Flavor from "../components/Assets/Flavor.png";
 import CookingStyle from "../components/Assets/Cooking Style.png";
 import { buildApiUrl } from "../utils/api";
+import {
+  setCanAccessAllergens,
+  setSignupFlowStage,
+  setSignupLastRoute,
+} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -171,37 +176,37 @@ const Preferences = () => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const savePreferences = async () => {
-    const token = localStorage.getItem("accessToken");
-    const userId = localStorage.getItem("userId");
-    if (!token || !userId) {
-      sessionStorage.setItem(
-        "tempPreferences",
-        JSON.stringify({ flavors, cookingStyles }),
-      );
-      return;
-    }
-    try {
-      const response = await fetch(
-        buildApiUrl(`/api/user/preferences/${userId}`),
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            preferences: { flavors, techniques: cookingStyles },
-          }),
-        },
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to save preferences.");
+  useEffect(() => {
+    setSignupFlowStage("preferences");
+    setSignupLastRoute("/preferences");
+
+    const savedPreferences = sessionStorage.getItem("tempPreferences");
+    if (savedPreferences) {
+      try {
+        const parsed = JSON.parse(savedPreferences);
+        setFlavors(Array.isArray(parsed.flavors) ? parsed.flavors : []);
+        setCookingStyles(
+          Array.isArray(parsed.cookingStyles) ? parsed.cookingStyles : [],
+        );
+      } catch (error) {
+        console.error("Error restoring preferences:", error.message);
       }
-    } catch (error) {
-      console.error("Error saving preferences:", error.message);
     }
+
+    window.history.pushState(null, "", window.location.href);
+    const preventBackNavigation = () => {
+      window.history.go(1);
+    };
+
+    window.addEventListener("popstate", preventBackNavigation);
+    return () => window.removeEventListener("popstate", preventBackNavigation);
+  }, []);
+
+  const savePreferences = async () => {
+    sessionStorage.setItem(
+      "tempPreferences",
+      JSON.stringify({ flavors, cookingStyles }),
+    );
   };
 
   const fetchOptions = async () => {
@@ -224,67 +229,6 @@ const Preferences = () => {
 
   useEffect(() => {
     fetchOptions();
-  }, []);
-
-  useEffect(() => {
-    const syncDataAfterAuth = async () => {
-      const token = localStorage.getItem("accessToken");
-      const userId = localStorage.getItem("userId");
-      if (!token || !userId) return;
-
-      const tempPreferences = sessionStorage.getItem("tempPreferences");
-      if (tempPreferences) {
-        try {
-          const { flavors, cookingStyles } = JSON.parse(tempPreferences);
-          const response = await fetch(
-            buildApiUrl(`/api/user/preferences/${userId}`),
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                preferences: { flavors, techniques: cookingStyles },
-              }),
-            },
-          );
-          if (!response.ok) {
-            const e = await response.json();
-            throw new Error(e.message || "Failed to sync preferences.");
-          }
-          sessionStorage.removeItem("tempPreferences");
-        } catch (error) {
-          console.error("Error syncing preferences to backend:", error.message);
-        }
-      }
-
-      const tempDislikes = localStorage.getItem("tempDislikes");
-      if (tempDislikes) {
-        try {
-          const { dislikes, allergens } = JSON.parse(tempDislikes);
-          const response = await fetch(
-            buildApiUrl(`/api/user/preferences/${userId}`),
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ dislikes, allergies: allergens }),
-            },
-          );
-          if (!response.ok) {
-            const e = await response.json();
-            throw new Error(e.message || "Failed to sync dislikes.");
-          }
-          localStorage.removeItem("tempDislikes");
-        } catch (error) {
-          console.error("Error syncing dislikes to backend:", error.message);
-        }
-      }
-    };
-    syncDataAfterAuth();
   }, []);
 
   const isNextDisabled = flavors.length === 0 && cookingStyles.length === 0;
@@ -390,6 +334,9 @@ const Preferences = () => {
                 <button
                   onClick={async () => {
                     await savePreferences();
+                    setCanAccessAllergens(true);
+                    setSignupFlowStage("allergens");
+                    setSignupLastRoute("/allergens");
                     navigate("/allergens");
                   }}
                   disabled={isNextDisabled}
@@ -404,7 +351,13 @@ const Preferences = () => {
 
                 <button
                   className="w-full mt-3 px-4 py-2.5 text-sm font-sfpro font-bold border-2 border-[#0060A9] text-[#0060A9] rounded-lg bg-white hover:bg-gray-50 outline-none transition-all"
-                  onClick={() => navigate("/allergens")}
+                  onClick={async () => {
+                    await savePreferences();
+                    setCanAccessAllergens(true);
+                    setSignupFlowStage("allergens");
+                    setSignupLastRoute("/allergens");
+                    navigate("/allergens");
+                  }}
                 >
                   Skip for Now
                 </button>
