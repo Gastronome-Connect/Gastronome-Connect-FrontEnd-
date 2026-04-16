@@ -52,10 +52,18 @@ const VerificationPage = () => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
+        // Get credentials from sessionStorage if available
+        const tempData = sessionStorage.getItem("tempSignupData");
+        const credentials = tempData ? JSON.parse(tempData) : {};
+        
         const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ 
+            email, 
+            username: credentials.username,
+            password: credentials.password 
+          }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Failed to send OTP");
@@ -134,10 +142,18 @@ const VerificationPage = () => {
         return;
       }
       try {
+        // Get credentials from sessionStorage if available
+        const tempData = sessionStorage.getItem("tempSignupData");
+        const credentials = tempData ? JSON.parse(tempData) : {};
+        
         const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ 
+            email, 
+            username: credentials.username,
+            password: credentials.password 
+          }),
         });
         const data = await response.json();
         if (!response.ok)

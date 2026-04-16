@@ -29,10 +29,10 @@ export const authAPI = {
       body: JSON.stringify(userData),
     }).then(r => r.json()),
 
-  sendOTP: (email) =>
+  sendOTP: (email, username, password) =>
     apiFetch(`/api/send-otp`, {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, username, password }),
     }).then(r => r.json()),
 
   verifyOTP: (email, otp) =>

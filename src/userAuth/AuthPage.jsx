@@ -469,33 +469,36 @@ const AuthPage = () => {
       
       // Check if the response indicates success (HTTP 200)
       if (response && (response.available !== false && response.message)) {
-        // Email validation successful - now create the user account
+        // Email validation successful - now send OTP with credentials
+        // The backend will temporarily store credentials and send OTP
         try {
-          const registerResponse = await authAPI.register({
-            username: signupUsername.trim(),
-            email: signupEmail,
-            password: signupPassword,
-          });
+          const otpResponse = await authAPI.sendOTP(signupEmail, signupUsername.trim(), signupPassword);
           
-          // User account created successfully
-          sessionStorage.setItem("pendingEmail", signupEmail);
-          sessionStorage.setItem("sourceFlow", "signup");
-          sessionStorage.setItem(
-            "tempSignupData",
-            JSON.stringify({
-              username: signupUsername.trim(),
-              email: signupEmail,
-              password: signupPassword,
-              confirmPassword,
-            }),
-          );
+          if (otpResponse && otpResponse.message) {
+            // OTP sent successfully - store credentials temporarily for verification step
+            sessionStorage.setItem("pendingEmail", signupEmail);
+            sessionStorage.setItem("sourceFlow", "signup");
+            sessionStorage.setItem(
+              "tempSignupData",
+              JSON.stringify({
+                username: signupUsername.trim(),
+                email: signupEmail,
+                password: signupPassword,
+                confirmPassword,
+              }),
+            );
 
-          navigate("/verification", { replace: true });
+            navigate("/verification", { replace: true });
+            setSignupLoading(false);
+            return;
+          }
+          
+          setSignupError(otpResponse?.message || "Failed to send OTP");
           setSignupLoading(false);
           return;
-        } catch (registerError) {
-          console.error("Registration error:", registerError);
-          setSignupError(registerError.message || "Failed to create account");
+        } catch (otpError) {
+          console.error("OTP send error:", otpError);
+          setSignupError(otpError.message || "Failed to send OTP. Please try again.");
           setSignupLoading(false);
           return;
         }

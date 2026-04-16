@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.0ea5b55a.css",
-    "main.js": "/static/js/main.ebdba0d6.js",
+    "main.js": "/static/js/main.3c9da588.js",
     "static/js/453.ab7e3297.chunk.js": "/static/js/453.ab7e3297.chunk.js",
     "static/media/top-view-table-full-food.png": "/static/media/top-view-table-full-food.966b1d1aaffdc1a4fdee.png",
     "static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.png": "/static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.de8a2ec12507d2335e38.png",
@@ -37,11 +37,11 @@
     "static/media/GC Navbar Logo.png": "/static/media/GC Navbar Logo.929f92b4c701e77c67ae.png",
     "index.html": "/index.html",
     "main.0ea5b55a.css.map": "/static/css/main.0ea5b55a.css.map",
-    "main.ebdba0d6.js.map": "/static/js/main.ebdba0d6.js.map",
+    "main.3c9da588.js.map": "/static/js/main.3c9da588.js.map",
     "453.ab7e3297.chunk.js.map": "/static/js/453.ab7e3297.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.0ea5b55a.css",
-    "static/js/main.ebdba0d6.js"
+    "static/js/main.3c9da588.js"
   ]
 }
