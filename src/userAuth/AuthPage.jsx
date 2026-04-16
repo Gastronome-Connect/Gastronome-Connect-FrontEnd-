@@ -465,26 +465,34 @@ const AuthPage = () => {
     }
 
     try {
-      const validateData = await authAPI.validateEmail(signupEmail);
-      if (!validateData.valid) {
-        setSignupEmailError(validateData.message || "Email validation failed");
+      const response = await authAPI.validateEmail(signupEmail);
+      
+      // Check if the response indicates success (HTTP 200)
+      // The backend returns the response body, not the full response object
+      // So we need to check if it's a success by looking at the message or available field
+      if (response && (response.available !== false && response.message)) {
+        // Email validation successful - proceed to next step
+        sessionStorage.setItem("pendingEmail", signupEmail);
+        sessionStorage.setItem("sourceFlow", "signup");
+        sessionStorage.setItem(
+          "tempSignupData",
+          JSON.stringify({
+            username: signupUsername.trim(),
+            email: signupEmail,
+            password: signupPassword,
+            confirmPassword,
+          }),
+        );
+
+        navigate("/verification", { replace: true });
         setSignupLoading(false);
         return;
       }
-
-      sessionStorage.setItem("pendingEmail", signupEmail);
-      sessionStorage.setItem("sourceFlow", "signup");
-      sessionStorage.setItem(
-        "tempSignupData",
-        JSON.stringify({
-          username: signupUsername.trim(),
-          email: signupEmail,
-          password: signupPassword,
-          confirmPassword,
-        }),
-      );
-
-      navigate("/verification", { replace: true });
+      
+      // If we get here, email validation failed
+      setSignupEmailError(response?.message || "Email validation failed");
+      setSignupLoading(false);
+      return;
     } catch (error) {
       console.error("Sign up preparation error:", error);
       
