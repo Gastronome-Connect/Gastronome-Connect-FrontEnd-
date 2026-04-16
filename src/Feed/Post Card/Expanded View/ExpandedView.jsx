@@ -104,6 +104,7 @@ const ExpandedView = ({
   const pinnedTextareaRef = useRef(null);
   const historyTimerRef   = useRef(null);
   const historyAddedRef   = useRef(false);
+  const speakIntervalRef  = useRef(null); // ← keeps Chrome alive
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media       = post.mediaItems ?? [];
@@ -133,31 +134,82 @@ const ExpandedView = ({
     setMenuOpen(false);
   };
 
+  // ── Fixed handleSpeak ───────────────────────────────────────────
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
+
+    // Toggle pause / resume if already speaking
     if (isSpeaking) {
-      if (isPaused) { window.speechSynthesis.resume(); setIsPaused(false); }
-      else { window.speechSynthesis.pause(); setIsPaused(true); }
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
       return;
     }
-    const ingredientsList = post.ingredients
-      ?.map((ing) => {
-        const measure = ing.unit === "to taste" ? "to taste" : [ing.amount, ing.unit].filter(Boolean).join(" ");
-        return `${measure ? `${measure} ` : ""}${ing.name}`;
-      }).join(", ") || "";
 
-    const textToSpeak = [
-      `Title: ${post.title}`,
-      ingredientsList ? `Ingredients: ${ingredientsList}` : "",
-      post.caption ? `Description: ${post.caption}` : "",
-    ].filter(Boolean).join(". ");
+    // Build the text to speak
+    const ingredientsList =
+      post.ingredients?.length > 0
+        ? post.ingredients
+            .map((ing) => {
+              const measure =
+                ing.unit === "to taste"
+                  ? "to taste"
+                  : [ing.amount, ing.unit].filter(Boolean).join(" ");
+              return `${measure ? `${measure} ` : ""}${ing.name}`;
+            })
+            .join(", ")
+        : "";
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.onstart = () => { setIsSpeaking(true); setIsPaused(false); };
-    utterance.onend   = () => { setIsSpeaking(false); setIsPaused(false); };
-    utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
+    const parts = [`Title: ${post.title}`];
+    if (ingredientsList) parts.push(`Ingredients: ${ingredientsList}`);
+    if (post.caption)    parts.push(`Description: ${post.caption}`);
+    const textToSpeak = parts.join(". ");
+
+    // Cancel anything queued, then wait one tick so the browser
+    // fully flushes before we queue the new utterance
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate   = 0.9;
+      utterance.pitch  = 1;
+      utterance.volume = 1;
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        setIsPaused(false);
+        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
+        speakIntervalRef.current = setInterval(() => {
+          if (
+            window.speechSynthesis.speaking &&
+            !window.speechSynthesis.paused
+          ) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }, 10000);
+      };
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        clearInterval(speakIntervalRef.current);
+      };
+
+      utterance.onerror = (e) => {
+        // "interrupted" is fired when we call cancel() ourselves — not a real error
+        if (e.error === "interrupted") return;
+        setIsSpeaking(false);
+        setIsPaused(false);
+        clearInterval(speakIntervalRef.current);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   };
 
   useEffect(() => {
@@ -179,6 +231,7 @@ const ExpandedView = ({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
       window.speechSynthesis.cancel();
+      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
     };
   }, [onClose, hasMultiple, media.length]);
 
@@ -267,7 +320,6 @@ const ExpandedView = ({
               </div>
             </div>
             <div className="flex items-center gap-1">
-              {/* FavoriteButton now receives the post so it can write to context */}
               <FavoriteButton post={post} />
               <div className="relative" ref={menuRef}>
                 <button

@@ -196,6 +196,7 @@ const PostCard = ({
 
       {!isOwner && showReportModal && (
         <ReportModal
+        post={post}                           // ← ADD THIS
           onConfirm={handleConfirmReport}
           onCancel={() => setShowReportModal(false)}
         />

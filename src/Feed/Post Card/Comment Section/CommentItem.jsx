@@ -77,6 +77,8 @@
     author,
     reportLabel = "Report",
     subject = "this",
+      comment  = null,   // ← ADD
+  postTitle = "",    // ← ADD
   }) => {
     const isOwner  = author === CURRENT_USER;   // owner cannot report their own content
     const canReport = !isOwner;
@@ -147,6 +149,8 @@
             onClose={() => setModalOpen(false)}
             onSubmit={handleSubmitReport}
             subject={subject}
+            comment={comment}     // ← ADD
+           postTitle={postTitle} // ← ADD
           />
         )}
 
@@ -241,6 +245,8 @@
               author={comment.author}
               reportLabel="Report comment"
               subject="this comment"
+              comment={comment} 
+              postTitle=""
             />
           </div>
 

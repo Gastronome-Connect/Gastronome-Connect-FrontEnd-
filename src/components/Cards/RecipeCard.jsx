@@ -7,8 +7,8 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
   const [expanded, setExpanded] = useState(false);
 
   const {
-    title: recipeTitle = "Binangkal",
-    author = "Jomarrie",
+    title: recipeTitle,
+    author,
     dateCreate,
     date,
     savedAt,
