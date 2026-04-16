@@ -16,19 +16,48 @@ export default function RestoreAccounts() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchAccounts = async () => {
+    let isMounted = true;
+
+    const fetchAccounts = async (showLoading = false) => {
       try {
+        if (showLoading && isMounted) {
+          setLoading(true);
+        }
         const response = await adminApi.get("/admin/deleted-accounts");
+        if (!isMounted) {
+          return;
+        }
         setAccounts(response.data);
-        setInitialTotal(response.data.length);
+        setInitialTotal((current) =>
+          current === 0
+            ? response.data.length
+            : Math.max(current, response.data.length),
+        );
+        setError(null);
         setLoading(false);
       } catch (err) {
+        if (!isMounted) {
+          return;
+        }
         setError("Failed to fetch accounts.");
         setLoading(false);
       }
     };
 
-    fetchAccounts();
+    const handleFocus = () => {
+      fetchAccounts();
+    };
+
+    fetchAccounts(true);
+
+    const intervalId = window.setInterval(() => fetchAccounts(), 15000);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   const handleRestore = async (id) => {

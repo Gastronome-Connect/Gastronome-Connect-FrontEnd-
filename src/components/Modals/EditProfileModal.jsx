@@ -10,10 +10,9 @@ import PreferencesTab from "./Edit Profile Modal Components/PreferencesTab";
 import AllergensTab from "./Edit Profile Modal Components/AllergensTab";
 import DeleteAccountPopup from "../Popups/DelPopup";
 import AvatarEditorModal from "../Modals/Edit Profile Modal Components/AvatarEditorModal";
-import { apiFetch } from "../../utils/api";
+import { apiFetch, logout } from "../../utils/api";
 
 const EXISTING_NAMES = ["Juan Dela Cruz", "Gastronome01", "Tester_01"];
-const MOCK_PASSWORD = "password123";
 
 const DEFAULT_OPTION_DATA = {
   flavors: [],
@@ -252,19 +251,36 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
     }
   };
 
-  const handleDeleteConfirm = (password) => {
+  const handleDeleteConfirm = async (password) => {
     setDeleteError("");
     setDeleteLoading(true);
-    setTimeout(() => {
-      if (password !== MOCK_PASSWORD) {
-        setDeleteLoading(false);
-        setDeleteError("Incorrect password. Please try again.");
-        return;
+
+    try {
+      const response = await apiFetch("/api/delete-account", {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || "Failed to schedule account deletion.",
+        );
       }
+
+      await logout();
+      localStorage.removeItem("userId");
+      localStorage.removeItem("adminAccessToken");
+
       setDeleteLoading(false);
       setShowDeletePopup(false);
-      navigate("/");
-    }, 1200);
+      onClose();
+      navigate("/login?mode=login", { replace: true });
+    } catch (error) {
+      setDeleteLoading(false);
+      setDeleteError(error.message || "Failed to schedule account deletion.");
+    }
   };
 
   const tabs = [
