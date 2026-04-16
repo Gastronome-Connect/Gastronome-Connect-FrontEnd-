@@ -1,5 +1,11 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import {
+  getSignupRedirectPath,
+  getSignupStepForPath,
+  isForgotPasswordFlowActive,
+  isSignupFlowActive,
+} from "../utils/signupFlow";
 
 /**
  * FlowRoute - Only allows access during signup/forgot-password flow
@@ -8,6 +14,8 @@ import { Navigate } from "react-router-dom";
  * Redirects to /login if accessed outside the flow
  */
 const FlowRoute = ({ Component }) => {
+  const location = useLocation();
+
   const hasFlowState = () => {
     const sourceFlow = sessionStorage.getItem("sourceFlow");
     const pendingEmail = sessionStorage.getItem("pendingEmail");
@@ -17,6 +25,23 @@ const FlowRoute = ({ Component }) => {
   // Not in flow - redirect to login
   if (!hasFlowState()) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (isForgotPasswordFlowActive() && location.pathname !== "/verification") {
+    return <Navigate to="/verification" replace />;
+  }
+
+  if (isSignupFlowActive()) {
+    const expectedPath = getSignupRedirectPath();
+    const requestedStep = getSignupStepForPath(location.pathname);
+
+    if (!requestedStep) {
+      return <Navigate to={expectedPath || "/verification"} replace />;
+    }
+
+    if (expectedPath && location.pathname !== expectedPath) {
+      return <Navigate to={expectedPath} replace />;
+    }
   }
 
   // User is in the signup/recovery flow - allow access

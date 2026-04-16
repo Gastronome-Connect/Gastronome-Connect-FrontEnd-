@@ -5,6 +5,12 @@ import LogoImage from "../components/Assets/Gastro.png";
 import Porm from "./Preferences";
 import ResendPopup from "../components/Popups/ResendPopup";
 import { buildApiUrl } from "../utils/api";
+import useBlockBrowserBack from "../Hooks/useBlockBrowserBack";
+import {
+  clearSignupStep,
+  setSignupStep,
+  SIGNUP_STEPS,
+} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -33,11 +39,19 @@ const VerificationPage = () => {
 
   const sourceFlow = sessionStorage.getItem("sourceFlow");
 
+  useBlockBrowserBack(sourceFlow === "signup");
+
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (sourceFlow === "signup") {
+      setSignupStep(SIGNUP_STEPS.VERIFICATION);
+    }
+  }, [sourceFlow]);
 
   // Panel position: forgotpassword → left (60px), signup → right
   const getPanelTransform = () => {
@@ -120,6 +134,7 @@ const VerificationPage = () => {
         sessionStorage.removeItem("sourceFlow");
         navigate("/login", { replace: true });
       } else {
+        setSignupStep(SIGNUP_STEPS.PREFERENCES);
         navigate("/preferences", { replace: true });
       }
     } catch (error) {
@@ -162,12 +177,15 @@ const VerificationPage = () => {
     // Clear flow state for both signup and forgotpassword flows
     sessionStorage.removeItem("pendingEmail");
     sessionStorage.removeItem("sourceFlow");
+    clearSignupStep();
 
     // For signup flow, also clear any auth tokens and temp signup data
     if (sourceFlow === "signup") {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       sessionStorage.removeItem("tempSignupData");
+      sessionStorage.removeItem("tempPreferences");
+      sessionStorage.removeItem("tempDislikes");
     }
 
     navigate("/login");

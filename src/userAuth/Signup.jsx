@@ -6,6 +6,7 @@ import BackgroundCarousel from "../components/Carousel Background/BackgroundCaro
 import LogoImage from "../components/Assets/Gastro.png";
 import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
+import { setSignupStep, SIGNUP_STEPS } from "../utils/signupFlow";
 
 const SignUp = () => {
   const [emailSent] = useState(false);
@@ -115,12 +116,33 @@ const SignUp = () => {
         return;
       }
 
+      const registerResponse = await fetch(buildApiUrl("/api/register"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const registerData = await registerResponse.json();
+      if (!registerResponse.ok) {
+        setError(registerData.message || "Failed to start signup");
+        setLoading(false);
+        return;
+      }
+
       sessionStorage.setItem(
         "tempSignupData",
         JSON.stringify({ email, password, confirmPassword }),
       );
       sessionStorage.setItem("pendingEmail", email);
       sessionStorage.setItem("sourceFlow", "signup");
+      setSignupStep(SIGNUP_STEPS.VERIFICATION);
 
       navigate("/verification", { replace: true });
     } catch (error) {

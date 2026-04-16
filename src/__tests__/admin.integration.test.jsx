@@ -64,7 +64,9 @@ describe("admin page integration", () => {
         <Routes>
           <Route
             path="/admin"
-            element={<ProtectedRoute Component={AdminLayout} requireAdmin={true} />}
+            element={
+              <ProtectedRoute Component={AdminLayout} requireAdmin={true} />
+            }
           >
             <Route index element={<AdminDashboard />} />
             <Route path="restore" element={<div>Restore Accounts Route</div>} />
@@ -78,12 +80,16 @@ describe("admin page integration", () => {
     );
 
     expect(await screen.findByText(/dashboard overview/i)).toBeInTheDocument();
-    expect(screen.getByText("Total Users")).toBeInTheDocument();
-    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(await screen.findByText("Total Users")).toBeInTheDocument();
+    expect(await screen.findByText("12")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /restore accounts/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /restore accounts/i }),
+    );
 
-    expect(await screen.findByText("Restore Accounts Route")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Restore Accounts Route"),
+    ).toBeInTheDocument();
     await waitFor(() => expect(adminApi.get).toHaveBeenCalledTimes(3));
   });
 
@@ -93,7 +99,9 @@ describe("admin page integration", () => {
         <Routes>
           <Route
             path="/admin"
-            element={<ProtectedRoute Component={AdminLayout} requireAdmin={true} />}
+            element={
+              <ProtectedRoute Component={AdminLayout} requireAdmin={true} />
+            }
           >
             <Route index element={<AdminDashboard />} />
           </Route>
@@ -111,7 +119,9 @@ describe("admin page integration", () => {
       await screen.findByText(/redirected to the login page/i),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /yes, log out/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /yes, log out/i }),
+    );
 
     expect(await screen.findByText("Login Route")).toBeInTheDocument();
     expect(localStorage.getItem("adminAccessToken")).toBeNull();
