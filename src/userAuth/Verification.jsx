@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
-import Porm from "./Preferences";
 import ResendPopup from "../components/Popups/ResendPopup";
 import { buildApiUrl } from "../utils/api";
 
@@ -25,13 +24,19 @@ const VerificationPage = () => {
   const [timer, setTimer] = useState(300);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [error, setError] = useState("");
-  const [showPorm] = useState(false);
   const [showResendPopup, setShowResendPopup] = useState(false);
   const [mobile, setMobile] = useState(isMobile());
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const email = sessionStorage.getItem("pendingEmail");
 
-  const sourceFlow = sessionStorage.getItem("sourceFlow");
+  // Check for pendingUser in sessionStorage on mount
+  useEffect(() => {
+    const pendingUser = sessionStorage.getItem("pendingUser");
+    if (!pendingUser) {
+      // No pending user - redirect to signup
+      navigate("/signup", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
@@ -39,43 +44,15 @@ const VerificationPage = () => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Panel position: forgotpassword → left (60px), signup → right
+  // Panel position based on viewport
   const getPanelTransform = () => {
-    if (mobile) return undefined; // handled by CSS centering
+    if (mobile) return undefined;
     const panelW = Math.min(480, window.innerWidth - 48);
     const rightX = window.innerWidth - panelW - 60;
-    return sourceFlow === "forgotpassword"
-      ? "translateX(60px)"
-      : `translateX(${rightX}px)`;
+    return `translateX(${rightX}px)`;
   };
 
-  useEffect(() => {
-    const sendOTP = async () => {
-      try {
-        // Get credentials from sessionStorage if available
-        const tempData = sessionStorage.getItem("tempSignupData");
-        const credentials = tempData ? JSON.parse(tempData) : {};
-        
-        const response = await fetch(buildApiUrl("/api/send-otp"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            email, 
-            username: credentials.username,
-            password: credentials.password 
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to send OTP");
-        setTimer(300);
-        setIsTimerRunning(true);
-      } catch (error) {
-        setError(error.message);
-      }
-    };
-    if (email) sendOTP();
-  }, [email]);
-
+  // Timer countdown
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
     const interval = setInterval(() => {
@@ -114,55 +91,97 @@ const VerificationPage = () => {
       setError("Please enter the complete 6-digit code.");
       return;
     }
+
+    setLoading(true);
+    setError("");
+
     try {
+      const pendingUser = sessionStorage.getItem("pendingUser");
+      const { email } = pendingUser ? JSON.parse(pendingUser) : {};
+
+      if (!email) {
+        setError("Session expired, please sign up again");
+        setTimeout(() => {
+          sessionStorage.removeItem("pendingUser");
+          navigate("/signup", { replace: true });
+        }, 3000);
+        return;
+      }
+
       const response = await fetch(buildApiUrl("/api/verify-otp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: enteredCode }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to verify OTP");
 
-      if (sourceFlow === "forgotpassword") {
-        sessionStorage.removeItem("pendingEmail");
-        sessionStorage.removeItem("sourceFlow");
+      const data = await response.json();
+
+      if (response.status === 200) {
+        // Success - clear sessionStorage and redirect to login
+        sessionStorage.removeItem("pendingUser");
         navigate("/login", { replace: true });
+      } else if (response.status === 400) {
+        // Wrong OTP
+        setError("Incorrect code, try again");
+      } else if (response.status === 410) {
+        // Max attempts exceeded
+        setError("Too many attempts, please sign up again");
+        setTimeout(() => {
+          sessionStorage.removeItem("pendingUser");
+          navigate("/signup", { replace: true });
+        }, 3000);
+      } else if (response.status === 404) {
+        // Session expired
+        setError("Session expired, please sign up again");
+        setTimeout(() => {
+          sessionStorage.removeItem("pendingUser");
+          navigate("/signup", { replace: true });
+        }, 3000);
       } else {
-        navigate("/preferences", { replace: true });
+        // Other errors
+        setError(data.message || "Failed to verify OTP. Please try again.");
       }
     } catch (error) {
-      setError(error.message);
+      console.error("Verification error:", error);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleResend = async () => {
     if (timer === 0 && !isTimerRunning) {
-      if (!email) {
-        setError("Session expired. Please restart the verification process.");
+      const pendingUser = sessionStorage.getItem("pendingUser");
+      if (!pendingUser) {
+        setError("Session expired. Please restart the signup process.");
         return;
       }
+
       try {
-        // Get credentials from sessionStorage if available
-        const tempData = sessionStorage.getItem("tempSignupData");
-        const credentials = tempData ? JSON.parse(tempData) : {};
-        
-        const response = await fetch(buildApiUrl("/api/send-otp"), {
+        const { email, username, password } = JSON.parse(pendingUser);
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(buildApiUrl("/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            email, 
-            username: credentials.username,
-            password: credentials.password 
-          }),
+          body: JSON.stringify({ email, username, password }),
         });
+
         const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.message || "Failed to resend OTP");
-        setTimer(300);
-        setIsTimerRunning(true);
-        setShowResendPopup(true);
+
+        if (response.status === 200) {
+          setTimer(300);
+          setIsTimerRunning(true);
+          setShowResendPopup(true);
+        } else {
+          setError(data.message || "Failed to resend OTP. Please try again.");
+        }
       } catch (error) {
-        setError(error.message);
+        console.error("Resend OTP error:", error);
+        setError("Failed to resend OTP. Please try again.");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -174,22 +193,10 @@ const VerificationPage = () => {
   };
 
   const handleContinue = () => setShowResendPopup(false);
-  const handleBackToLogin = () => {
-    // Clear flow state for both signup and forgotpassword flows
-    sessionStorage.removeItem("pendingEmail");
-    sessionStorage.removeItem("sourceFlow");
-
-    // For signup flow, also clear any auth tokens and temp signup data
-    if (sourceFlow === "signup") {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      sessionStorage.removeItem("tempSignupData");
-    }
-
-    navigate("/login");
+  const handleBackToSignup = () => {
+    sessionStorage.removeItem("pendingUser");
+    navigate("/signup", { replace: true });
   };
-
-  if (showPorm) return <Porm />;
 
   const panelStyle = mobile
     ? {
@@ -287,9 +294,9 @@ const VerificationPage = () => {
                       <button
                         type="button"
                         onClick={handleResend}
-                        disabled={timer !== 0 || isTimerRunning}
+                        disabled={timer !== 0 || isTimerRunning || loading}
                         className={`ml-1 font-semibold hover:underline outline-none ${
-                          timer === 0 && !isTimerRunning
+                          timer === 0 && !isTimerRunning && !loading
                             ? "text-[#F57600] cursor-pointer"
                             : "text-gray-400 cursor-not-allowed"
                         }`}
@@ -304,9 +311,10 @@ const VerificationPage = () => {
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md"
+                    disabled={loading}
+                    className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Verify
+                    {loading ? "Verifying..." : "Verify"}
                   </button>
                 </form>
 
@@ -319,10 +327,10 @@ const VerificationPage = () => {
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button
-                    onClick={handleBackToLogin}
+                    onClick={handleBackToSignup}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"
                   >
-                    Back to Login
+                    Back to Sign Up
                   </button>
                 </div>
               </div>

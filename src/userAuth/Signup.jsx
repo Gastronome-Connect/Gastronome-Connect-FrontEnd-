@@ -4,15 +4,15 @@ import { buildApiUrl } from "../utils/api";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
-import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
 
 const SignUp = () => {
-  const [emailSent] = useState(false);
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -34,6 +34,19 @@ const SignUp = () => {
       return false;
     }
     setEmailError("");
+    return true;
+  };
+
+  const validateUsername = () => {
+    if (!username) {
+      setUsernameError("Field can't be empty");
+      return false;
+    }
+    if (username.length < 3) {
+      setUsernameError("Username must be at least 3 characters long");
+      return false;
+    }
+    setUsernameError("");
     return true;
   };
 
@@ -80,57 +93,61 @@ const SignUp = () => {
     return true;
   };
 
-  const handleVerify = () => {
-    navigate("/verification", { replace: true });
-  };
-
   const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    setEmailError("");
+    setUsernameError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
 
+    // Client-side validation
     const isEmailValid = validateEmail();
+    const isUsernameValid = validateUsername();
     const isPasswordValid = validatePassword();
     const isConfirmPasswordValid = validateConfirmPassword();
 
-    if (!isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
-      setLoading(false);
+    if (!isEmailValid || !isUsernameValid || !isPasswordValid || !isConfirmPasswordValid) {
       return;
     }
 
+    setLoading(true);
+
     try {
-      const validateResponse = await fetch(buildApiUrl("/api/validate"), {
+      // Save pending user to sessionStorage before calling API
+      sessionStorage.setItem(
+        "pendingUser",
+        JSON.stringify({ email, username, password }),
+      );
+
+      // Call send-otp API
+      const response = await fetch(buildApiUrl("/api/send-otp"), {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, username, password }),
       });
 
-      const validateData = await validateResponse.json();
-      if (!validateResponse.ok) {
-        setEmailError(validateData.message || "Email validation failed");
-        setLoading(false);
-        return;
+      const data = await response.json();
+
+      if (response.status === 200) {
+        // Success - redirect to verification
+        navigate("/verify", { replace: true });
+      } else {
+        // Error - show message on signup page
+        setError(data.message || "Failed to send OTP. Please try again.");
+        // Clear sessionStorage on error
+        sessionStorage.removeItem("pendingUser");
       }
-
-      sessionStorage.setItem(
-        "tempSignupData",
-        JSON.stringify({ email, password, confirmPassword }),
-      );
-      sessionStorage.setItem("pendingEmail", email);
-      sessionStorage.setItem("sourceFlow", "signup");
-
-      navigate("/verification", { replace: true });
     } catch (error) {
-      console.error("Sign up preparation error:", error);
+      console.error("Sign up error:", error);
       setError(error.message || "An unexpected error occurred");
+      // Clear sessionStorage on error
+      sessionStorage.removeItem("pendingUser");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setLoading(false);
   };
 
   return (
@@ -189,6 +206,34 @@ const SignUp = () => {
                   {emailError && (
                     <p className="text-red-600 text-xs sm:text-sm mt-1">
                       {emailError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Username input */}
+                <div className="mt-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      onBlur={validateUsername}
+                      placeholder=" "
+                      className={`peer block w-full px-3 py-3 border ${
+                        usernameError ? "border-red-600" : "border-gray-700"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-[#00B4FA] focus:border-[#0060A9] text-xs sm:text-sm md:text-base bg-transparent`}
+                    />
+                    <label
+                      htmlFor="username"
+                      className="absolute left-3 top-3 px-1 transition-all duration-200 cursor-text text-gray-500 text-xs sm:text-sm md:text-base peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:text-[#0060A9] peer-focus:bg-white peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:bg-white"
+                    >
+                      Username
+                    </label>
+                  </div>
+                  {usernameError && (
+                    <p className="text-red-600 text-xs sm:text-sm mt-1">
+                      {usernameError}
                     </p>
                   )}
                 </div>
@@ -307,9 +352,6 @@ const SignUp = () => {
           </div>
         </div>
       </div>
-
-      {/* Email sent message */}
-      {emailSent && <ResendPopup onContinue={handleVerify} />}
     </div>
   );
 };
