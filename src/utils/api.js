@@ -65,7 +65,21 @@ async function apiFetch(input, init = {}) {
   const token = getAccessToken();
   if (token) opts.headers["Authorization"] = `Bearer ${token}`;
 
-  let res = await fetch(url, opts);
+  let res;
+  try {
+    res = await fetch(url, opts);
+  } catch (err) {
+    // Handle network errors, including CORS
+    if (err.message === 'Failed to fetch') {
+      const corsError = new Error(
+        'Unable to reach the server. This could be a network issue, CORS configuration problem, or the server may be temporarily unavailable.'
+      );
+      corsError.isCORSError = true;
+      throw corsError;
+    }
+    throw err;
+  }
+
   if (res.status !== 401) return res;
 
   // Try refresh once

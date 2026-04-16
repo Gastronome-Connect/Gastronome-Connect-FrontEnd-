@@ -487,7 +487,17 @@ const AuthPage = () => {
       navigate("/verification", { replace: true });
     } catch (error) {
       console.error("Sign up preparation error:", error);
-      setSignupError(error.message || "An unexpected error occurred");
+      
+      // Provide better error messages
+      let errorMessage = "An unexpected error occurred";
+      
+      if (error.message && error.message.includes("Failed to fetch")) {
+        errorMessage = "Unable to connect to the server. Please check your internet connection or try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setSignupError(errorMessage);
       setSignupLoading(false);
     }
   };
