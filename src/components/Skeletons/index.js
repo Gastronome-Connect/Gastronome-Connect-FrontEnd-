@@ -21,3 +21,7 @@ export { default as SkeletonGridCards } from "./SkeletonGridCards";
 export { default as SkeletonChatbot } from "./SkeletonChatbot";
 export { default as SkeletonTable } from "./SkeletonTable";
 export { default as SkeletonStats } from "./SkeletonStats";
+
+// Admin Skeletons
+export { default as SkeletonAdminQuickActions } from "./SkeletonAdminQuickActions";
+export { default as SkeletonAdminCardList } from "./SkeletonAdminCardList";

@@ -20,6 +20,13 @@ const useDraft = () => {
           title:   title   ?? "",
           caption: caption ?? "",
         })),
+        ingredients: (data.ingredients ?? []).map(({ id, name, amount, unit, optional }) => ({
+          id,
+          name:     name     ?? "",
+          amount:   amount   ?? "",
+          unit:     unit     ?? "",
+          optional: optional ?? false,
+        })),
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));

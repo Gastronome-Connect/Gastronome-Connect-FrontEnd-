@@ -187,11 +187,14 @@ const IngredientInput = ({
     if (!raw) return;
     if (amount.trim() && !isValidAmount(amount)) { setAmountErr(true); return; }
 
+    // Capitalize first letter
+    const capitalizedName = raw.charAt(0).toUpperCase() + raw.slice(1);
+
     setIngredients((prev) => [
       ...prev,
       {
         id:       Math.random().toString(36).substr(2, 9),
-        name:     raw,
+        name:     capitalizedName,
         amount:   amount.trim(),
         unit,
         optional: isOptional,

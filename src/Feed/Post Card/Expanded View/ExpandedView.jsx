@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bot, Send, UtensilsCrossed } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, Send, UtensilsCrossed } from "lucide-react";
 import { FaEllipsisH } from "react-icons/fa";
 
 import Avatar from "../Post Header/Avatar";
@@ -9,6 +9,7 @@ import PostMenu from "../Post Header/PostMenu";
 import FavoriteButton from "../Post Header/FavoriteButton";
 import PostActions from "../Post Action/PostActions";
 import CommentSection from "../Comment Section/CommentSection";
+import AILogo from "../../../components/Assets/AILogo.png";
 
 /* ── Shared unit pluralizer ── */
 const pluralizeUnit = (unit, amount) => {
@@ -60,6 +61,8 @@ const IngredientList = ({ ingredients }) => {
       >
         {visible.map((ing) => {
           const measure = fmt(ing);
+          // Capitalize first letter if not already capitalized
+          const displayName = ing.name ? ing.name.charAt(0).toUpperCase() + ing.name.slice(1) : ing.name;
           return (
             <li key={ing.id} className="flex items-baseline gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F57600] shrink-0 mt-1.5" />
@@ -68,7 +71,7 @@ const IngredientList = ({ ingredients }) => {
                   {measure}
                 </span>
               )}
-              <span className="text-sm text-gray-700 leading-snug">{ing.name}</span>
+              <span className="text-sm text-gray-700 leading-snug">{displayName}</span>
             </li>
           );
         })}
@@ -90,50 +93,24 @@ const IngredientList = ({ ingredients }) => {
 };
 
 /* ── Builds the chatbot prefill string ── */
-const buildChatbotPrefill = (post, media) => {
+const buildChatbotPrefill = (post) => {
   const lines = [];
 
-  const hasPerMedia = media.length > 1 && media.some((m) => m.title || m.caption);
+  if (post.title) lines.push(`Title:\n${post.title}`);
 
-  if (!hasPerMedia) {
-    // ── Structure 1: Single media ──
-    if (post.title) lines.push(post.title);
-
-    if (post.ingredients?.length > 0) {
-      lines.push("\nIngredients:");
-      post.ingredients.forEach((ing) => {
-        const measure =
-          ing.unit === "to taste"
-            ? "to taste"
-            : [ing.amount, ing.unit].filter(Boolean).join(" ");
-        const optional = ing.optional ? " (optional)" : "";
-        lines.push(`• ${measure ? `${measure} ` : ""}${ing.name}${optional}`);
-      });
-    }
-
-    if (post.caption) lines.push(`\nDescription:\n${post.caption}`);
-
-  } else {
-    // ── Structure 2: Multiple media ──
-    if (post.ingredients?.length > 0) {
-      lines.push("Ingredients:");
-      post.ingredients.forEach((ing) => {
-        const measure =
-          ing.unit === "to taste"
-            ? "to taste"
-            : [ing.amount, ing.unit].filter(Boolean).join(" ");
-        const optional = ing.optional ? " (optional)" : "";
-        lines.push(`• ${measure ? `${measure} ` : ""}${ing.name}${optional}`);
-      });
-    }
-
-    media.forEach((m, i) => {
-      if (!m.title && !m.caption) return;
-      lines.push(`\nMedia ${i + 1}:`);
-      if (m.title)   lines.push(`Title: ${m.title}`);
-      if (m.caption) lines.push(`Description: ${m.caption}`);
+  if (post.ingredients?.length > 0) {
+    lines.push("\nIngredients:");
+    post.ingredients.forEach((ing) => {
+      const measure =
+        ing.unit === "to taste"
+          ? "to taste"
+          : [ing.amount, ing.unit].filter(Boolean).join(" ");
+      const optional = ing.optional ? " (optional)" : "";
+      lines.push(`${measure ? `${measure} ` : ""}${ing.name}${optional}`);
     });
   }
+
+  if (post.caption) lines.push(`\nDescription:\n${post.caption}`);
 
   return lines.join("\n").trim();
 };
@@ -153,6 +130,9 @@ const ExpandedView = ({
   const [current, setCurrent]           = useState(startIndex);
   const [showComments, setShowComments] = useState(false);
   const [menuOpen, setMenuOpen]         = useState(false);
+  const [isSpeaking, setIsSpeaking]     = useState(false);
+  const [isPaused, setIsPaused]         = useState(false);
+  const synthRef                        = useRef(null);
 
   const menuRef           = useRef(null);
   const commentSectionRef = useRef(null);
@@ -165,6 +145,53 @@ const ExpandedView = ({
 
   const goPrev = (e) => { e.stopPropagation(); setCurrent((p) => (p - 1 + media.length) % media.length); };
   const goNext = (e) => { e.stopPropagation(); setCurrent((p) => (p + 1) % media.length); };
+
+  const handleSpeak = () => {
+    if (!window?.speechSynthesis) return;
+    
+    if (isSpeaking) {
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
+    const ingredientsList = post.ingredients
+      ?.map((ing) => {
+        const measure = ing.unit === "to taste" ? "to taste" : [ing.amount, ing.unit].filter(Boolean).join(" ");
+        return `${measure ? `${measure} ` : ""}${ing.name}`;
+      })
+      .join(", ") || "";
+
+    const textToSpeak = [
+      `Title: ${post.title}`,
+      ingredientsList ? `Ingredients: ${ingredientsList}` : "",
+      post.caption ? `Description: ${post.caption}` : "",
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+    synthRef.current = utterance;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     const el = pinnedTextareaRef.current;
@@ -181,7 +208,13 @@ const ExpandedView = ({
     };
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = "unset"; };
+    return () => { 
+      document.removeEventListener("keydown", onKeyDown); 
+      document.body.style.overflow = "unset";
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
   }, [onClose, hasMultiple, media.length]);
 
   useEffect(() => {
@@ -338,16 +371,31 @@ const ExpandedView = ({
                 commentsOpen={showComments}
               />
 
-              <button
-                onClick={() => {
-                  const prefill = buildChatbotPrefill(post, media);
-                  navigate("/chatbot", { state: { prefill } });
-                }}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
-              >
-                <Bot size={13} />
-                <span className="hidden xs:inline">Chatbot</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSpeak}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shrink-0 ${
+                    isSpeaking && !isPaused
+                      ? "bg-[#F57600] text-white shadow"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  title="Read aloud"
+                >
+                  <Volume2 size={13} />
+                  <span className="hidden xs:inline">{!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const prefill = buildChatbotPrefill(post);
+                    navigate("/chatbot", { state: { prefill } });
+                  }}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
+                >
+                  <img src={AILogo} alt="AI" className="w-3 h-3" />
+                  <span className="hidden xs:inline">Chatbot</span>
+                </button>
+              </div>
             </div>
 
             {showComments && (

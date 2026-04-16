@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Heart, Archive, Flag, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Archive, Flag, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
 import { FaEllipsisH } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { useChatContext } from "../../Context/ChatContext";
+import AILogo from "../Assets/AILogo.png";
 
 /* ── Inline avatar — no external dependency needed ── */
 const Avatar = ({ src, alt, size = 9 }) => {
@@ -58,6 +61,8 @@ const IngredientList = ({ ingredients }) => {
       <ul className="space-y-1 pr-0.5">
         {visible.map((ing) => {
           const measure = fmt(ing);
+          // Capitalize first letter if not already capitalized
+          const displayName = ing.name ? ing.name.charAt(0).toUpperCase() + ing.name.slice(1) : ing.name;
           return (
             <li key={ing.id} className="flex items-baseline gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F57600] shrink-0 mt-1.5" />
@@ -66,7 +71,7 @@ const IngredientList = ({ ingredients }) => {
                   {measure}
                 </span>
               )}
-              <span className="text-sm text-gray-700 leading-snug">{ing.name}</span>
+              <span className="text-sm text-gray-700 leading-snug">{displayName}</span>
             </li>
           );
         })}
@@ -98,11 +103,16 @@ const CardExpandedView = ({
   onSave,
   initialSaved = false,
 }) => {
+  const navigate = useNavigate();
+  const { dispatch } = useChatContext();
   const [current, setCurrent] = useState(startIndex);
   const [menuOpen, setMenuOpen] = useState(false);
   const [saved, setSaved] = useState(initialSaved);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const menuRef = useRef(null);
+  const synthRef = useRef(null);
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -122,10 +132,105 @@ const CardExpandedView = ({
     onSave?.(!saved);
   };
 
+  // Text-to-Speech function
+  const handleSpeak = () => {
+    if (!window?.speechSynthesis) return;
+    
+    if (isSpeaking) {
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
+    // Format ingredients
+    const ingredientsText = post.ingredients && post.ingredients.length > 0
+      ? post.ingredients
+          .map((ing) => {
+            const measure = [ing.amount, ing.unit].filter(Boolean).join(" ");
+            return `${measure ? `${measure} ` : ""}${ing.name}`;
+          })
+          .join(", ")
+      : "";
+
+    // Build text to speak with structured format
+    const textToSpeak = [
+      `Title: ${post.title}`,
+      ingredientsText ? `Ingredients: ${ingredientsText}` : "",
+      post.caption ? `Description: ${post.caption}` : "",
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Navigate to chatbot with pre-filled recipe info
+  const handleChatbot = () => {
+    // Format ingredients
+    const ingredientsText = post.ingredients && post.ingredients.length > 0
+      ? post.ingredients
+          .map((ing) => {
+            const measure = [ing.amount, ing.unit].filter(Boolean).join(" ");
+            return `${ing.name}${measure ? `, ${measure}` : ""}`;
+          })
+          .join(", ")
+      : "";
+
+    // Build recipe info with structured format
+    const recipeInfo = [
+      `Title:\n${post.title}`,
+      ingredientsText ? `Ingredients:\n${ingredientsText}` : "",
+      `Description:\n${post.caption || ""}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    // Create initial message
+    dispatch({
+      type: "NEW_SESSION",
+      payload: {
+        title: post.title || "Recipe Chat",
+      },
+    });
+
+    // Navigate to chatbot with pre-filled message
+    onClose();
+    navigate("/chatbot", { state: { prefill: recipeInfo } });
+  };
+
   /* Close on Escape / arrow-key navigation */
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        setIsPaused(false);
+        onClose();
+      }
       if (e.key === "ArrowLeft" && hasMultiple)
         setCurrent((p) => (p - 1 + media.length) % media.length);
       if (e.key === "ArrowRight" && hasMultiple)
@@ -136,6 +241,9 @@ const CardExpandedView = ({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setIsPaused(false);
     };
   }, [onClose, hasMultiple, media.length]);
 
@@ -241,6 +349,32 @@ const CardExpandedView = ({
             </div>
 
             <div className="flex items-center gap-1.5">
+              {/* Play / Read Aloud button */}
+              <button
+                onClick={handleSpeak}
+                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
+                  ${isSpeaking && !isPaused
+                    ? "bg-blue-50 border-blue-200 text-blue-500 hover:bg-blue-100"
+                    : "border-gray-200 text-gray-400 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-400"
+                  }`}
+                title={!isSpeaking ? "Read recipe aloud" : isPaused ? "Resume reading" : "Pause reading"}
+              >
+                <Volume2
+                  size={15}
+                  fill={isSpeaking && !isPaused ? "currentColor" : "none"}
+                  strokeWidth={isSpeaking && !isPaused ? 0 : 2}
+                />
+              </button>
+
+              {/* Chatbot button */}
+              <button
+                onClick={handleChatbot}
+                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center transition-all duration-200 hover:border-orange-200 hover:bg-orange-50"
+                title="Ask chatbot about recipe"
+              >
+                <img src={AILogo} alt="AI Chatbot" className="w-4 h-4 object-contain" />
+              </button>
+
               {/* Heart / Save button */}
               <button
                 onClick={handleSave}
@@ -327,24 +461,10 @@ const CardExpandedView = ({
 
               return (
                 <div className="px-4 sm:px-5 pb-6">
-                  {/* Section label */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg width="13" height="13" fill="none" stroke="#0060A9" strokeWidth="2" viewBox="0 0 24 24">
-                      <line x1="3" y1="6"  x2="21" y2="6"  />
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="18" x2="15" y2="18" />
-                    </svg>
-                    <span className="text-xs font-extrabold text-[#0060A9] uppercase tracking-wide">
-                      Description
-                    </span>
-                  </div>
-
-                  {displayCaption ? (
+                  {displayCaption && (
                     <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
                       {displayCaption}
                     </p>
-                  ) : (
-                    <p className="text-gray-400 text-sm italic">No description provided.</p>
                   )}
 
                   {/* Shared caption shown below for multi-media posts */}

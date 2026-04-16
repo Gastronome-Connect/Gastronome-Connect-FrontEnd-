@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useChatContext } from "../Context/ChatContext";
 import { sendMessageToBot } from "../Services/ChatAPI";
 
@@ -12,9 +12,21 @@ function formatTime() {
 export function useChat() {
   const { activeSessionId, activeSession, dispatch } = useChatContext();
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const abortControllerRef = useRef(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const startNewSession = useCallback(() => {
-    dispatch({ type: "NEW_SESSION", payload: { title: "New chat" } });
+    // Don't create a session yet, just clear the active one
+    // Session will be created when first message is sent
+    dispatch({ type: "SET_ACTIVE_SESSION", payload: null });
   }, [dispatch]);
 
   const switchSession = useCallback(
@@ -66,6 +78,7 @@ export function useChat() {
 
       try {
         const botMsg = await sendMessageToBot(text, formatTime);
+        
         dispatch({
           type: "ADD_MESSAGE",
           payload: {
@@ -74,12 +87,15 @@ export function useChat() {
           },
         });
       } catch (err) {
-        console.error("Bot response error:", err);
+        // Only log if it's not an abort error
+        if (err.name !== "AbortError") {
+          console.error("Bot response error:", err);
+        }
       } finally {
         setIsBotTyping(false);
       }
     },
-    [activeSessionId, isBotTyping, dispatch]
+    [activeSessionId, dispatch, isBotTyping]
   );
 
   return {
