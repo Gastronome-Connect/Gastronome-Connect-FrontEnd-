@@ -468,25 +468,37 @@ const AuthPage = () => {
       const response = await authAPI.validateEmail(signupEmail);
       
       // Check if the response indicates success (HTTP 200)
-      // The backend returns the response body, not the full response object
-      // So we need to check if it's a success by looking at the message or available field
       if (response && (response.available !== false && response.message)) {
-        // Email validation successful - proceed to next step
-        sessionStorage.setItem("pendingEmail", signupEmail);
-        sessionStorage.setItem("sourceFlow", "signup");
-        sessionStorage.setItem(
-          "tempSignupData",
-          JSON.stringify({
+        // Email validation successful - now create the user account
+        try {
+          const registerResponse = await authAPI.register({
             username: signupUsername.trim(),
             email: signupEmail,
             password: signupPassword,
-            confirmPassword,
-          }),
-        );
+          });
+          
+          // User account created successfully
+          sessionStorage.setItem("pendingEmail", signupEmail);
+          sessionStorage.setItem("sourceFlow", "signup");
+          sessionStorage.setItem(
+            "tempSignupData",
+            JSON.stringify({
+              username: signupUsername.trim(),
+              email: signupEmail,
+              password: signupPassword,
+              confirmPassword,
+            }),
+          );
 
-        navigate("/verification", { replace: true });
-        setSignupLoading(false);
-        return;
+          navigate("/verification", { replace: true });
+          setSignupLoading(false);
+          return;
+        } catch (registerError) {
+          console.error("Registration error:", registerError);
+          setSignupError(registerError.message || "Failed to create account");
+          setSignupLoading(false);
+          return;
+        }
       }
       
       // If we get here, email validation failed
