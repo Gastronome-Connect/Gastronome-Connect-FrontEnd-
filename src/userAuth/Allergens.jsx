@@ -5,7 +5,13 @@ import { FaChevronDown, FaChevronUp, FaTimes } from "react-icons/fa";
 import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
+import PrefPopup from "../components/Popups/PrefPopup";
 import { buildApiUrl } from "../utils/api";
+import {
+  clearSignupStep,
+  setSignupStep,
+  SIGNUP_STEPS,
+} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -163,13 +169,56 @@ const Allergens = () => {
     dislikes: [],
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAccountCreatedPopup, setShowAccountCreatedPopup] = useState(false);
   const [mobile, setMobile] = useState(isMobile());
+  const sourceFlow = sessionStorage.getItem("sourceFlow");
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (sourceFlow !== "signup") {
+      return undefined;
+    }
+
+    const handlePopState = () => {
+      setSignupStep(SIGNUP_STEPS.PREFERENCES);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [sourceFlow]);
+
+  useEffect(() => {
+    if (sourceFlow === "signup") {
+      setSignupStep(SIGNUP_STEPS.ALLERGENS);
+    }
+  }, [sourceFlow]);
+
+  const clearSignupFlowState = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("userId");
+    sessionStorage.removeItem("tempSignupData");
+    sessionStorage.removeItem("tempDislikes");
+    sessionStorage.removeItem("tempPreferences");
+    sessionStorage.removeItem("sourceFlow");
+    sessionStorage.removeItem("pendingEmail");
+    clearSignupStep();
+  };
+
+  const handlePopupContinue = () => {
+    setShowAccountCreatedPopup(false);
+    clearSignupFlowState();
+    navigate("/login?mode=login", { replace: true });
+  };
 
   const fetchOptions = async () => {
     try {
@@ -225,85 +274,58 @@ const Allergens = () => {
 
   const handleCompleteSignup = async () => {
     try {
+      setError("");
+      setIsSubmitting(true);
+
       const signupDataStr = sessionStorage.getItem("tempSignupData");
       if (!signupDataStr) {
-        console.error("No signup data found in sessionStorage");
+        setError("Signup session expired. Please sign up again.");
         return;
       }
 
       const signupData = JSON.parse(signupDataStr);
-      const { email, password, confirmPassword, username } = signupData;
+      const { email } = signupData;
+      const tempPreferencesStr = sessionStorage.getItem("tempPreferences");
+      const tempPreferences = tempPreferencesStr
+        ? JSON.parse(tempPreferencesStr)
+        : {};
 
-      const registerResponse = await fetch(buildApiUrl("/api/register"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const completeSignupResponse = await fetch(
+        buildApiUrl("/api/complete-signup"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            preferences: {
+              flavors: Array.isArray(tempPreferences.flavors)
+                ? tempPreferences.flavors
+                : [],
+              techniques: Array.isArray(tempPreferences.cookingStyles)
+                ? tempPreferences.cookingStyles
+                : [],
+            },
+            allergens,
+            dislikes,
+          }),
         },
-        body: JSON.stringify({
-          username: username || undefined,
-          email,
-          password,
-          confirmPassword,
-        }),
-      });
+      );
 
-      const registerData = await registerResponse.json();
+      const completeSignupData = await completeSignupResponse.json();
 
-      if (!registerResponse.ok) {
-        console.error("Account creation failed:", registerData.message);
+      if (!completeSignupResponse.ok) {
+        setError(completeSignupData.message || "Account creation failed");
         return;
       }
 
-      localStorage.setItem("accessToken", registerData.accessToken);
-      localStorage.setItem("refreshToken", registerData.refreshToken);
-      if (registerData.userId) {
-        localStorage.setItem("userId", registerData.userId);
-      }
-
-      const token = registerData.accessToken;
-      const userId = registerData.userId;
-
-      const tempPreferences = sessionStorage.getItem("tempPreferences");
-      if (tempPreferences) {
-        try {
-          const { flavors, cookingStyles } = JSON.parse(tempPreferences);
-          await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              preferences: { flavors, techniques: cookingStyles },
-            }),
-          });
-          sessionStorage.removeItem("tempPreferences");
-        } catch (error) {
-          console.error("Error syncing preferences:", error.message);
-        }
-      }
-
-      try {
-        await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ dislikes, allergies: allergens }),
-        });
-      } catch (error) {
-        console.error("Error saving dislikes:", error.message);
-      }
-
-      sessionStorage.removeItem("tempSignupData");
-      sessionStorage.removeItem("tempDislikes");
-      sessionStorage.removeItem("sourceFlow");
-      sessionStorage.removeItem("pendingEmail");
-
-      navigate("/feed", { replace: true });
+      setShowAccountCreatedPopup(true);
     } catch (error) {
       console.error("Error completing signup:", error);
+      setError(error.message || "Failed to complete signup");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -413,36 +435,54 @@ const Allergens = () => {
                   </div>
                 )}
 
+                {error && (
+                  <p className="mt-4 text-center text-sm text-red-500">
+                    {error}
+                  </p>
+                )}
+
                 <button
                   onClick={handleCompleteSignup}
-                  disabled={isDoneDisabled}
+                  disabled={isDoneDisabled || isSubmitting}
                   className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
-                    isDoneDisabled
+                    isDoneDisabled || isSubmitting
                       ? "cursor-not-allowed opacity-50"
                       : "hover:brightness-110 active:scale-[0.98]"
                   }`}
                 >
-                  Done
+                  {isSubmitting ? "Creating account..." : "Done"}
                 </button>
 
                 <button
                   className="w-full mt-3 px-4 py-2.5 text-sm font-sfpro font-bold border-2 border-[#0060A9] text-[#0060A9] rounded-lg bg-white hover:bg-gray-50 outline-none transition-all"
+                  disabled={isSubmitting}
                   onClick={handleCompleteSignup}
                 >
-                  Skip for Now
+                  {isSubmitting ? "Creating account..." : "Skip for Now"}
                 </button>
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button
                     onClick={async () => {
+                      if (sourceFlow === "signup") {
+                        setSignupStep(SIGNUP_STEPS.PREFERENCES);
+                      }
                       await saveDislikes();
-                      navigate("/preferences");
+                      navigate("/preferences", { replace: true });
                     }}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"
                   >
                     Back
                   </button>
                 </div>
+
+                <PrefPopup
+                  isOpen={showAccountCreatedPopup}
+                  onContinue={handlePopupContinue}
+                  title="Account Created"
+                  message="Your account has been created successfully. Continue to sign in."
+                  buttonText="Continue to Login"
+                />
               </div>
             </div>
           </div>

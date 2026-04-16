@@ -6,6 +6,8 @@ import LogoImage from "../components/Assets/Gastro.png";
 import Flavor from "../components/Assets/Flavor.png";
 import CookingStyle from "../components/Assets/Cooking Style.png";
 import { buildApiUrl } from "../utils/api";
+import useBlockBrowserBack from "../Hooks/useBlockBrowserBack";
+import { setSignupStep, SIGNUP_STEPS } from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -164,12 +166,21 @@ const Preferences = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
+  const sourceFlow = sessionStorage.getItem("sourceFlow");
+
+  useBlockBrowserBack(sourceFlow === "signup");
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (sourceFlow === "signup") {
+      setSignupStep(SIGNUP_STEPS.PREFERENCES);
+    }
+  }, [sourceFlow]);
 
   const savePreferences = async () => {
     const token = localStorage.getItem("accessToken");
@@ -390,6 +401,9 @@ const Preferences = () => {
                 <button
                   onClick={async () => {
                     await savePreferences();
+                    if (sourceFlow === "signup") {
+                      setSignupStep(SIGNUP_STEPS.ALLERGENS);
+                    }
                     navigate("/allergens");
                   }}
                   disabled={isNextDisabled}
@@ -404,7 +418,12 @@ const Preferences = () => {
 
                 <button
                   className="w-full mt-3 px-4 py-2.5 text-sm font-sfpro font-bold border-2 border-[#0060A9] text-[#0060A9] rounded-lg bg-white hover:bg-gray-50 outline-none transition-all"
-                  onClick={() => navigate("/allergens")}
+                  onClick={() => {
+                    if (sourceFlow === "signup") {
+                      setSignupStep(SIGNUP_STEPS.ALLERGENS);
+                    }
+                    navigate("/allergens");
+                  }}
                 >
                   Skip for Now
                 </button>

@@ -4,6 +4,12 @@ import BackgroundCarousel from "../components/Carousel Background/BackgroundCaro
 import LogoImage from "../components/Assets/Gastro.png";
 import ResendPopup from "../components/Popups/ResendPopup";
 import { buildApiUrl } from "../utils/api";
+import useBlockBrowserBack from "../Hooks/useBlockBrowserBack";
+import {
+  clearSignupStep,
+  setSignupStep,
+  SIGNUP_STEPS,
+} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -38,13 +44,21 @@ const VerificationPage = () => {
     }
   }, [navigate]);
 
+  useBlockBrowserBack(sourceFlow === "signup");
+
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Panel position based on viewport
+  useEffect(() => {
+    if (sourceFlow === "signup") {
+      setSignupStep(SIGNUP_STEPS.VERIFICATION);
+    }
+  }, [sourceFlow]);
+
+  // Panel position: forgotpassword → left (60px), signup → right
   const getPanelTransform = () => {
     if (mobile) return undefined;
     const panelW = Math.min(480, window.innerWidth - 48);
@@ -138,8 +152,8 @@ const VerificationPage = () => {
           navigate("/signup", { replace: true });
         }, 3000);
       } else {
-        // Other errors
-        setError(data.message || "Failed to verify OTP. Please try again.");
+        setSignupStep(SIGNUP_STEPS.PREFERENCES);
+        navigate("/preferences", { replace: true });
       }
     } catch (error) {
       console.error("Verification error:", error);
@@ -193,9 +207,22 @@ const VerificationPage = () => {
   };
 
   const handleContinue = () => setShowResendPopup(false);
-  const handleBackToSignup = () => {
-    sessionStorage.removeItem("pendingUser");
-    navigate("/signup", { replace: true });
+  const handleBackToLogin = () => {
+    // Clear flow state for both signup and forgotpassword flows
+    sessionStorage.removeItem("pendingEmail");
+    sessionStorage.removeItem("sourceFlow");
+    clearSignupStep();
+
+    // For signup flow, also clear any auth tokens and temp signup data
+    if (sourceFlow === "signup") {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      sessionStorage.removeItem("tempSignupData");
+      sessionStorage.removeItem("tempPreferences");
+      sessionStorage.removeItem("tempDislikes");
+    }
+
+    navigate("/login");
   };
 
   const panelStyle = mobile

@@ -1,6 +1,11 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import {
+  getSignupRedirectPath,
+  isForgotPasswordFlowActive,
+  isSignupFlowActive,
+} from "../utils/signupFlow";
 
 /**
  * PublicRoute - Only allows unauthenticated users
@@ -39,6 +44,14 @@ const PublicRoute = ({ Component }) => {
     }
     // Regular users go to feed
     return <Navigate to="/feed" replace />;
+  }
+
+  if (isSignupFlowActive()) {
+    return <Navigate to={getSignupRedirectPath() || "/verification"} replace />;
+  }
+
+  if (isForgotPasswordFlowActive()) {
+    return <Navigate to="/verification" replace />;
   }
 
   // User is not authenticated, allow access to public page

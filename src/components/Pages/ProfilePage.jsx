@@ -63,6 +63,9 @@ const dataUrlToFile = async (dataUrl) => {
   return new File([blob], `avatar.${extension}`, { type: blob.type });
 };
 
+const areStringArraysEqual = (left = [], right = []) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
 const GCProfile = () => {
   const [posts, setPosts] = useState([]);
   const [chatExpanded, setChatExpanded] = useState(false);
@@ -167,6 +170,38 @@ const GCProfile = () => {
 
     if (typeof updated.name === "string" && updated.name.trim()) {
       nextProfile.name = updated.name.trim();
+    }
+
+    const preferencesChanged =
+      !areStringArraysEqual(updated.flavors, profileData.flavors) ||
+      !areStringArraysEqual(updated.cookingStyles, profileData.cookingStyles) ||
+      !areStringArraysEqual(updated.allergens, profileData.allergens) ||
+      !areStringArraysEqual(updated.dislikes, profileData.dislikes);
+
+    if (preferencesChanged && profileData.id) {
+      const preferencesResponse = await apiFetch(
+        `/api/user/preferences/${profileData.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            preferences: {
+              flavors: updated.flavors,
+              techniques: updated.cookingStyles,
+            },
+            allergies: updated.allergens,
+            dislikes: updated.dislikes,
+          }),
+        },
+      );
+
+      const preferencesData = await preferencesResponse.json();
+      if (!preferencesResponse.ok) {
+        throw new Error(
+          preferencesData.message || "Failed to update preferences",
+        );
+      }
+
+      Object.assign(nextProfile, normalizeProfileData(preferencesData.user));
     }
 
     setProfileData(nextProfile);

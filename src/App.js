@@ -11,7 +11,6 @@ import Home from "./Landing/Home";
 import AboutUs from "./Landing/AboutUs";
 import ContactUs from "./Landing/ContactUs";
 import LogIn from "./userAuth/AuthPage";
-import SignUp from "./userAuth/Signup";
 import Feed from "./Feed/Feed";
 
 // Protected Route
@@ -107,7 +106,6 @@ export const router = createBrowserRouter([
 
       // Auth (Public-only - redirect to feed/admin if already logged in)
       { path: "login", Component: () => <PublicRoute Component={LogIn} /> },
-      { path: "signup", Component: () => <PublicRoute Component={SignUp} /> },
       {
         path: "verification",
         Component: () => <FlowRoute Component={Verification} />,

@@ -465,28 +465,28 @@ const AuthPage = () => {
     }
 
     try {
-      const response = await authAPI.validateEmail(signupEmail);
-      
-      // Check if the response indicates success (HTTP 200)
-      if (response && (response.available !== false && response.message)) {
-        // Email validation successful - now send OTP with credentials
-        // The backend will temporarily store credentials and send OTP
-        try {
-          const otpResponse = await authAPI.sendOTP(signupEmail, signupUsername.trim(), signupPassword);
-          
-          if (otpResponse && otpResponse.message) {
-            // OTP sent successfully - store credentials temporarily for verification step
-            sessionStorage.setItem("pendingEmail", signupEmail);
-            sessionStorage.setItem("sourceFlow", "signup");
-            sessionStorage.setItem(
-              "tempSignupData",
-              JSON.stringify({
-                username: signupUsername.trim(),
-                email: signupEmail,
-                password: signupPassword,
-                confirmPassword,
-              }),
-            );
+      const validateResponse = await apiFetch("/api/validate", {
+        method: "POST",
+        body: JSON.stringify({ email: signupEmail }),
+      });
+      const validateData = await validateResponse.json();
+      if (!validateResponse.ok) {
+        setSignupEmailError(validateData.message || "Email validation failed");
+        setSignupLoading(false);
+        return;
+      }
+
+      sessionStorage.setItem("pendingEmail", signupEmail);
+      sessionStorage.setItem("sourceFlow", "signup");
+      sessionStorage.setItem(
+        "tempSignupData",
+        JSON.stringify({
+          username: signupUsername.trim(),
+          email: signupEmail,
+          password: signupPassword,
+          confirmPassword,
+        }),
+      );
 
             navigate("/verification", { replace: true });
             setSignupLoading(false);
@@ -609,7 +609,7 @@ const AuthPage = () => {
                           onChange={(e) => setLoginEmail(e.target.value)}
                           onBlur={validateLoginIdentifier}
                           error={loginEmailError}
-                          label="Email address or admin username"
+                          label="Email address"
                         />
                         {loginEmailError && (
                           <p className="text-red-500 text-xs mt-1">

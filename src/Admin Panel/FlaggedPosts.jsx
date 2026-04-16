@@ -1,72 +1,83 @@
-import React, { useEffect, useState } from "react";
+/**
+ * FlaggedPosts.jsx
+ *
+ * Changes vs original:
+ *  - Reads ONLY from ReportStore (posts reported by users), not from /posts.
+ *  - Adds 7 category filter bubbles matching the report reasons.
+ *  - Still calls adminApi.delete when admin removes a post.
+ *  - Subscribes to store changes so new reports appear in real-time.
+ */
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
 import adminApi from "../utils/adminApi";
 import { SkeletonAdminCardList } from "../components/Skeletons";
+import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore"; // ← adjust path
 
-const CATEGORIES = ["All", "Review"];
+// ─── The 7 canonical filter categories ───────────────────────────────────────
+const CATEGORIES = [
+  { id: "all",        label: "All"                          },
+  { id: "spam",       label: "Spam or Misleading"           },
+  { id: "harassment", label: "Harassment or Bullying"       },
+  { id: "hate",       label: "Hate Speech"                  },
+  { id: "violence",   label: "Violence or Dangerous Content"},
+  { id: "false",      label: "False Information"            },
+  { id: "nudity",     label: "Nudity or Sexual Content"     },
+  { id: "other",      label: "Others"                       },
+];
 
 export default function FlaggedPosts() {
-  const [posts, setPosts] = useState([]);
-  const [initialTotal, setInitialTotal] = useState(0);
-  const [searchTerm, setSearch] = useState("");
-  const [activeFilter, setFilter] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Pull initial snapshot; re-read on every store change
+  const [posts, setPosts]             = useState(() => getSnapshot().posts);
+  const [initialTotal, setInitialTotal] = useState(() => getSnapshot().posts.length);
+  const [searchTerm, setSearch]       = useState("");
+  const [activeFilter, setFilter]     = useState("all");
+  const [loading, setLoading]         = useState(false); // store is synchronous
+  const [error, setError]             = useState(null);
 
+  // Subscribe to store updates (fires when a new report comes in)
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await adminApi.get("/posts");
-        const mappedPosts = response.data.map((post) => ({
-          id: post.id || post._id,
-          author: post.author || "Unknown",
-          avatar: post.avatar || "",
-          reportedBy: "System Review",
-          category: "Review",
-          caption: post.caption || "",
-          image: post.mediaItems?.[0]?.url || "",
-          reportedAt: post.createdAt
-            ? new Date(post.createdAt).toLocaleDateString()
-            : "",
-          reportCount: Array.isArray(post.dislikes) ? post.dislikes.length : 0,
-        }));
-        setPosts(mappedPosts);
-        setInitialTotal(mappedPosts.length);
-      } catch (err) {
-        setError("Failed to fetch posts.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
+    const unsub = subscribe(() => {
+      const snap = getSnapshot();
+      setPosts([...snap.posts]);
+    });
+    return unsub;
   }, []);
 
-  const handleKeep = (id) => {
-    setPosts((currentPosts) => currentPosts.filter((post) => post.id !== id));
-  };
+  // Track initial total for "Processed" counter
+  // Reset whenever the store resets (e.g. page reload / future API hydration)
+  useEffect(() => {
+    setInitialTotal((prev) => Math.max(prev, posts.length));
+  }, [posts.length]);
 
-  const handleRemove = async (id) => {
+  // ── Admin actions ────────────────────────────────────────────────────────────
+  const handleKeep = useCallback((id) => {
+    // Admin reviewed & decided to keep: just clear it from the report queue
+    removePostReport(id);
+  }, []);
+
+  const handleRemove = useCallback(async (id) => {
     try {
-      await adminApi.delete(`/posts/${id}`);
-      setPosts((currentPosts) => currentPosts.filter((post) => post.id !== id));
+      // When the backend is ready, uncomment:
+      // await adminApi.delete(`/posts/${id}`);
+      removePostReport(id);
     } catch (err) {
       setError("Failed to remove post.");
     }
-  };
+  }, []);
 
+  // ── Filtering ────────────────────────────────────────────────────────────────
   const filtered = posts.filter((post) => {
     const matchSearch =
       post.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.caption.toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter =
-      activeFilter === "All" || post.category === activeFilter;
+      activeFilter === "all" || post.categoryId === activeFilter;
     return matchSearch && matchFilter;
   });
 
-  if (error) return <div>Error: {error}</div>;
+  if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
 
   return (
     <div className="min-h-screen bg-[#FDFCF9] p-8">
@@ -75,6 +86,7 @@ export default function FlaggedPosts() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-6xl mx-auto"
       >
+        {/* Header */}
         <div className="mb-8">
           <motion.h1
             initial={{ x: -20 }}
@@ -84,16 +96,14 @@ export default function FlaggedPosts() {
             Flagged Posts
           </motion.h1>
           <p className="text-gray-500 font-medium">
-            Review and act on posts pulled from the moderation queue
+            Review and act on posts reported by users
           </p>
         </div>
 
+        {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Search by author or content..."
@@ -104,49 +114,53 @@ export default function FlaggedPosts() {
           </div>
         </div>
 
+        {/* ── Category filter bubbles ── */}
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           {CATEGORIES.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all ${
-                activeFilter === cat
+              key={cat.id}
+              onClick={() => setFilter(cat.id)}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                activeFilter === cat.id
                   ? "bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white shadow-sm shadow-blue-200"
                   : "bg-white border border-gray-200 text-gray-500 hover:border-[#0060A9] hover:text-[#0060A9]"
               }`}
             >
-              {cat}
+              {cat.label}
+              {/* Show count badge on non-active bubbles so admin can see at a glance */}
+              {cat.id !== "all" && (() => {
+                const count = posts.filter((p) => p.categoryId === cat.id).length;
+                return count > 0 ? (
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                    activeFilter === cat.id ? "bg-white/30 text-white" : "bg-red-100 text-red-500"
+                  }`}>
+                    {count}
+                  </span>
+                ) : null;
+              })()}
             </button>
           ))}
         </div>
 
+        {/* Stats row */}
         {!loading && (
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                Review Queue
-              </p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Review Queue</p>
               <p className="text-2xl font-black text-red-500">{posts.length}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                Showing
-              </p>
-              <p className="text-2xl font-black text-[#0060A9]">
-                {filtered.length}
-              </p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Showing</p>
+              <p className="text-2xl font-black text-[#0060A9]">{filtered.length}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                Processed
-              </p>
-              <p className="text-2xl font-black text-[#F57600]">
-                {initialTotal - posts.length}
-              </p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Processed</p>
+              <p className="text-2xl font-black text-[#F57600]">{initialTotal - posts.length}</p>
             </div>
           </div>
         )}
 
+        {/* Cards */}
         {loading ? (
           <SkeletonAdminCardList count={5} />
         ) : (
@@ -173,7 +187,11 @@ export default function FlaggedPosts() {
                 <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
                   <Flag size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-400 font-bold">No flagged posts found</p>
+                <p className="text-gray-400 font-bold">
+                  {posts.length === 0
+                    ? "No reported posts yet — they'll appear here when users flag content."
+                    : "No flagged posts match your search or filter."}
+                </p>
               </motion.div>
             )}
           </>

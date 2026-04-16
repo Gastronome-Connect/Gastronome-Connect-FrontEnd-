@@ -1,27 +1,45 @@
+/**
+ * ReportModal.jsx  (used by PostCard for reporting posts)
+ *
+ * Changes vs original:
+ *  - On submit, calls ReportStore.addPostReport so the admin dashboard
+ *    can display it immediately (no backend needed yet).
+ *  - Accepts `post` prop so the store has the full post object.
+ */
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { FaFlag } from "react-icons/fa";
+import { addPostReport } from "../../Store/ReportStore";  // ← adjust path to match your project
 
 const REPORT_REASONS = [
-  { id: "spam", label: "Spam", description: "Repetitive or unsolicited content" },
-  { id: "inappropriate", label: "Inappropriate Content", description: "Offensive, adult, or disturbing material" },
-  { id: "misinformation", label: "Misinformation", description: "False or misleading information" },
-  { id: "harassment", label: "Harassment or Bullying", description: "Targeted abuse toward a person" },
-  { id: "copyright", label: "Copyright Violation", description: "Stolen or uncredited content" },
-  { id: "other", label: "Other", description: "Something else not listed here" },
+  { id: "spam",          label: "Spam or Misleading",       description: "Repetitive or unsolicited content" },
+  { id: "harassment",    label: "Harassment or Bullying",   description: "Targeted abuse toward a person" },
+  { id: "hate",          label: "Hate Speech",              description: "Content promoting hatred or discrimination" },
+  { id: "violence",      label: "Violence or Dangerous Content", description: "Graphic violence or harmful acts" },
+  { id: "false",         label: "False Information",        description: "Misleading or factually incorrect content" },
+  { id: "nudity",        label: "Nudity or Sexual Content", description: "Explicit or adult material" },
+  { id: "other",         label: "Others",                   description: "Something else not listed here" },
 ];
 
 /**
- * @param {Function} onConfirm  - called with the selected reason id string
- * @param {Function} onCancel
+ * Props:
+ *   onConfirm  (reasonId) => void
+ *   onCancel   () => void
+ *   post       object   ← NEW: the full post object (for the store)
  */
-const ReportModal = ({ onConfirm, onCancel }) => {
-  const [selected, setSelected] = useState(null);
+const ReportModal = ({ onConfirm, onCancel, post = null }) => {
+  const [selected,  setSelected]  = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = () => {
     if (!selected) return;
+
+    // Save to store so admin dashboard picks it up
+    if (post) {
+      addPostReport(post, selected);
+    }
+
     setSubmitted(true);
     setTimeout(() => {
       onConfirm?.(selected);
@@ -84,9 +102,7 @@ const ReportModal = ({ onConfirm, onCancel }) => {
                       selected === reason.id ? "border-red-400 bg-red-400" : "border-gray-300"
                     }`}
                   >
-                    {selected === reason.id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-white block" />
-                    )}
+                    {selected === reason.id && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                   </span>
                   <div>
                     <p className={`text-sm font-bold leading-tight ${selected === reason.id ? "text-red-600" : "text-gray-800"}`}>
@@ -110,9 +126,7 @@ const ReportModal = ({ onConfirm, onCancel }) => {
                 onClick={handleSubmit}
                 disabled={!selected}
                 className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all ${
-                  selected
-                    ? "bg-red-500 hover:bg-red-600 text-white shadow"
-                    : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                  selected ? "bg-red-500 hover:bg-red-600 text-white shadow" : "bg-gray-100 text-gray-300 cursor-not-allowed"
                 }`}
               >
                 Submit Report

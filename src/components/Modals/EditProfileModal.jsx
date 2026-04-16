@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { X, User, Lock, Heart, ShieldAlert, Trash2 } from "lucide-react";
@@ -10,9 +10,86 @@ import PreferencesTab from "./Edit Profile Modal Components/PreferencesTab";
 import AllergensTab from "./Edit Profile Modal Components/AllergensTab";
 import DeleteAccountPopup from "../Popups/DelPopup";
 import AvatarEditorModal from "../Modals/Edit Profile Modal Components/AvatarEditorModal";
+import { apiFetch } from "../../utils/api";
 
 const EXISTING_NAMES = ["Juan Dela Cruz", "Gastronome01", "Tester_01"];
 const MOCK_PASSWORD = "password123";
+
+const DEFAULT_OPTION_DATA = {
+  flavors: [],
+  cookingStyles: [],
+  allergens: [],
+  dislikes: [],
+};
+
+const normalizeOptionArray = (value) =>
+  Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+
+const mergeOptionPayload = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return DEFAULT_OPTION_DATA;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.reduce(
+      (result, option) => {
+        if (!option || typeof option !== "object") {
+          return result;
+        }
+
+        if (option.type === "preferences" && option.values) {
+          return {
+            ...result,
+            flavors: normalizeOptionArray(option.values.flavors),
+            cookingStyles: normalizeOptionArray(
+              option.values.cookingStyles || option.values.techniques,
+            ),
+          };
+        }
+
+        if (option.type === "flavors") {
+          return {
+            ...result,
+            flavors: normalizeOptionArray(option.values),
+          };
+        }
+
+        if (option.type === "cookingStyles") {
+          return {
+            ...result,
+            cookingStyles: normalizeOptionArray(option.values),
+          };
+        }
+
+        if (option.type === "allergens") {
+          return {
+            ...result,
+            allergens: normalizeOptionArray(option.values),
+          };
+        }
+
+        if (option.type === "dislikes") {
+          return {
+            ...result,
+            dislikes: normalizeOptionArray(option.values),
+          };
+        }
+
+        return result;
+      },
+      { ...DEFAULT_OPTION_DATA },
+    );
+  }
+
+  return {
+    flavors: normalizeOptionArray(payload.flavors),
+    cookingStyles: normalizeOptionArray(
+      payload.cookingStyles || payload.techniques,
+    ),
+    allergens: normalizeOptionArray(payload.allergens),
+    dislikes: normalizeOptionArray(payload.dislikes),
+  };
+};
 
 const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const navigate = useNavigate();
@@ -44,6 +121,8 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   );
   const [allergens, setAllergens] = useState(initialData.allergens ?? []);
   const [dislikes, setDislikes] = useState(initialData.dislikes ?? []);
+  const [optionData, setOptionData] = useState(DEFAULT_OPTION_DATA);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
   // ── Delete / popups ──
   const [showDeletePopup, setShowDeletePopup] = useState(false);
@@ -56,6 +135,67 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   // ── Save toast ──
   // saveToastVisible drives SaveToast — set true to show, SaveToast resets it via onDone
   const [saveToastVisible, setSaveToastVisible] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOptionData = async () => {
+      setOptionsLoading(true);
+
+      try {
+        const [preferencesResponse, allergensResponse, dislikesResponse] =
+          await Promise.all([
+            apiFetch("/api/preferences"),
+            apiFetch("/api/allergens"),
+            apiFetch("/api/dislikes"),
+          ]);
+
+        const [preferencesPayload, allergensPayload, dislikesPayload] =
+          await Promise.all([
+            preferencesResponse.json().catch(() => null),
+            allergensResponse.json().catch(() => null),
+            dislikesResponse.json().catch(() => null),
+          ]);
+
+        const nextOptions = {
+          ...mergeOptionPayload(preferencesPayload),
+          allergens: normalizeOptionArray(allergensPayload),
+          dislikes: normalizeOptionArray(dislikesPayload),
+        };
+
+        const needsFallback =
+          nextOptions.flavors.length === 0 &&
+          nextOptions.cookingStyles.length === 0;
+
+        if (needsFallback) {
+          const optionsResponse = await apiFetch("/api/options");
+          const optionsPayload = await optionsResponse.json().catch(() => null);
+          const fallbackOptions = mergeOptionPayload(optionsPayload);
+          nextOptions.flavors = fallbackOptions.flavors;
+          nextOptions.cookingStyles = fallbackOptions.cookingStyles;
+        }
+
+        if (isMounted) {
+          setOptionData(nextOptions);
+        }
+      } catch (error) {
+        console.error("Failed to load profile option data:", error);
+        if (isMounted) {
+          setOptionData(DEFAULT_OPTION_DATA);
+        }
+      } finally {
+        if (isMounted) {
+          setOptionsLoading(false);
+        }
+      }
+    };
+
+    fetchOptionData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // ── Helpers ──
   const hasAnyChanges = () =>
@@ -72,20 +212,6 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
     JSON.stringify(dislikes) !== JSON.stringify(initialData.dislikes ?? []);
 
   const handleTabChange = (nextTabId) => {
-    if (activeTab === "profile") {
-      setName(initialData.name ?? "");
-      setBio(initialData.bio ?? "");
-    } else if (activeTab === "password") {
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } else if (activeTab === "preferences") {
-      setFlavors(initialData.flavors ?? []);
-      setCookingStyles(initialData.cookingStyles ?? []);
-    } else if (activeTab === "allergens") {
-      setAllergens(initialData.allergens ?? []);
-      setDislikes(initialData.dislikes ?? []);
-    }
     setActiveTab(nextTabId);
   };
 
@@ -247,6 +373,9 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
               setFlavors={setFlavors}
               cookingStyles={cookingStyles}
               setCookingStyles={setCookingStyles}
+              flavorOptions={optionData.flavors}
+              cookingStyleOptions={optionData.cookingStyles}
+              optionsLoading={optionsLoading}
             />
           )}
           {activeTab === "allergens" && (
@@ -255,6 +384,9 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
               setAllergens={setAllergens}
               dislikes={dislikes}
               setDislikes={setDislikes}
+              allergenOptions={optionData.allergens}
+              dislikeOptions={optionData.dislikes}
+              optionsLoading={optionsLoading}
             />
           )}
         </div>

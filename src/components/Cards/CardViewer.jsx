@@ -104,9 +104,9 @@ const CardExpandedView = ({
   const [isPaused, setIsPaused] = useState(false);
 
   const menuRef = useRef(null);
-  // Tracks how long the modal has been open for history
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
+  const speakIntervalRef = useRef(null); // ← keeps Chrome alive
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -141,32 +141,82 @@ const CardExpandedView = ({
     setMenuOpen(false);
   };
 
+  // ── Fixed handleSpeak ───────────────────────────────────────────
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
+
+    // Toggle pause / resume if already speaking
     if (isSpeaking) {
-      if (isPaused) { window.speechSynthesis.resume(); setIsPaused(false); }
-      else { window.speechSynthesis.pause(); setIsPaused(true); }
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
       return;
     }
-    const ingredientsText = post.ingredients?.length > 0
-      ? post.ingredients.map((ing) => {
-          const measure = [ing.amount, ing.unit].filter(Boolean).join(" ");
-          return `${measure ? `${measure} ` : ""}${ing.name}`;
-        }).join(", ")
-      : "";
-    const textToSpeak = [
-      `Title: ${post.title}`,
-      ingredientsText ? `Ingredients: ${ingredientsText}` : "",
-      post.caption ? `Description: ${post.caption}` : "",
-    ].filter(Boolean).join(". ");
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 0.9; utterance.pitch = 1; utterance.volume = 1;
-    utterance.onstart = () => { setIsSpeaking(true); setIsPaused(false); };
-    utterance.onend   = () => { setIsSpeaking(false); setIsPaused(false); };
-    utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
+    // Build the text to speak
+    const ingredientsText =
+      post.ingredients?.length > 0
+        ? post.ingredients
+            .map((ing) => {
+              const measure =
+                ing.unit === "to taste"
+                  ? "to taste"
+                  : [ing.amount, ing.unit].filter(Boolean).join(" ");
+              return `${measure ? `${measure} ` : ""}${ing.name}`;
+            })
+            .join(", ")
+        : "";
+
+    const parts = [`Title: ${post.title}`];
+    if (ingredientsText) parts.push(`Ingredients: ${ingredientsText}`);
+    if (post.caption)    parts.push(`Description: ${post.caption}`);
+    const textToSpeak = parts.join(". ");
+
+    // Cancel anything queued, then wait one tick so the browser
+    // fully flushes before we queue the new utterance
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate   = 0.9;
+      utterance.pitch  = 1;
+      utterance.volume = 1;
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        setIsPaused(false);
+        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
+        speakIntervalRef.current = setInterval(() => {
+          if (
+            window.speechSynthesis.speaking &&
+            !window.speechSynthesis.paused
+          ) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }, 10000);
+      };
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        clearInterval(speakIntervalRef.current);
+      };
+
+      utterance.onerror = (e) => {
+        // "interrupted" is fired when we call cancel() ourselves — not a real error
+        if (e.error === "interrupted") return;
+        setIsSpeaking(false);
+        setIsPaused(false);
+        clearInterval(speakIntervalRef.current);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   };
 
   const handleChatbot = () => {
@@ -199,6 +249,7 @@ const CardExpandedView = ({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
       window.speechSynthesis.cancel();
+      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
     };
   }, [onClose, hasMultiple, media.length]);
 
