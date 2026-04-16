@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import StatCard from "./StatCard";
 import adminApi from "../utils/adminApi";
+import { SkeletonStats } from "../components/Skeletons";
 
 const buildPeriodStats = (label, totals) => {
   const suffix =
@@ -148,7 +149,6 @@ export default function Statistics() {
     fetchStats();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   const cards = statsByPeriod[period] || [];
@@ -191,32 +191,53 @@ export default function Statistics() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {cards.map((stat, index) => (
-            <motion.div
-              key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.06 }}
-            >
-              <StatCard {...stat} />
-            </motion.div>
-          ))}
-        </div>
+        {loading ? (
+          <>
+            <div className="mb-8">
+              <SkeletonStats count={6} />
+            </div>
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-48 h-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="w-full h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-full h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {cards.map((stat, index) => (
+                <motion.div
+                  key={stat.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.06 }}
+                >
+                  <StatCard {...stat} />
+                </motion.div>
+              ))}
+            </div>
 
-        <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-black text-[#0060A9] uppercase tracking-tight">
-              Activity Summary
-            </h3>
-            <Calendar className="text-[#F57600]" size={20} />
-          </div>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            This screen is now connected to live backend data. Counts are
-            computed from the admin dashboard endpoint and filtered post
-            activity for the selected period.
-          </p>
-        </div>
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black text-[#0060A9] uppercase tracking-tight">
+                  Activity Summary
+                </h3>
+                <Calendar className="text-[#F57600]" size={20} />
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                This screen is now connected to live backend data. Counts are
+                computed from the admin dashboard endpoint and filtered post
+                activity for the selected period.
+              </p>
+            </div>
+          </>
+        )}
       </motion.div>
     </div>
   );

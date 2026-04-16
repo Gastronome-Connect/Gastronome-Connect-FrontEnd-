@@ -60,16 +60,21 @@ import ReportedComments from "./Admin Panel/ReportedComments";
 // Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
 
+import { UserLibraryProvider } from "./Context/UserLibraryContext"; // add this import
+
 // ── Root layout — ChatProvider + CarouselProvider + ErrorBoundary wrap the whole app
 const RootLayout = () => (
   <ErrorBoundary>
     <ChatProvider>
       <CarouselProvider>
-        <Outlet />
+        <UserLibraryProvider>   {/* ← add this */}
+          <Outlet />
+        </UserLibraryProvider>
       </CarouselProvider>
     </ChatProvider>
   </ErrorBoundary>
 );
+
 
 // Admin layout wrapper — separate boundary so admin crashes don't kill the whole app
 const AdminLayoutWithBoundary = () => (
@@ -129,11 +134,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "profchangepass",
-        Component: () => <ProtectedRoute Component={ProfChangePassword} />,
+        Component: () => <ProtectedRoute Component={ProfChangePassword} blockAdmin={true} />,
       },
 
       // Feed
-      { path: "feed", Component: () => <ProtectedRoute Component={Feed} /> },
+      { path: "feed", Component: () => <ProtectedRoute Component={Feed} blockAdmin={true} /> },
       { path: "sidebar", Component: SideBar },
       { path: "searchbar", Component: SearchBar },
       { path: "navigationbar", Component: NavigationBar },
@@ -141,27 +146,27 @@ export const router = createBrowserRouter([
       // User Pages (Protected)
       {
         path: "profile",
-        Component: () => <ProtectedRoute Component={GCProfile} />,
+        Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
       },
       {
         path: "history",
-        Component: () => <ProtectedRoute Component={History} />,
+        Component: () => <ProtectedRoute Component={History} blockAdmin={true} />,
       },
       {
         path: "favorites",
-        Component: () => <ProtectedRoute Component={Favorites} />,
+        Component: () => <ProtectedRoute Component={Favorites} blockAdmin={true} />,
       },
       {
         path: "archives",
-        Component: () => <ProtectedRoute Component={Archives} />,
+        Component: () => <ProtectedRoute Component={Archives} blockAdmin={true} />,
       },
       {
         path: "chatbot",
-        Component: () => <ProtectedRoute Component={ChatbotPage} />,
+        Component: () => <ProtectedRoute Component={ChatbotPage} blockAdmin={true} />,
       },
       {
         path: "notifications",
-        Component: () => <ProtectedRoute Component={NotificationsPage} />,
+        Component: () => <ProtectedRoute Component={NotificationsPage} blockAdmin={true} />,
       },
 
       // Utility

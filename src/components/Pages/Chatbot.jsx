@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Plus } from "lucide-react";
 import Sidebar from "../../Feed/SideBar";
 import AILogo from "../Assets/AILogo.png";
 import ChatWindow from "./Chat Bot Components/Chats/ChatWindow";
@@ -59,7 +60,11 @@ function EmptyStateWithInput({ initialValue = "", isBotTyping }) {
 
 export default function ChatbotPage() {
   const location = useLocation();
-  const { messages, isBotTyping } = useChat();
+  const { messages, isBotTyping, startNewSession } = useChat();
+
+  const handleNewChat = () => {
+    startNewSession();
+  };
 
   const {
     uploadState,
@@ -124,6 +129,14 @@ export default function ChatbotPage() {
                 AI Chat
               </h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
+              <button
+                onClick={handleNewChat}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-sm font-bold hover:opacity-90 transition-all flex-shrink-0"
+                title="Start a new conversation"
+              >
+                <Plus size={16} />
+                New Chat
+              </button>
             </div>
 
             <div className="flex-1 min-h-0 rounded-[1.75rem] bg-white flex flex-col overflow-hidden">

@@ -1,8 +1,10 @@
-import React, { useState, useRef } from "react";
+import React from "react";
 import UserMessageBubble from "../Chat Bubbles/UserBubble";
 import BotMessageBubble from "../Chat Bubbles/ChatbotBubble";
+import { useChatContext } from "../../../../Context/ChatContext";
 
-// ── SmallRecipeCard ───────────────────────────────────────────────────────────
+const PAGE_SIZE = 3;
+
 function SmallRecipeCard({ recipe }) {
   const {
     title = "Recipe",
@@ -18,61 +20,38 @@ function SmallRecipeCard({ recipe }) {
         {image ? (
           <img src={image} alt={title} className="w-full h-full object-cover" />
         ) : (
-          <svg
-            className="w-6 h-6 sm:w-7 sm:h-7 text-orange-300"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-1.5-.454M9 6l3-3 3 3M12 3v12"
-            />
+          <svg className="w-6 h-6 sm:w-7 sm:h-7 text-orange-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-1.5-.454M9 6l3-3 3 3M12 3v12" />
           </svg>
         )}
       </div>
       <div className="w-2/3 h-[2px] bg-orange-500 rounded-full mb-1.5" />
-      <h4 className="font-black text-[11px] sm:text-xs text-gray-900 leading-tight mb-1 truncate">
-        {title}
-      </h4>
+      <h4 className="font-black text-[11px] sm:text-xs text-gray-900 leading-tight mb-1 truncate">{title}</h4>
       <p className="text-[9px] sm:text-[10px] font-semibold text-gray-700">
         Author: <span className="font-medium">{author}</span>
       </p>
       <p className="text-[9px] sm:text-[10px] font-semibold text-gray-700 mb-1">
         Date: <span className="font-medium">{dateCreate}</span>
       </p>
-      <p className="text-[9px] sm:text-[10px] text-gray-400 line-clamp-2 leading-snug">
-        {description}
-      </p>
+      <p className="text-[9px] sm:text-[10px] text-gray-400 line-clamp-2 leading-snug">{description}</p>
     </div>
   );
 }
 
-// ── RecipeCarousel ────────────────────────────────────────────────────────────
-const PAGE_SIZE = 3;
-
 function RecipeCarousel({ recipes }) {
-  const [page, setPage] = useState(0);
+  const [page, setPage] = React.useState(0);
   const totalPages = Math.ceil(recipes.length / PAGE_SIZE);
   const canPrev = page > 0;
   const canNext = page < totalPages - 1;
   const visible = recipes.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-  const scrollRef = useRef(null);
+  const scrollRef = React.useRef(null);
 
   return (
     <>
-      {/* Mobile: free horizontal scroll */}
       <div
         ref={scrollRef}
         className="flex sm:hidden gap-2 overflow-x-auto pb-2 -mx-1 px-1"
-        style={{
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
+        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         <style>{`.recipe-scroll::-webkit-scrollbar { display: none; }`}</style>
         <div className="recipe-scroll flex gap-2">
@@ -84,7 +63,6 @@ function RecipeCarousel({ recipes }) {
         </div>
       </div>
 
-      {/* Desktop: paginated with chevrons */}
       <div className="hidden sm:flex items-center" style={{ gap: "6px" }}>
         <button
           onClick={() => setPage((p) => p - 1)}
@@ -95,13 +73,11 @@ function RecipeCarousel({ recipes }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-
         <div className="flex" style={{ gap: "8px" }}>
           {visible.map((recipe, i) => (
             <SmallRecipeCard key={i} recipe={recipe} />
           ))}
         </div>
-
         <button
           onClick={() => setPage((p) => p + 1)}
           disabled={!canNext}
@@ -116,7 +92,6 @@ function RecipeCarousel({ recipes }) {
   );
 }
 
-// ── ActionBar ─────────────────────────────────────────────────────────────────
 function ActionBar({ time }) {
   return (
     <div className="flex items-center gap-1 sm:gap-1.5 pl-9 sm:pl-20">
@@ -146,8 +121,10 @@ function ActionBar({ time }) {
   );
 }
 
-// ── MessageList ───────────────────────────────────────────────────────────────
 export default function MessageList({ messages, isBotTyping, bottomRef }) {
+  // ← Pull context so we can dispatch MARK_MESSAGE_SEEN
+  const { activeSessionId, dispatch } = useChatContext();
+
   return (
     <div className="flex-1 overflow-y-auto flex flex-col py-3 sm:py-4">
       {messages.map((msg) => {
@@ -159,14 +136,35 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
 
         if (msg.type === "text") {
           return (
-            <BotMessageBubble key={msg.id} message={msg.text} time={msg.time} />
+            <BotMessageBubble
+              key={msg.id}
+              message={msg.text}
+              time={msg.time}
+              isNew={msg.isNew === true}
+              onTypingDone={() =>
+                dispatch({
+                  type: "MARK_MESSAGE_SEEN",
+                  payload: { sessionId: activeSessionId, messageId: msg.id },
+                })
+              }
+            />
           );
         }
 
         if (msg.type === "recipe") {
           return (
             <div key={msg.id} className="flex flex-col gap-2 py-2 group">
-              <BotMessageBubble message={msg.text} hideActions />
+              <BotMessageBubble
+                message={msg.text}
+                hideActions
+                isNew={msg.isNew === true}
+                onTypingDone={() =>
+                  dispatch({
+                    type: "MARK_MESSAGE_SEEN",
+                    payload: { sessionId: activeSessionId, messageId: msg.id },
+                  })
+                }
+              />
               <p className="text-[11px] text-gray-400 pl-9 sm:pl-20">
                 {msg.recipes.length} recipe{msg.recipes.length !== 1 ? "s" : ""} found
                 <span className="hidden sm:inline">

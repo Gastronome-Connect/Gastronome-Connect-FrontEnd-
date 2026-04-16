@@ -43,7 +43,7 @@ const PostHeader = ({ post, isOwner = false, onEdit, onDelete, onArchive, onRepo
       </div>
 
       <div className="flex items-center gap-1">
-        <FavoriteButton />
+        <FavoriteButton post={post} />
 
         <div className="relative" ref={menuWrapRef}>
           <button

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import RestoreAccountCard from "./RestoreAccountCard";
 import adminApi from "../utils/adminApi";
+import { SkeletonAdminCardList } from "../components/Skeletons";
 
 const CATEGORIES = ["All", "User Request", "Accidental", "Compromised"];
 
@@ -46,10 +47,6 @@ export default function RestoreAccounts() {
     const matchFilter = activeFilter === "All" || a.category === activeFilter;
     return matchSearch && matchFilter;
   });
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   if (error) {
     return <div>Error: {error}</div>;
@@ -117,57 +114,65 @@ export default function RestoreAccounts() {
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Restore Requests
-            </p>
-            <p className="text-2xl font-black text-[#F57600]">
-              {accounts.length}
-            </p>
+        {!loading && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Restore Requests
+              </p>
+              <p className="text-2xl font-black text-[#F57600]">
+                {accounts.length}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Showing
+              </p>
+              <p className="text-2xl font-black text-[#0060A9]">
+                {filtered.length}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Restored Today
+              </p>
+              <p className="text-2xl font-black text-green-600">
+                {initialTotal - accounts.length}
+              </p>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Showing
-            </p>
-            <p className="text-2xl font-black text-[#0060A9]">
-              {filtered.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Restored Today
-            </p>
-            <p className="text-2xl font-black text-green-600">
-              {initialTotal - accounts.length}
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Account List */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((account) => (
-              <RestoreAccountCard
-                key={account.id}
-                account={account}
-                onRestore={() => handleRestore(account.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {filtered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
-          >
-            <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Search size={32} className="text-gray-400" />
+        {loading ? (
+          <SkeletonAdminCardList count={5} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((account) => (
+                  <RestoreAccountCard
+                    key={account.id}
+                    account={account}
+                    onRestore={() => handleRestore(account.id)}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
-            <p className="text-gray-400 font-bold">No accounts found</p>
-          </motion.div>
+
+            {filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Search size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-400 font-bold">No accounts found</p>
+              </motion.div>
+            )}
+          </>
         )}
       </motion.div>
     </div>

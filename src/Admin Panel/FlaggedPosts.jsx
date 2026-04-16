@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
 import adminApi from "../utils/adminApi";
+import { SkeletonAdminCardList } from "../components/Skeletons";
 
 const CATEGORIES = ["All", "Review"];
 
@@ -65,7 +66,6 @@ export default function FlaggedPosts() {
     return matchSearch && matchFilter;
   });
 
-  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -120,55 +120,63 @@ export default function FlaggedPosts() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Review Queue
-            </p>
-            <p className="text-2xl font-black text-red-500">{posts.length}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Showing
-            </p>
-            <p className="text-2xl font-black text-[#0060A9]">
-              {filtered.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Processed
-            </p>
-            <p className="text-2xl font-black text-[#F57600]">
-              {initialTotal - posts.length}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((post) => (
-              <FlaggedPostCard
-                key={post.id}
-                post={post}
-                onKeep={() => handleKeep(post.id)}
-                onRemove={() => handleRemove(post.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {filtered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
-          >
-            <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Flag size={32} className="text-gray-400" />
+        {!loading && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Review Queue
+              </p>
+              <p className="text-2xl font-black text-red-500">{posts.length}</p>
             </div>
-            <p className="text-gray-400 font-bold">No flagged posts found</p>
-          </motion.div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Showing
+              </p>
+              <p className="text-2xl font-black text-[#0060A9]">
+                {filtered.length}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Processed
+              </p>
+              <p className="text-2xl font-black text-[#F57600]">
+                {initialTotal - posts.length}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <SkeletonAdminCardList count={5} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((post) => (
+                  <FlaggedPostCard
+                    key={post.id}
+                    post={post}
+                    onKeep={() => handleKeep(post.id)}
+                    onRemove={() => handleRemove(post.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Flag size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-400 font-bold">No flagged posts found</p>
+              </motion.div>
+            )}
+          </>
         )}
       </motion.div>
     </div>

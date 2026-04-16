@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Sidebar from "../../Feed/SideBar";
-import SearchBar from "../../Feed/SideBarSearchBar";
+import SearchBar from "../../Feed/SideBarSearchBar"; // ← this one is already controlled
 import RecipeCard from "../Cards/RecipeCard";
 import { AnimatePresence } from "framer-motion";
 import GastroLogo from "../Assets/GastroLogo.png";
@@ -9,6 +9,7 @@ import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal   from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../../Hooks/UseUpload";
 import SkeletonRecipeGrid  from "../Skeletons/SkeletonRecipeGrid";
+import { useUserLibrary }  from "../../Context/UserLibraryContext";
 
 const SORT_OPTIONS = [
   { value: "recent", label: "Most Recent" },
@@ -26,11 +27,20 @@ const FavoritesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy]           = useState("recent");
   const [sortOpen, setSortOpen]       = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  // Brief loading shimmer on first mount
   const [isLoading, setIsLoading]     = useState(true);
   const sortRef = useRef(null);
 
+  const { favorites, removeFromFavorites } = useUserLibrary();
+
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
   const handleNewPost = (newPost) => startUpload(newPost, () => {});
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const handler = () => setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
@@ -46,18 +56,39 @@ const FavoritesPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const [recipes, setRecipes] = useState([]);
+  const sortedRecipes = useMemo(() => {
+    let list = [...favorites];
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+list = list.filter((r) => {
+  const ingredientMatch = Array.isArray(r.ingredients)
+    ? r.ingredients.some((ing) => {
+        const name = typeof ing === "string" ? ing : ing?.name ?? "";
+        return name.toLowerCase().includes(q);
+      })
+    : false;
 
-  // Simulate / replace with real API call
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+  return (
+    r.title?.toLowerCase().includes(q) ||
+    r.caption?.toLowerCase().includes(q) ||
+    r.description?.toLowerCase().includes(q) ||
+    r.author?.toLowerCase().includes(q) ||
+    ingredientMatch
+  );
+});
+    }
+    switch (sortBy) {
+      case "oldest": return list.sort((a, b) => a.savedAt - b.savedAt);
+      case "az":     return list.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
+      case "za":     return list.sort((a, b) => (b.title ?? "").localeCompare(a.title ?? ""));
+      default:       return list.sort((a, b) => b.savedAt - a.savedAt);
+    }
+  }, [favorites, sortBy, searchQuery]);
 
-  const isEmpty    = !isLoading && recipes.length === 0;
-  const totalPages = Math.ceil(recipes.length / ITEMS_PER_PAGE);
-  const paginatedRecipes = recipes.slice(
+  const isEmpty    = !isLoading && sortedRecipes.length === 0;
+  const totalPages = Math.ceil(sortedRecipes.length / ITEMS_PER_PAGE);
+  const paginatedRecipes = sortedRecipes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -81,11 +112,20 @@ const FavoritesPage = () => {
             <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">Favorites</h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
+              {favorites.length > 0 && (
+                <span className="text-xs font-bold text-[#F57600] bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-full">
+                  {favorites.length}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="w-full sm:max-w-md">
-                <SearchBar placeholder="Search your favorites..." />
+                <SearchBar
+                  placeholder="Search your favorites..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
               </div>
               <div className="relative self-end sm:self-auto" ref={sortRef}>
                 <button
@@ -117,23 +157,22 @@ const FavoritesPage = () => {
 
           {/* Content */}
           <div className="flex-1 relative">
-            {/* ── Skeleton ── */}
             {isLoading && <SkeletonRecipeGrid count={10} />}
 
-            {/* ── Empty state ── */}
             {isEmpty && (
               <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
                 <img src={GastroLogo} alt="" aria-hidden="true" className="w-40 sm:w-56 lg:w-64 h-40 sm:h-56 lg:h-64 object-contain opacity-90" />
                 <div className="text-center mt-2">
-                  <p className="text-lg sm:text-xl font-black text-gray-700 tracking-tight">No Favorites Yet</p>
+                  <p className="text-lg sm:text-xl font-black text-gray-700 tracking-tight">
+                    {searchQuery ? "No results found" : "No Favorites Yet"}
+                  </p>
                   <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-[200px] sm:max-w-[240px] mx-auto leading-relaxed">
-                    Browse recipes and save the ones you love here.
+                    {searchQuery ? "Try a different search term." : "Browse recipes and save the ones you love here."}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* ── Recipe grid ── */}
             {!isLoading && !isEmpty && (
               <AnimatePresence mode="popLayout">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
@@ -142,7 +181,7 @@ const FavoritesPage = () => {
                       key={recipe.id}
                       recipe={recipe}
                       variant="favorite"
-                      onDelete={() => setRecipes((prev) => prev.filter((r) => r.id !== recipe.id))}
+                      onDelete={() => removeFromFavorites(recipe.id)}
                     />
                   ))}
                 </div>

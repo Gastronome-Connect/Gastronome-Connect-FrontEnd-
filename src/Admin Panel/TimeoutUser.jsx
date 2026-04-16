@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import TimeoutUserCard from "./TimeoutUserCard";
 import adminApi from "../utils/adminApi";
+import { SkeletonAdminCardList } from "../components/Skeletons";
 
 const CATEGORIES = [
   "All",
@@ -64,7 +65,6 @@ export default function TimeoutUsers() {
     return matchSearch && matchFilter;
   });
 
-  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -124,54 +124,60 @@ export default function TimeoutUsers() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Total Timeout
-            </p>
-            <p className="text-2xl font-black text-[#0060A9]">{users.length}</p>
+        {!loading && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Total Timeout
+              </p>
+              <p className="text-2xl font-black text-[#0060A9]">{users.length}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Showing
+              </p>
+              <p className="text-2xl font-black text-green-600">
+                {filtered.length}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Pending Review
+              </p>
+              <p className="text-2xl font-black text-[#F57600]">{users.length}</p>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Showing
-            </p>
-            <p className="text-2xl font-black text-green-600">
-              {filtered.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
-              Pending Review
-            </p>
-            <p className="text-2xl font-black text-[#F57600]">{users.length}</p>
-          </div>
-        </div>
+        )}
 
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((user) => (
-              <TimeoutUserCard
-                key={user.id}
-                user={user}
-                onApprove={() => updateTimeout(user.id, "approve")}
-                onReject={() => updateTimeout(user.id, "reject")}
-              />
-            ))}
-          </AnimatePresence>
+        {loading ? (
+          <SkeletonAdminCardList count={5} />
+        ) : (
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((user) => (
+                <TimeoutUserCard
+                  key={user.id}
+                  user={user}
+                  onApprove={() => updateTimeout(user.id, "approve")}
+                  onReject={() => updateTimeout(user.id, "reject")}
+                />
+              ))}
+            </AnimatePresence>
 
-          {filtered.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16"
-            >
-              <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                <Search size={32} className="text-gray-400" />
-              </div>
-              <p className="text-gray-400 font-bold">No users found</p>
-            </motion.div>
-          )}
-        </div>
+            {filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Search size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-400 font-bold">No users found</p>
+              </motion.div>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   );

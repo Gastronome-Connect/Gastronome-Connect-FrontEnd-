@@ -16,14 +16,15 @@ const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
 
   // Normalize to the post shape CardExpandedView expects.
   const post = {
-    id:          recipe.id,
-    title:       recipe.title    ?? recipe.name,
-    caption:     recipe.caption  ?? recipe.description ?? "",
+    id:          recipe.id ?? recipe._id,
+    _id:         recipe._id,
+    title:       recipe.title ?? recipe.name,
+    caption:     recipe.caption ?? recipe.description ?? "",
     author:      recipe.author,
-    avatar:      recipe.avatar   ?? recipe.img,
-    date:        recipe.date     ?? "",
+    avatar:      recipe.avatar ?? recipe.img,
+    date:        recipe.date ?? "",
     ingredients: recipe.ingredients ?? [],
-    mediaItems:  recipe.mediaItems  ?? [{ type: "image", url: recipe.img }],
+    mediaItems:  recipe.mediaItems ?? [{ type: "image", url: recipe.img }],
   };
 
   return (

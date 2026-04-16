@@ -13,14 +13,19 @@ function loadSessions() {
 
 function saveSessions(sessions) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    // Only save sessions that have messages (content)
+    const nonEmptySessions = sessions.filter(s => s.messages.length > 0);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nonEmptySessions));
   } catch {}
 }
 
-const initialState = {
-  sessions: loadSessions(),
-  activeSessionId: null,
-};
+const initialState = (() => {
+  const sessions = loadSessions();
+  return {
+    sessions,
+    activeSessionId: sessions.length > 0 ? sessions[0].id : null,
+  };
+})();
 
 function reducer(state, action) {
   switch (action.type) {
@@ -71,9 +76,27 @@ function reducer(state, action) {
             : state.activeSessionId,
       };
 
+      case "MARK_MESSAGE_SEEN": {
+  const { sessionId, messageId } = action.payload;
+  return {
+    ...state,
+    sessions: state.sessions.map((s) =>
+      s.id !== sessionId
+        ? s
+        : {
+            ...s,
+            messages: s.messages.map((m) =>
+              m.id !== messageId ? m : { ...m, isNew: false }
+            ),
+          }
+    ),
+  };
+}
+
     default:
       return state;
   }
+  
 }
 
 const ChatContext = createContext(null);

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useChatContext } from "../Context/ChatContext";
 import { sendMessageToBot } from "../Services/ChatAPI";
 
@@ -12,35 +12,42 @@ function formatTime() {
 export function useChat() {
   const { activeSessionId, activeSession, dispatch } = useChatContext();
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    const ac = abortControllerRef.current;
+    return () => {
+      if (ac) {
+        ac.abort();
+      }
+    };
+  }, []);
 
   const startNewSession = useCallback(() => {
-    dispatch({ type: "NEW_SESSION", payload: { title: "New chat" } });
+    dispatch({ type: "SET_ACTIVE_SESSION", payload: null });
   }, [dispatch]);
 
   const switchSession = useCallback(
     (sessionId) => {
       dispatch({ type: "SET_ACTIVE_SESSION", payload: sessionId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const deleteSession = useCallback(
     (sessionId) => {
       dispatch({ type: "DELETE_SESSION", payload: sessionId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const sendMessage = useCallback(
     async (text) => {
       if (!text.trim() || isBotTyping) return;
 
-      // Determine which session to use
       let sessionId = activeSessionId;
 
-      // If no active session exists, create one first and use its id
       if (!sessionId) {
-        // Generate the id here so we can reference it immediately
         const newId = Date.now().toString();
         dispatch({
           type: "NEW_SESSION",
@@ -66,20 +73,27 @@ export function useChat() {
 
       try {
         const botMsg = await sendMessageToBot(text, formatTime);
+
         dispatch({
           type: "ADD_MESSAGE",
           payload: {
             sessionId,
-            message: { ...botMsg, id: (Date.now() + 1).toString() },
+            message: {
+              ...botMsg,
+              id: (Date.now() + 1).toString(),
+              isNew: true, // ← mark as new so typewriter plays once
+            },
           },
         });
       } catch (err) {
-        console.error("Bot response error:", err);
+        if (err.name !== "AbortError") {
+          console.error("Bot response error:", err);
+        }
       } finally {
         setIsBotTyping(false);
       }
     },
-    [activeSessionId, isBotTyping, dispatch]
+    [activeSessionId, dispatch, isBotTyping],
   );
 
   return {

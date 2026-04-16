@@ -52,16 +52,17 @@ const PopularRecipeCard = ({ recipe, index, onArchive, onReport, onSave }) => {
   const rank   = index + 1;
 
   // Normalize recipe shape for CardExpandedView.
-  const post = {
-    id:          recipe.id,
-    title:       recipe.title    ?? recipe.name,
-    caption:     recipe.caption  ?? recipe.description ?? "",
-    author:      recipe.author,
-    avatar:      recipe.avatar   ?? recipe.img,
-    date:        recipe.date     ?? "",
-    ingredients: recipe.ingredients ?? [],
-    mediaItems:  recipe.mediaItems  ?? [{ type: "image", url: recipe.img }],
-  };
+const post = {
+  id:          recipe.id ?? recipe._id,
+  _id:         recipe._id,
+  title:       recipe.title ?? recipe.name,
+  caption:     recipe.caption ?? recipe.description ?? "",
+  author:      recipe.author,
+  avatar:      recipe.avatar ?? recipe.img,
+  date:        recipe.date ?? "",
+  ingredients: recipe.ingredients ?? [],
+  mediaItems:  recipe.mediaItems ?? [{ type: "image", url: recipe.img }],
+};
 
   return (
     <>

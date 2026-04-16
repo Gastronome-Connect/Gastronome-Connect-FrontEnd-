@@ -7,12 +7,35 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
   const [expanded, setExpanded] = useState(false);
 
   const {
-    title       = "Binangkal",
-    image       = "",
-    author      = "Jomarrie",
-    dateCreate  = "01/10/01",
-    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+    title: recipeTitle = "Binangkal",
+    author = "Jomarrie",
+    dateCreate,
+    date,
+    savedAt,
+    description,
+    caption,
+    mediaItems = [],
   } = recipe || {};
+
+  // ── Pick the first media item that has an image/video ──
+  const firstMedia = mediaItems.find((m) => m.url) ?? null;
+  const image = firstMedia?.url ?? recipe?.image ?? "";
+
+  // ── Pick the first media item that has a title or caption ──
+  const firstWithContent = mediaItems.length > 1
+    ? mediaItems.find((m) => m.title || m.caption)
+    : null;
+
+  const title = firstWithContent?.title ?? recipeTitle;
+  const resolvedDescription =
+    firstWithContent?.caption ??
+    caption ??
+    description ??
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit...";
+
+  const resolvedDate = savedAt
+    ? new Date(savedAt).toLocaleDateString()
+    : (dateCreate ?? date ?? "01/10/01");
 
   const colors = {
     blue:        "#0060A9",
@@ -21,17 +44,18 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
     lightOrange: "#F0AE35",
   };
 
-  // Normalize to the post shape CardExpandedView expects.
-  // RecipeCard uses `description` — map it to `caption` for the modal.
   const post = {
-    id:          recipe?.id,
-    title:       title,
-    caption:     recipe?.caption ?? description,   // prefer explicit caption, fall back to description
-    author:      author,
+    id:          recipe?.id ?? recipe?._id,
+    _id:         recipe?._id,
+    title,
+    caption:     resolvedDescription,
+    author,
     avatar:      recipe?.avatar ?? image,
-    date:        dateCreate,
+    date:        resolvedDate,
     ingredients: recipe?.ingredients ?? [],
-    mediaItems:  recipe?.mediaItems ?? (image ? [{ type: "image", url: image }] : []),
+    mediaItems:  mediaItems.length > 0
+                   ? mediaItems
+                   : (image ? [{ type: "image", url: image }] : []),
   };
 
   return (
@@ -69,7 +93,7 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Action Button — stop propagation so it doesn't open the modal */}
+          {/* Action Button */}
           <div className="absolute top-3 right-3 z-10">
             {variant === "favorite" ? (
               <button
@@ -125,7 +149,7 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
           </h3>
 
           <p className="text-gray-500 text-[9px] xl:text-xs leading-relaxed line-clamp-2 mb-2 xl:mb-4">
-            {description}
+            {resolvedDescription}
           </p>
 
           <div className="h-px w-full bg-gray-100 mb-2 xl:mb-4" />
@@ -142,7 +166,7 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
                 <div className="p-0.5 xl:p-1 rounded-md bg-orange-50">
                   <Calendar size={9} style={{ color: colors.orange }} className="xl:size-3 transition-all duration-500 group-hover:drop-shadow-[0_0_4px_rgba(245,118,0,0.8)]" />
                 </div>
-                <span className="text-[8px] xl:text-[10px] font-medium text-gray-400">{dateCreate}</span>
+                <span className="text-[8px] xl:text-[10px] font-medium text-gray-400">{resolvedDate}</span>
               </div>
             </div>
 
@@ -168,6 +192,7 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
           onArchive={() => onArchive?.(recipe)}
           onReport={() => onReport?.(recipe)}
           onSave={(isSaved) => onSave?.(recipe, isSaved)}
+          hideFavoriteAndOptions
         />
       )}
     </>
@@ -176,16 +201,6 @@ const RecipeCard = ({ recipe, onDelete, variant, onArchive, onReport, onSave }) 
 
 export default RecipeCard;
 
-/**
- * RecipeGrid — wraps your list with smooth delete transitions.
- * Props:
- *   recipes   - array of recipe objects
- *   onDelete  - (id) => void
- *   variant   - "favorite" | "archive" | undefined
- *   onArchive - (recipe) => void  — forwarded to each card
- *   onReport  - (recipe) => void  — forwarded to each card
- *   onSave    - (recipe, isSaved) => void — forwarded to each card
- */
 export const RecipeGrid = ({ recipes, onDelete, variant, onArchive, onReport, onSave }) => {
   return (
     <div className="overflow-hidden">
