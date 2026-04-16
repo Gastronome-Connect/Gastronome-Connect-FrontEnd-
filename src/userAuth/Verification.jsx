@@ -162,7 +162,7 @@ const VerificationPage = () => {
         setLoading(true);
         setError("");
 
-        const response = await fetch(buildApiUrl("/send-otp"), {
+        const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, username, password }),
