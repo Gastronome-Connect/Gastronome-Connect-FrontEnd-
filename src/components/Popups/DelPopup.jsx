@@ -3,7 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-const DeleteAccountPopup = ({ isOpen, onCancel, onConfirm, loading, error }) => {
+const DeleteAccountPopup = ({
+  isOpen,
+  onCancel,
+  onConfirm,
+  loading,
+  error,
+}) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,12 +31,15 @@ const DeleteAccountPopup = ({ isOpen, onCancel, onConfirm, loading, error }) => 
           >
             <div className="bg-red-600 text-white text-center py-10 px-6">
               <ShieldAlert size={40} className="mx-auto mb-3" />
-              <h2 className="text-xl font-black tracking-tight uppercase">Delete Account</h2>
+              <h2 className="text-xl font-black tracking-tight uppercase">
+                Delete Account
+              </h2>
             </div>
 
             <div className="p-8">
               <p className="text-gray-500 text-xs text-center leading-relaxed mb-6">
-                This action will delete your account.
+                This will schedule your account for deletion and disable access.
+                It will be permanently deleted after 30 days.
               </p>
 
               {/* Password field with eye toggle */}
@@ -48,7 +57,11 @@ const DeleteAccountPopup = ({ isOpen, onCancel, onConfirm, loading, error }) => 
                   onClick={() => setShowPassword((s) => !s)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  {showPassword ? <FaEyeSlash size={15} /> : <FaEye size={15} />}
+                  {showPassword ? (
+                    <FaEyeSlash size={15} />
+                  ) : (
+                    <FaEye size={15} />
+                  )}
                 </button>
               </div>
 
@@ -70,7 +83,9 @@ const DeleteAccountPopup = ({ isOpen, onCancel, onConfirm, loading, error }) => 
                   className={`w-full py-4 rounded-2xl text-white font-black text-xs tracking-widest transition-all
                     ${!password ? "bg-gray-200 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 shadow-xl shadow-red-100"}`}
                 >
-                  {loading ? "WIPING DATA..." : "DELETE ACCOUNT"}
+                  {loading
+                    ? "SCHEDULING DELETION..."
+                    : "SCHEDULE ACCOUNT DELETION"}
                 </motion.button>
                 <button
                   onClick={handleCancel}
