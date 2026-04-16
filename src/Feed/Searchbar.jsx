@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Searchbar({ scrollContainer }) {
+export default function Searchbar({ scrollContainer, value, onChange, placeholder }) {
   const [scrolled, setScrolled] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -33,13 +33,13 @@ export default function Searchbar({ scrollContainer }) {
 
   const isMinimized = scrolled && !expanded;
 
-  const handleClick = () => {
-    if (isMinimized) {
-      setExpanded(true);
-      setShowTooltip(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  };
+const handleClick = () => {
+  if (isMinimized) {
+    setExpanded(true);
+    setShowTooltip(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }
+};
 
   return (
     <div ref={wrapperRef} className="relative h-11 flex items-center justify-start">
@@ -85,15 +85,17 @@ export default function Searchbar({ scrollContainer }) {
         </AnimatePresence>
 
         {/* Input Field */}
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Search..."
-          readOnly={isMinimized}
-          className={`w-full bg-transparent border-none focus:ring-0 outline-none text-sm font-medium text-gray-700 placeholder-gray-400 pr-4 transition-opacity duration-200 ${
-            isMinimized ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-        />
+<input
+  ref={inputRef}
+  type="text"
+  placeholder={placeholder ?? "Search..."}
+  readOnly={isMinimized}
+  value={value ?? ""}
+  onChange={onChange}
+  className={`w-full bg-transparent border-none focus:ring-0 outline-none text-sm font-medium text-gray-700 placeholder-gray-400 pr-4 transition-opacity duration-200 ${
+    isMinimized ? "opacity-0 pointer-events-none" : "opacity-100"
+  }`}
+/>
       </motion.div>
 
       {/* "Lively" Tooltip */}

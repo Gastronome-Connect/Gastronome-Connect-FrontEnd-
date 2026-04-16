@@ -50,8 +50,6 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [showDiscard, setShowDiscard] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [saveError, setSaveError] = useState("");
 
   // ── Save toast ──
   // saveToastVisible drives SaveToast — set true to show, SaveToast resets it via onDone
@@ -94,36 +92,30 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
     else onClose();
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (nameError) return;
 
     const changed = hasAnyChanges();
 
+    onSave({
+      name,
+      bio,
+      avatarSrc,
+      flavors,
+      cookingStyles,
+      allergens,
+      dislikes,
+    });
+    setAvatarChanged(false);
+
     if (!changed) {
+      // Nothing actually changed — close silently
       onClose();
       return;
     }
 
-    setSaveError("");
-    setSaveLoading(true);
-
-    try {
-      await onSave({
-        name,
-        bio,
-        avatarSrc,
-        flavors,
-        cookingStyles,
-        allergens,
-        dislikes,
-      });
-      setAvatarChanged(false);
-      setSaveToastVisible(true);
-    } catch (error) {
-      setSaveError(error.message || "Failed to save profile changes.");
-    } finally {
-      setSaveLoading(false);
-    }
+    // Show the save toast; onDone closes the modal after the toast finishes
+    setSaveToastVisible(true);
   };
 
   const handleDeleteConfirm = (password) => {
@@ -283,31 +275,23 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={handleAttemptClose}
-              disabled={saveLoading}
               className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black text-gray-500 uppercase hover:bg-gray-100 transition-all"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              disabled={saveLoading}
-              className="px-5 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black bg-[#0060A9] text-white hover:bg-[#00B4FA] shadow-lg shadow-blue-200 uppercase transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+              className="px-5 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black bg-[#0060A9] text-white hover:bg-[#00B4FA] shadow-lg shadow-blue-200 uppercase transition-all active:scale-95"
             >
-              {saveLoading ? "Saving..." : "Save"}
+              Save
             </button>
           </div>
         </div>
-        {saveError && (
-          <div className="px-5 sm:px-8 pb-4 sm:pb-5 text-[11px] sm:text-xs font-semibold text-red-500">
-            {saveError}
-          </div>
-        )}
       </div>
 
       {showDiscard && (
         <DiscardChangesModal
           onDiscard={() => {
-            setSaveError("");
             setName(initialData.name ?? "");
             setBio(initialData.bio ?? "");
             setAvatarSrc(initialData.avatarSrc ?? null);
@@ -365,7 +349,6 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
         subLabel="Profile"
         onDone={() => {
           setSaveToastVisible(false);
-          setSaveError("");
           onClose();
         }}
       />

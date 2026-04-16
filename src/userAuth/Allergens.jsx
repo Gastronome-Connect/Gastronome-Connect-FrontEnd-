@@ -6,12 +6,6 @@ import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
 import { buildApiUrl } from "../utils/api";
-import AccountCreatedPopup from "../components/Popups/PrefPopup";
-import {
-  clearSignupFlowState,
-  setSignupFlowStage,
-  setSignupLastRoute,
-} from "../utils/signupFlow";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -170,30 +164,11 @@ const Allergens = () => {
   });
   const [loading, setLoading] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCreatedPopup, setShowCreatedPopup] = useState(false);
-  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     const onResize = () => setMobile(isMobile());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  useEffect(() => {
-    setSignupFlowStage("allergens");
-    setSignupLastRoute("/allergens");
-
-    const savedDislikes = sessionStorage.getItem("tempDislikes");
-    if (savedDislikes) {
-      try {
-        const parsed = JSON.parse(savedDislikes);
-        setDislikes(Array.isArray(parsed.dislikes) ? parsed.dislikes : []);
-        setAllergens(Array.isArray(parsed.allergens) ? parsed.allergens : []);
-      } catch (error) {
-        console.error("Error restoring dislikes:", error.message);
-      }
-    }
   }, []);
 
   const fetchOptions = async () => {
@@ -225,56 +200,110 @@ const Allergens = () => {
   };
 
   const saveDislikes = async () => {
-    sessionStorage.setItem(
-      "tempDislikes",
-      JSON.stringify({ dislikes, allergens }),
-    );
+    const token = localStorage.getItem("accessToken");
+    const userId = localStorage.getItem("userId");
+    if (!token || !userId) {
+      sessionStorage.setItem(
+        "tempDislikes",
+        JSON.stringify({ dislikes, allergens }),
+      );
+      return;
+    }
+    try {
+      await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dislikes, allergies: allergens }),
+      });
+    } catch (error) {
+      console.error("Error saving dislikes:", error.message);
+    }
   };
 
   const handleCompleteSignup = async () => {
     try {
-      await saveDislikes();
-      setSubmitError("");
-      setIsSubmitting(true);
+      const signupDataStr = sessionStorage.getItem("tempSignupData");
+      if (!signupDataStr) {
+        console.error("No signup data found in sessionStorage");
+        return;
+      }
 
-      const email = sessionStorage.getItem("pendingEmail");
-      const tempPreferences = sessionStorage.getItem("tempPreferences");
-      const parsedPreferences = tempPreferences
-        ? JSON.parse(tempPreferences)
-        : { flavors: [], cookingStyles: [] };
+      const signupData = JSON.parse(signupDataStr);
+      const { email, password, confirmPassword, username } = signupData;
 
-      const response = await fetch(buildApiUrl("/api/complete-signup"), {
+      const registerResponse = await fetch(buildApiUrl("/api/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          username: username || undefined,
           email,
-          preferences: {
-            flavors: Array.isArray(parsedPreferences.flavors)
-              ? parsedPreferences.flavors
-              : [],
-            techniques: Array.isArray(parsedPreferences.cookingStyles)
-              ? parsedPreferences.cookingStyles
-              : [],
-          },
-          allergens,
-          dislikes,
+          password,
+          confirmPassword,
         }),
       });
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to complete signup.");
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        console.error("Account creation failed:", registerData.message);
+        return;
       }
 
-      clearSignupFlowState();
-      setShowCreatedPopup(true);
+      localStorage.setItem("accessToken", registerData.accessToken);
+      localStorage.setItem("refreshToken", registerData.refreshToken);
+      if (registerData.userId) {
+        localStorage.setItem("userId", registerData.userId);
+      }
+
+      const token = registerData.accessToken;
+      const userId = registerData.userId;
+
+      const tempPreferences = sessionStorage.getItem("tempPreferences");
+      if (tempPreferences) {
+        try {
+          const { flavors, cookingStyles } = JSON.parse(tempPreferences);
+          await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              preferences: { flavors, techniques: cookingStyles },
+            }),
+          });
+          sessionStorage.removeItem("tempPreferences");
+        } catch (error) {
+          console.error("Error syncing preferences:", error.message);
+        }
+      }
+
+      try {
+        await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ dislikes, allergies: allergens }),
+        });
+      } catch (error) {
+        console.error("Error saving dislikes:", error.message);
+      }
+
+      sessionStorage.removeItem("tempSignupData");
+      sessionStorage.removeItem("tempDislikes");
+      sessionStorage.removeItem("sourceFlow");
+      sessionStorage.removeItem("pendingEmail");
+
+      navigate("/feed", { replace: true });
     } catch (error) {
       console.error("Error completing signup:", error);
-      setSubmitError(error.message || "Failed to complete signup.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -309,16 +338,6 @@ const Allergens = () => {
     <div className="fixed inset-0 w-full h-full overflow-hidden">
       <style>{STYLES}</style>
       <BackgroundCarousel />
-      <AccountCreatedPopup
-        isOpen={showCreatedPopup}
-        title="Account Created"
-        message="Your account has been saved successfully. Continue to log in and start using Gastronome Connect."
-        buttonLabel="Back to Login"
-        onContinue={() => {
-          setShowCreatedPopup(false);
-          navigate("/login?mode=login", { replace: true });
-        }}
-      />
 
       <div
         className={
@@ -394,38 +413,29 @@ const Allergens = () => {
                   </div>
                 )}
 
-                {submitError && (
-                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                    {submitError}
-                  </div>
-                )}
-
                 <button
                   onClick={handleCompleteSignup}
-                  disabled={isDoneDisabled || isSubmitting}
+                  disabled={isDoneDisabled}
                   className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
-                    isDoneDisabled || isSubmitting
+                    isDoneDisabled
                       ? "cursor-not-allowed opacity-50"
                       : "hover:brightness-110 active:scale-[0.98]"
                   }`}
                 >
-                  {isSubmitting ? "Saving..." : "Done"}
+                  Done
                 </button>
 
                 <button
                   className="w-full mt-3 px-4 py-2.5 text-sm font-sfpro font-bold border-2 border-[#0060A9] text-[#0060A9] rounded-lg bg-white hover:bg-gray-50 outline-none transition-all"
                   onClick={handleCompleteSignup}
-                  disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Saving..." : "Skip for Now"}
+                  Skip for Now
                 </button>
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button
                     onClick={async () => {
                       await saveDislikes();
-                      setSignupFlowStage("preferences");
-                      setSignupLastRoute("/preferences");
                       navigate("/preferences");
                     }}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"

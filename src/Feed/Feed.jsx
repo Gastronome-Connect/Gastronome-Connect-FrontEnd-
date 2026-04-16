@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 import Sidebar             from "../Feed/SideBar";
 import Searchbar           from "./Searchbar";
@@ -12,6 +12,7 @@ import UploadFailedModal   from "../components/Modals/Create Post Components/Upl
 import useUpload           from "../Hooks/UseUpload";
 import { SkeletonPostList } from "../components/Skeletons";
 import { buildApiUrl } from "../utils/api";
+import { useUserLibrary } from "../Context/UserLibraryContext";
 
 const PAGE_SIZE = 10;
 
@@ -73,6 +74,7 @@ export default function GCFeed() {
   const [chatExpanded, setChatExpanded] = useState(false);
   const mainRef                         = useRef(null);
 
+  const { isSuppressedByArchive } = useUserLibrary();
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
 
   const handleNewPost = useCallback(
@@ -111,6 +113,11 @@ export default function GCFeed() {
     fetchPage(next);
   }, [hasMore, isFetching, page, fetchPage]);
 
+  const visiblePosts = useMemo(
+    () => posts.filter((post) => !isSuppressedByArchive(post)),
+    [posts, isSuppressedByArchive]
+  );
+
   return (
     <div className="flex h-screen w-full bg-gray-50">
       <Sidebar onNewPost={handleNewPost} />
@@ -130,14 +137,14 @@ export default function GCFeed() {
             {initialLoading && <SkeletonPostList count={3} />}
 
             {/* ── Empty state (after load, no posts) ── */}
-            {!initialLoading && posts.length === 0 && (
+            {!initialLoading && visiblePosts.length === 0 && (
               <p className="text-center text-gray-400 py-16">
                 No posts yet. Share your first recipe!
               </p>
             )}
 
             {/* ── Post list ── */}
-            {!initialLoading && posts.map((post) => (
+            {!initialLoading && visiblePosts.map((post) => (
               <LazyItem key={post.id} placeholderHeight={320}>
                 <PostCard
                   post={post}
@@ -148,11 +155,11 @@ export default function GCFeed() {
               </LazyItem>
             ))}
 
-            {posts.length > 0 && (
+            {visiblePosts.length > 0 && (
               <InfiniteScrollTrigger onTrigger={handleLoadMore} hasMore={hasMore} isLoading={isFetching} />
             )}
 
-            {!hasMore && posts.length > 0 && (
+            {!hasMore && visiblePosts.length > 0 && (
               <p className="text-center text-xs text-gray-300 py-4 select-none">
                 You've reached the end of your feed.
               </p>

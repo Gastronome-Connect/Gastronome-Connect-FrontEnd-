@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Flame } from "lucide-react";
 import PopularRecipeCard from "../Cards/PopularRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
+import { useUserLibrary } from "../../Context/UserLibraryContext";
 
 import Karekare  from "../Assets/Kare-kare.png";
 import Sisig     from "../Assets/Sisig.png";
@@ -14,16 +15,16 @@ import Laing     from "../Assets/Laing.png";
 import Binangkal from "../Assets/Binangkal.png";
 
 const recipes = [
-  { name: "Kare-kare",     author: "Lola Rosa",      img: Karekare  },
-  { name: "Sisig",         author: "Aling Lucing",   img: Sisig     },
-  { name: "Adobo",         author: "Chef Boy Logro", img: Adobo     },
-  { name: "Lechong Kawali",author: "Mang Tomas",     img: Lechon    },
-  { name: "Sinigang",      author: "Nanay Maria",    img: Sinigang  },
-  { name: "Bicol Express", author: "Bicol's Finest", img: Bicol     },
-  { name: "Pancit Canton", author: "Lolo Pepe",      img: Pancit    },
-  { name: "Laing",         author: "Gata Master",    img: Laing     },
-  { name: "Binangkal",     author: "Cebu Sweets",    img: Binangkal },
-  { name: "Lechon Manok",  author: "Andok's Style",  img: Lechon    },
+  { id: "popular-kare-kare", name: "Kare-kare", author: "Lola Rosa", img: Karekare },
+  { id: "popular-sisig", name: "Sisig", author: "Aling Lucing", img: Sisig },
+  { id: "popular-adobo", name: "Adobo", author: "Chef Boy Logro", img: Adobo },
+  { id: "popular-lechong-kawali", name: "Lechong Kawali", author: "Mang Tomas", img: Lechon },
+  { id: "popular-sinigang", name: "Sinigang", author: "Nanay Maria", img: Sinigang },
+  { id: "popular-bicol-express", name: "Bicol Express", author: "Bicol's Finest", img: Bicol },
+  { id: "popular-pancit-canton", name: "Pancit Canton", author: "Lolo Pepe", img: Pancit },
+  { id: "popular-laing", name: "Laing", author: "Gata Master", img: Laing },
+  { id: "popular-binangkal", name: "Binangkal", author: "Cebu Sweets", img: Binangkal },
+  { id: "popular-lechon-manok", name: "Lechon Manok", author: "Andok's Style", img: Lechon },
 ];
 
 // Skeleton row that mirrors PopularRecipeCard's layout
@@ -43,12 +44,18 @@ const SkeletonPopularRow = () => (
 
 export default function PopularRecipes() {
   const [isLoading, setIsLoading] = useState(true);
+  const { isSuppressedByArchive } = useUserLibrary();
 
   // Simulate data fetch — replace with real API call if needed
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  const visibleRecipes = useMemo(
+    () => recipes.filter((recipe) => !isSuppressedByArchive(recipe)),
+    [isSuppressedByArchive]
+  );
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 flex flex-col h-full min-h-0 shadow-[0_20px_40px_-15px_rgba(0,96,169,0.08)] relative overflow-hidden">
@@ -75,7 +82,7 @@ export default function PopularRecipes() {
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 sm:pr-3 custom-scrollbar space-y-2 sm:space-y-3 relative z-10">
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => <SkeletonPopularRow key={i} />)
-          : recipes.map((recipe, index) => (
+          : visibleRecipes.map((recipe, index) => (
               <PopularRecipeCard key={index} recipe={recipe} index={index} />
             ))
         }

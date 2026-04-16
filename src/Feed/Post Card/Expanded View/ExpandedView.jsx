@@ -10,32 +10,24 @@ import FavoriteButton from "../Post Header/FavoriteButton";
 import PostActions from "../Post Action/PostActions";
 import CommentSection from "../Comment Section/CommentSection";
 import AILogo from "../../../components/Assets/AILogo.png";
+import { useUserLibrary } from "../../../Context/UserLibraryContext";
 
 /* ── Shared unit pluralizer ── */
 const pluralizeUnit = (unit, amount) => {
   if (!unit || unit === "to taste") return unit;
   const num = parseFloat(amount);
   if (!num || num <= 1) return unit;
-  const plurals = {
-    cup:   "cups",
-    tsp:   "tsps",
-    tbsp:  "tbsps",
-    piece: "pieces",
-    pinch: "pinches",
-    oz:    "ozs",
-    lb:    "lbs",
-  };
+  const plurals = { cup: "cups", tsp: "tsps", tbsp: "tbsps", piece: "pieces", pinch: "pinches", oz: "ozs", lb: "lbs" };
   return plurals[unit] ?? unit;
 };
 
-/* ── Inline ingredient list for the expanded panel ── */
 const IngredientList = ({ ingredients }) => {
   const [expanded, setExpanded] = useState(false);
   if (!ingredients || ingredients.length === 0) return null;
 
   const PREVIEW = 4;
   const showToggle = ingredients.length > PREVIEW;
-  const visible    = expanded ? ingredients : ingredients.slice(0, PREVIEW);
+  const visible = expanded ? ingredients : ingredients.slice(0, PREVIEW);
 
   const fmt = (ing) => {
     if (ing.unit === "to taste") return "to taste";
@@ -47,75 +39,48 @@ const IngredientList = ({ ingredients }) => {
     <div className="mx-4 sm:mx-5 mb-3 rounded-2xl border border-orange-100 bg-orange-50/60 px-3.5 py-3">
       <div className="flex items-center gap-1.5 mb-2">
         <UtensilsCrossed size={13} className="text-[#F57600]" />
-        <span className="text-xs font-extrabold text-[#F57600] uppercase tracking-wide">
-          Ingredients
-        </span>
+        <span className="text-xs font-extrabold text-[#F57600] uppercase tracking-wide">Ingredients</span>
         <span className="ml-auto text-[10px] text-orange-400 font-medium">
           {ingredients.length} item{ingredients.length !== 1 ? "s" : ""}
         </span>
       </div>
-
-      <ul
-        className="space-y-1 overflow-y-auto pr-0.5"
-        style={{ maxHeight: expanded ? "none" : undefined }}
-      >
+      <ul className="space-y-1 overflow-y-auto pr-0.5">
         {visible.map((ing) => {
           const measure = fmt(ing);
-          // Capitalize first letter if not already capitalized
           const displayName = ing.name ? ing.name.charAt(0).toUpperCase() + ing.name.slice(1) : ing.name;
           return (
             <li key={ing.id} className="flex items-baseline gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F57600] shrink-0 mt-1.5" />
-              {measure && (
-                <span className="text-[11px] font-bold text-[#F57600] shrink-0 min-w-[52px]">
-                  {measure}
-                </span>
-              )}
+              {measure && <span className="text-[11px] font-bold text-[#F57600] shrink-0 min-w-[52px]">{measure}</span>}
               <span className="text-sm text-gray-700 leading-snug">{displayName}</span>
             </li>
           );
         })}
       </ul>
-
       {showToggle && (
-        <button
-          onClick={() => setExpanded((p) => !p)}
-          className="mt-2 flex items-center gap-1 text-[#F57600] text-xs font-bold hover:underline"
-        >
-          {expanded
-            ? <><ChevronUp size={12} /> Show less</>
-            : <><ChevronDown size={12} /> +{ingredients.length - PREVIEW} more</>
-          }
+        <button onClick={() => setExpanded((p) => !p)} className="mt-2 flex items-center gap-1 text-[#F57600] text-xs font-bold hover:underline">
+          {expanded ? <><ChevronUp size={12} /> Show less</> : <><ChevronDown size={12} /> +{ingredients.length - PREVIEW} more</>}
         </button>
       )}
     </div>
   );
 };
 
-/* ── Builds the chatbot prefill string ── */
 const buildChatbotPrefill = (post) => {
   const lines = [];
-
   if (post.title) lines.push(`Title:\n${post.title}`);
-
   if (post.ingredients?.length > 0) {
     lines.push("\nIngredients:");
     post.ingredients.forEach((ing) => {
-      const measure =
-        ing.unit === "to taste"
-          ? "to taste"
-          : [ing.amount, ing.unit].filter(Boolean).join(" ");
+      const measure = ing.unit === "to taste" ? "to taste" : [ing.amount, ing.unit].filter(Boolean).join(" ");
       const optional = ing.optional ? " (optional)" : "";
       lines.push(`${measure ? `${measure} ` : ""}${ing.name}${optional}`);
     });
   }
-
   if (post.caption) lines.push(`\nDescription:\n${post.caption}`);
-
   return lines.join("\n").trim();
 };
 
-/* ── Main ExpandedView ── */
 const ExpandedView = ({
   post,
   startIndex = 0,
@@ -123,72 +88,74 @@ const ExpandedView = ({
   onClose,
   onEdit,
   onDelete,
-  onArchive,
   onReport,
 }) => {
   const navigate = useNavigate();
+  const { isArchived, addToArchives, removeFromArchives, addToHistory } = useUserLibrary();
+
   const [current, setCurrent]           = useState(startIndex);
   const [showComments, setShowComments] = useState(false);
   const [menuOpen, setMenuOpen]         = useState(false);
   const [isSpeaking, setIsSpeaking]     = useState(false);
   const [isPaused, setIsPaused]         = useState(false);
-  const synthRef                        = useRef(null);
 
   const menuRef           = useRef(null);
   const commentSectionRef = useRef(null);
   const pinnedTextareaRef = useRef(null);
+  const historyTimerRef   = useRef(null);
+  const historyAddedRef   = useRef(false);
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media       = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
   const item        = media[current] ?? null;
+  const postId      = post.id ?? post._id;
+  const archived    = isArchived(postId);
+
+  // ── 5-second history timer ──────────────────────────────────────
+  useEffect(() => {
+    historyAddedRef.current = false;
+    historyTimerRef.current = setTimeout(() => {
+      if (!historyAddedRef.current) {
+        addToHistory(post);
+        historyAddedRef.current = true;
+      }
+    }, 5000);
+    return () => clearTimeout(historyTimerRef.current);
+  }, [post, addToHistory]);
 
   const goPrev = (e) => { e.stopPropagation(); setCurrent((p) => (p - 1 + media.length) % media.length); };
   const goNext = (e) => { e.stopPropagation(); setCurrent((p) => (p + 1) % media.length); };
 
+  const handleArchive = () => {
+    if (archived) removeFromArchives(postId);
+    else addToArchives(post);
+    setMenuOpen(false);
+  };
+
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
-    
     if (isSpeaking) {
-      if (isPaused) {
-        window.speechSynthesis.resume();
-        setIsPaused(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPaused(true);
-      }
+      if (isPaused) { window.speechSynthesis.resume(); setIsPaused(false); }
+      else { window.speechSynthesis.pause(); setIsPaused(true); }
       return;
     }
-
     const ingredientsList = post.ingredients
       ?.map((ing) => {
         const measure = ing.unit === "to taste" ? "to taste" : [ing.amount, ing.unit].filter(Boolean).join(" ");
         return `${measure ? `${measure} ` : ""}${ing.name}`;
-      })
-      .join(", ") || "";
+      }).join(", ") || "";
 
     const textToSpeak = [
       `Title: ${post.title}`,
       ingredientsList ? `Ingredients: ${ingredientsList}` : "",
       post.caption ? `Description: ${post.caption}` : "",
-    ]
-      .filter(Boolean)
-      .join(". ");
+    ].filter(Boolean).join(". ");
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setIsPaused(false);
-    };
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-    };
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-    };
-    synthRef.current = utterance;
+    utterance.onstart = () => { setIsSpeaking(true); setIsPaused(false); };
+    utterance.onend   = () => { setIsSpeaking(false); setIsPaused(false); };
+    utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
@@ -208,21 +175,19 @@ const ExpandedView = ({
     };
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
-    return () => { 
-      document.removeEventListener("keydown", onKeyDown); 
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      setIsPaused(false);
     };
   }, [onClose, hasMultiple, media.length]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const submitComment = () => {
@@ -302,7 +267,8 @@ const ExpandedView = ({
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <FavoriteButton />
+              {/* FavoriteButton now receives the post so it can write to context */}
+              <FavoriteButton post={post} />
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((o) => !o)}
@@ -313,9 +279,10 @@ const ExpandedView = ({
                 {menuOpen && (
                   <PostMenu
                     isOwner={isOwner}
+                    isArchived={archived}
                     onEdit={() => { setMenuOpen(false); onEdit?.(); onClose(); }}
                     onDelete={() => { setMenuOpen(false); onDelete?.(); onClose(); }}
-                    onArchive={() => { setMenuOpen(false); onArchive?.(); }}
+                    onArchive={handleArchive}
                     onReport={() => { setMenuOpen(false); onReport?.(); }}
                   />
                 )}
@@ -325,8 +292,7 @@ const ExpandedView = ({
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto min-h-0">
-
-            {/* ── 1. TITLE ── */}
+            {/* Title */}
             {(() => {
               const hasPerMedia  = media.length > 1 && (item?.title || item?.caption);
               const displayTitle = hasPerMedia ? item.title : post.title;
@@ -334,19 +300,16 @@ const ExpandedView = ({
               return (
                 <div className="px-4 sm:px-5 pt-3 sm:pt-4 pb-1">
                   {hasPerMedia && (
-                    <p className="text-[10px] font-bold text-[#F57600] uppercase tracking-wide mb-1">
-                      Photo {current + 1} of {media.length}
-                    </p>
+                    <p className="text-[10px] font-bold text-[#F57600] uppercase tracking-wide mb-1">Photo {current + 1} of {media.length}</p>
                   )}
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900">{displayTitle}</h3>
                 </div>
               );
             })()}
 
-            {/* ── 2. INGREDIENTS ── */}
             <IngredientList ingredients={post.ingredients} />
 
-            {/* ── 3. DESCRIPTION / caption ── */}
+            {/* Caption */}
             {(() => {
               const hasPerMedia    = media.length > 1 && (item?.title || item?.caption);
               const displayCaption = hasPerMedia ? item.caption : post.caption;
@@ -363,33 +326,21 @@ const ExpandedView = ({
               );
             })()}
 
-            {/* ── Actions bar ── */}
+            {/* Actions bar */}
             <div className="sticky top-0 bg-white z-10 border-t border-b border-gray-100 flex items-center justify-between pr-3 sm:pr-5">
-              <PostActions
-                post={post}
-                onComment={() => setShowComments((s) => !s)}
-                commentsOpen={showComments}
-              />
-
+              <PostActions post={post} onComment={() => setShowComments((s) => !s)} commentsOpen={showComments} />
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSpeak}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shrink-0 ${
-                    isSpeaking && !isPaused
-                      ? "bg-[#F57600] text-white shadow"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    isSpeaking && !isPaused ? "bg-[#F57600] text-white shadow" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
-                  title="Read aloud"
                 >
                   <Volume2 size={13} />
                   <span className="hidden xs:inline">{!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}</span>
                 </button>
-
                 <button
-                  onClick={() => {
-                    const prefill = buildChatbotPrefill(post);
-                    navigate("/chatbot", { state: { prefill } });
-                  }}
+                  onClick={() => navigate("/chatbot", { state: { prefill: buildChatbotPrefill(post) } })}
                   className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
                 >
                   <img src={AILogo} alt="AI" className="w-3 h-3" />
@@ -411,17 +362,12 @@ const ExpandedView = ({
             )}
           </div>
 
-          {/* Pinned comment input */}
           {showComments && (
             <div
               className="border-t border-gray-100 shrink-0 px-3 sm:px-4 pb-3 pt-2 flex items-center gap-2 bg-white"
               style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}
             >
-              <img
-                src="https://i.pravatar.cc/100?img=12"
-                alt="You"
-                className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-200"
-              />
+              <img src="https://i.pravatar.cc/100?img=12" alt="You" className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-200" />
               <div className="flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-[#F57600] transition-colors">
                 <textarea
                   ref={pinnedTextareaRef}

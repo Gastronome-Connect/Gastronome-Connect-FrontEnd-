@@ -18,13 +18,14 @@ export const OwnerMenu = ({ onEdit, onDelete }) => (
   </>
 );
 
-export const ViewerMenu = ({ onArchive, onReport }) => (
+export const ViewerMenu = ({ onArchive, onReport, isArchived }) => (
   <>
     <button
       onClick={onArchive}
       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-[#F57600] transition-colors"
     >
-      <FaArchive size={14} /> Archive Recipe
+      <FaArchive size={14} className={isArchived ? "text-[#F57600]" : ""} />
+      {isArchived ? "Unarchive Recipe" : "Archive Recipe"}
     </button>
     <div className="border-t border-gray-100" />
     <button
@@ -37,16 +38,15 @@ export const ViewerMenu = ({ onArchive, onReport }) => (
 );
 
 /**
- * PostMenu no longer handles its own outside-click — the parent wraps both
- * the trigger button and this dropdown in a single ref so clicking the button
- * cleanly toggles without the outside-click handler fighting it.
+ * PostMenu
+ * Now accepts `post` so ViewerMenu can show archive toggle state.
  */
-const PostMenu = ({ isOwner = false, onEdit, onDelete, onArchive, onReport }) => (
+const PostMenu = ({ isOwner = false, post, onEdit, onDelete, onArchive, onReport, isArchived = false }) => (
   <div className="absolute right-0 top-10 z-50 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden w-48">
     {isOwner ? (
       <OwnerMenu onEdit={onEdit} onDelete={onDelete} />
     ) : (
-      <ViewerMenu onArchive={onArchive} onReport={onReport} />
+      <ViewerMenu onArchive={onArchive} onReport={onReport} isArchived={isArchived} />
     )}
   </div>
 );

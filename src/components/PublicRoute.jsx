@@ -1,7 +1,6 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { getSignupRedirectRoute, isSignupVerified } from "../utils/signupFlow";
 
 /**
  * PublicRoute - Only allows unauthenticated users
@@ -9,10 +8,6 @@ import { getSignupRedirectRoute, isSignupVerified } from "../utils/signupFlow";
  * Redirects to /feed or /admin if user is already authenticated
  */
 const PublicRoute = ({ Component }) => {
-  if (isSignupVerified()) {
-    return <Navigate to={getSignupRedirectRoute()} replace />;
-  }
-
   const getStoredToken = () => {
     return (
       localStorage.getItem("adminAccessToken") ||

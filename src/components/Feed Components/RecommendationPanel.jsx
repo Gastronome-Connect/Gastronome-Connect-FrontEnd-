@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import RecommendationCard from "../Cards/RecommendedRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
+import { useUserLibrary } from "../../Context/UserLibraryContext";
 
 import Karekare  from "../Assets/Kare-kare.png";
 import Sisig     from "../Assets/Sisig.png";
@@ -14,16 +15,16 @@ import Laing     from "../Assets/Laing.png";
 import Binangkal from "../Assets/Binangkal.png";
 
 const recommendedRecipes = [
-  { name: "Kare-kare",     author: "Lola Rosa",      img: Karekare  },
-  { name: "Sisig",         author: "Aling Lucing",   img: Sisig     },
-  { name: "Adobo",         author: "Chef Boy Logro", img: Adobo     },
-  { name: "Lechong Kawali",author: "Mang Tomas",     img: Lechon    },
-  { name: "Sinigang",      author: "Nanay Maria",    img: Sinigang  },
-  { name: "Bicol Express", author: "Bicol's Finest", img: Bicol     },
-  { name: "Pancit Canton", author: "Lolo Pepe",      img: Pancit    },
-  { name: "Laing",         author: "Gata Master",    img: Laing     },
-  { name: "Binangkal",     author: "Jomarrie",       img: Binangkal },
-  { name: "Pork Humba",    author: "Lola Arnel",     img: Adobo     },
+  { id: "recommended-kare-kare", name: "Kare-kare", author: "Lola Rosa", img: Karekare },
+  { id: "recommended-sisig", author: "Aling Lucing", name: "Sisig", img: Sisig },
+  { id: "recommended-adobo", author: "Chef Boy Logro", name: "Adobo", img: Adobo },
+  { id: "recommended-lechong-kawali", name: "Lechong Kawali", author: "Mang Tomas", img: Lechon },
+  { id: "recommended-sinigang", name: "Sinigang", author: "Nanay Maria", img: Sinigang },
+  { id: "recommended-bicol-express", name: "Bicol Express", author: "Bicol's Finest", img: Bicol },
+  { id: "recommended-pancit-canton", name: "Pancit Canton", author: "Lolo Pepe", img: Pancit },
+  { id: "recommended-laing", name: "Laing", author: "Gata Master", img: Laing },
+  { id: "recommended-binangkal", name: "Binangkal", author: "Jomarrie", img: Binangkal },
+  { id: "recommended-pork-humba", name: "Pork Humba", author: "Lola Arnel", img: Adobo },
 ];
 
 /**
@@ -66,6 +67,7 @@ const SkeletonRecommendationCard = () => (
 export default function Recommendation() {
   const scrollRef               = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { isSuppressedByArchive } = useUserLibrary();
 
   // Replace with your real API call
   useEffect(() => {
@@ -83,6 +85,11 @@ export default function Recommendation() {
       behavior: "smooth",
     });
   };
+
+  const visibleRecommendedRecipes = useMemo(
+    () => recommendedRecipes.filter((recipe) => !isSuppressedByArchive(recipe)),
+    [isSuppressedByArchive]
+  );
 
   return (
     <section className="w-full relative">
@@ -119,7 +126,7 @@ export default function Recommendation() {
             ? Array.from({ length: 5 }).map((_, i) => (
                 <SkeletonRecommendationCard key={`skeleton-${i}`} />
               ))
-            : recommendedRecipes.map((recipe, index) => (
+            : visibleRecommendedRecipes.map((recipe, index) => (
                 <RecommendationCard key={`recipe-${recipe.name}-${index}`} recipe={recipe} />
               ))
           }

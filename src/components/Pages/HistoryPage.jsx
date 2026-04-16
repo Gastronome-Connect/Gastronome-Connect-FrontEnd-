@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Sidebar from "../../Feed/SideBar";
-import SearchBar from "../../Feed/SideBarSearchBar";
+import SearchBar from "../../Feed/SideBarSearchBar"; // ← this one is already controlled
 import RecipeCard from "../Cards/RecipeCard";
 import { AnimatePresence } from "framer-motion";
 import ClearAllPopup from "../Popups/CAPopup";
@@ -12,6 +12,7 @@ import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal   from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../../Hooks/UseUpload";
 import SkeletonRecipeGrid  from "../Skeletons/SkeletonRecipeGrid";
+import { useUserLibrary }  from "../../Context/UserLibraryContext";
 
 const SORT_OPTIONS = [
   { value: "recent", label: "Most Recent" },
@@ -30,25 +31,29 @@ const HistoryPage = () => {
   const [currentPage, setCurrentPage]       = useState(1);
   const [sortBy, setSortBy]                 = useState("recent");
   const [sortOpen, setSortOpen]             = useState(false);
+  const [searchQuery, setSearchQuery]       = useState("");
   const [isLoading, setIsLoading]           = useState(true);
   const sortRef = useRef(null);
+
+  const { history, removeFromHistory, restoreHistory, clearHistory } = useUserLibrary();
 
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
   const handleNewPost = (newPost) => startUpload(newPost, () => {});
 
-  const [toast, setToast] = useState({ visible: false, message: "", snapshot: null });
+  // Undo snapshot — stored locally since it's transient UI state
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const [toast, setToast] = useState({ visible: false, message: "" });
 
   const showUndo = useCallback((message, snapshot) => {
-    setToast({ visible: false, message: "", snapshot: null });
-    requestAnimationFrame(() => setToast({ visible: true, message, snapshot }));
+    setUndoSnapshot(snapshot);
+    setToast({ visible: false, message: "" });
+    requestAnimationFrame(() => setToast({ visible: true, message }));
   }, []);
 
-  const handleUndo    = useCallback(() => {
-    if (toast.snapshot !== null) setRecipes(toast.snapshot);
-    setToast((t) => ({ ...t, visible: false }));
-  }, [toast.snapshot]);
-
-  const handleDismiss = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const handler = () => setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
@@ -64,28 +69,37 @@ const HistoryPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const [recipes, setRecipes] = useState([]);
-
-  // Simulate / replace with real API call
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const isEmpty = !isLoading && recipes.length === 0;
-
   const sortedRecipes = useMemo(() => {
-    const copy = [...recipes];
-    switch (sortBy) {
-      case "oldest": return copy.sort((a, b) => new Date(a.dateCreate) - new Date(b.dateCreate));
-      case "az":     return copy.sort((a, b) => a.title.localeCompare(b.title));
-      case "za":     return copy.sort((a, b) => b.title.localeCompare(a.title));
-      default:       return copy.sort((a, b) => new Date(b.dateCreate) - new Date(a.dateCreate));
-    }
-  }, [recipes, sortBy]);
+    let list = [...history];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+list = list.filter((r) => {
+  const ingredientMatch = Array.isArray(r.ingredients)
+    ? r.ingredients.some((ing) => {
+        const name = typeof ing === "string" ? ing : ing?.name ?? "";
+        return name.toLowerCase().includes(q);
+      })
+    : false;
 
-  const totalPages       = Math.ceil(sortedRecipes.length / ITEMS_PER_PAGE);
+  return (
+    r.title?.toLowerCase().includes(q) ||
+    r.caption?.toLowerCase().includes(q) ||
+    r.description?.toLowerCase().includes(q) ||
+    r.author?.toLowerCase().includes(q) ||
+    ingredientMatch
+  );
+});
+    }
+    switch (sortBy) {
+      case "oldest": return list.sort((a, b) => a.savedAt - b.savedAt);
+      case "az":     return list.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
+      case "za":     return list.sort((a, b) => (b.title ?? "").localeCompare(a.title ?? ""));
+      default:       return list.sort((a, b) => b.savedAt - a.savedAt);
+    }
+  }, [history, sortBy, searchQuery]);
+
+  const isEmpty      = !isLoading && sortedRecipes.length === 0;
+  const totalPages   = Math.ceil(sortedRecipes.length / ITEMS_PER_PAGE);
   const paginatedRecipes = sortedRecipes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -96,18 +110,27 @@ const HistoryPage = () => {
   }, [totalPages, currentPage]);
 
   const handleDelete = useCallback((id) => {
-    const snapshot = recipes;
-    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    const snapshot = [...history];
+    removeFromHistory(id);
     showUndo("Item removed from history", snapshot);
-  }, [recipes, showUndo]);
+  }, [history, removeFromHistory, showUndo]);
 
   const handleClearAll = useCallback(() => {
-    const snapshot = recipes;
-    setRecipes([]);
+    const snapshot = [...history];
+    clearHistory();
     setShowClearPopup(false);
     setCurrentPage(1);
     showUndo("History cleared", snapshot);
-  }, [recipes, showUndo]);
+  }, [history, clearHistory, showUndo]);
+
+  const handleUndo = useCallback(() => {
+    if (undoSnapshot) {
+      restoreHistory(undoSnapshot);
+    }
+    setToast((t) => ({ ...t, visible: false }));
+  }, [undoSnapshot, restoreHistory]);
+
+  const handleDismiss = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] overflow-x-hidden">
@@ -124,11 +147,20 @@ const HistoryPage = () => {
             <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">History</h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
+              {history.length > 0 && (
+                <span className="text-xs font-bold text-[#F57600] bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-full">
+                  {history.length}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="w-full sm:max-w-md">
-                <SearchBar placeholder="Search your history..." />
+                <SearchBar
+                  placeholder="Search your history..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
               </div>
               <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto shrink-0">
                 <div className="relative" ref={sortRef}>
@@ -158,7 +190,7 @@ const HistoryPage = () => {
                 </div>
                 <button
                   onClick={() => setShowClearPopup(true)}
-                  disabled={isEmpty || isLoading}
+                  disabled={history.length === 0 || isLoading}
                   className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-red-50 border border-red-100 text-red-500 text-xs sm:text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50 disabled:hover:text-red-500 disabled:hover:border-red-100"
                 >
                   <Trash2 size={13} />
@@ -177,9 +209,11 @@ const HistoryPage = () => {
               <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
                 <img src={GastroLogo} alt="" aria-hidden="true" className="w-40 sm:w-56 lg:w-64 h-40 sm:h-56 lg:h-64 object-contain opacity-90" />
                 <div className="text-center mt-2">
-                  <p className="text-lg sm:text-xl font-black text-gray-700 tracking-tight">No History Yet</p>
+                  <p className="text-lg sm:text-xl font-black text-gray-700 tracking-tight">
+                    {searchQuery ? "No results found" : "No History Yet"}
+                  </p>
                   <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-[200px] sm:max-w-[240px] mx-auto leading-relaxed">
-                    Recipes you've viewed will appear here.
+                    {searchQuery ? "Try a different search term." : "Recipes you've viewed will appear here."}
                   </p>
                 </div>
               </div>

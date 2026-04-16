@@ -60,16 +60,21 @@ import ReportedComments from "./Admin Panel/ReportedComments";
 // Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
 
+import { UserLibraryProvider } from "./Context/UserLibraryContext"; // add this import
+
 // ── Root layout — ChatProvider + CarouselProvider + ErrorBoundary wrap the whole app
 const RootLayout = () => (
   <ErrorBoundary>
     <ChatProvider>
       <CarouselProvider>
-        <Outlet />
+        <UserLibraryProvider>   {/* ← add this */}
+          <Outlet />
+        </UserLibraryProvider>
       </CarouselProvider>
     </ChatProvider>
   </ErrorBoundary>
 );
+
 
 // Admin layout wrapper — separate boundary so admin crashes don't kill the whole app
 const AdminLayoutWithBoundary = () => (

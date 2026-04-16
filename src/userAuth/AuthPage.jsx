@@ -8,13 +8,6 @@ import LogoImage from "../components/Assets/Gastro.png";
 import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
 import { apiFetch } from "../utils/api";
-import {
-  clearSignupFlowState,
-  setCanAccessAllergens,
-  setSignupFlowStage,
-  setSignupLastRoute,
-  setSignupVerified,
-} from "../utils/signupFlow";
 
 const FloatingInput = ({
   type,
@@ -491,7 +484,6 @@ const AuthPage = () => {
         return;
       }
 
-      clearSignupFlowState();
       sessionStorage.setItem("pendingEmail", signupEmail);
       sessionStorage.setItem("sourceFlow", "signup");
       sessionStorage.setItem(
@@ -503,12 +495,8 @@ const AuthPage = () => {
           confirmPassword,
         }),
       );
-      setSignupVerified(false);
-      setCanAccessAllergens(false);
-      setSignupFlowStage("verification");
-      setSignupLastRoute("/verification");
 
-      navigate("/verification");
+      navigate("/verification", { replace: true });
     } catch (error) {
       console.error("Sign up preparation error:", error);
       setSignupError(error.message || "An unexpected error occurred");

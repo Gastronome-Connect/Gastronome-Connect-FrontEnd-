@@ -76,9 +76,27 @@ function reducer(state, action) {
             : state.activeSessionId,
       };
 
+      case "MARK_MESSAGE_SEEN": {
+  const { sessionId, messageId } = action.payload;
+  return {
+    ...state,
+    sessions: state.sessions.map((s) =>
+      s.id !== sessionId
+        ? s
+        : {
+            ...s,
+            messages: s.messages.map((m) =>
+              m.id !== messageId ? m : { ...m, isNew: false }
+            ),
+          }
+    ),
+  };
+}
+
     default:
       return state;
   }
+  
 }
 
 const ChatContext = createContext(null);
