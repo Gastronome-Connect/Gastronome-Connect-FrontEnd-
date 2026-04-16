@@ -122,27 +122,24 @@ const VerificationPage = () => {
         navigate("/login", { replace: true });
       } else if (response.status === 400) {
         // Wrong OTP
-        setError("Incorrect code, please try again");
+        setError("Incorrect code, try again");
       } else if (response.status === 410) {
         // Max attempts exceeded
-        setError("Too many failed attempts. Redirecting to signup...");
+        setError("Too many attempts, please sign up again");
         setTimeout(() => {
           sessionStorage.removeItem("pendingUser");
           navigate("/signup", { replace: true });
         }, 3000);
       } else if (response.status === 404) {
         // Session expired
-        setError("Session expired. Redirecting to signup...");
+        setError("Session expired, please sign up again");
         setTimeout(() => {
           sessionStorage.removeItem("pendingUser");
           navigate("/signup", { replace: true });
         }, 3000);
-      } else if (response.status === 500) {
-        // Server error
-        setError("Something went wrong. Please try again.");
       } else {
         // Other errors
-        setError(data.message || "Failed to verify code. Please try again.");
+        setError(data.message || "Failed to verify OTP. Please try again.");
       }
     } catch (error) {
       console.error("Verification error:", error);

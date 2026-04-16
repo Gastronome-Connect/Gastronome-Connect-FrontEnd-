@@ -134,26 +134,15 @@ const SignUp = () => {
       if (response.status === 200) {
         // Success - redirect to verification
         navigate("/verify", { replace: true });
-      } else if (response.status === 400) {
-        // Bad request - invalid fields
-        setError("Please fill in all fields correctly");
-        sessionStorage.removeItem("pendingUser");
-      } else if (response.status === 409) {
-        // Email already registered
-        setError("This email is already registered. Please log in.");
-        sessionStorage.removeItem("pendingUser");
-      } else if (response.status === 500) {
-        // Server error
-        setError("Failed to send verification email. Please try again.");
-        sessionStorage.removeItem("pendingUser");
       } else {
-        // Other errors
-        setError(data.message || "Failed to send verification code. Please try again.");
+        // Error - show message on signup page
+        setError(data.message || "Failed to send OTP. Please try again.");
+        // Clear sessionStorage on error
         sessionStorage.removeItem("pendingUser");
       }
     } catch (error) {
       console.error("Sign up error:", error);
-      setError("An unexpected error occurred. Please try again.");
+      setError(error.message || "An unexpected error occurred");
       // Clear sessionStorage on error
       sessionStorage.removeItem("pendingUser");
     } finally {
