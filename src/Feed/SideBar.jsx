@@ -17,9 +17,9 @@ import {
   ChevronRight,
   Menu,
 } from "lucide-react";
-import { jwtDecode } from "jwt-decode";
 import { useChatContext } from "../Context/ChatContext";
 import { Trash2 } from "lucide-react";
+import { apiFetch, resolveUploadUrl } from "../utils/api";
 
 import LogoImage from "../components/Assets/Gastro.png";
 import AILogo from "../components/Assets/AILogo.png";
@@ -32,16 +32,47 @@ import PopularRecipes from "../components/Feed Components/PopularRecipePanel";
 function useUserInfo() {
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState(null);
+
   useEffect(() => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        const d = jwtDecode(token);
-        setUserName(d.username);
-        if (d.avatar) setUserAvatar(d.avatar);
+    const updateFromProfile = (profile = {}) => {
+      if (profile.name) {
+        setUserName(profile.name);
       }
-    } catch {}
+      setUserAvatar(
+        profile.avatarSrc ? resolveUploadUrl(profile.avatarSrc) : null,
+      );
+    };
+
+    const fetchUser = async () => {
+      try {
+        const response = await apiFetch("/api/user");
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch sidebar user");
+        }
+
+        setUserName(data.user?.username || "");
+        setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
+      } catch (error) {
+        console.error("Failed to fetch sidebar user:", error);
+      }
+    };
+
+    fetchUser();
+
+    const handleProfileUpdated = (event) =>
+      updateFromProfile(event.detail || {});
+    window.addEventListener("profile-updated", handleProfileUpdated);
+
+    const handleStorage = () => fetchUser();
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("profile-updated", handleProfileUpdated);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
+
   return { userName, userAvatar };
 }
 
@@ -62,7 +93,11 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, sessionId: null, sessionTitle: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    open: false,
+    sessionId: null,
+    sessionTitle: "",
+  });
 
   const prevPathRef = useRef(location.pathname);
   const isHome = location.pathname === "/feed";
@@ -125,7 +160,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
         initial={false}
         animate={{ width: collapsed ? 80 : 288 }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="relative h-screen bg-white border-r-2 border-[#0060A9] flex flex-col shadow-sm z-[100] hidden lg:flex"
+        className="relative hidden h-screen bg-white border-r-2 border-[#0060A9] shadow-sm z-[100] lg:flex lg:flex-col"
       >
         {/* Collapse toggle */}
         <button
@@ -269,24 +304,38 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                     `}</style>
                     <div>
                       {sessions.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center py-4">No chat history</p>
+                        <p className="text-xs text-gray-400 text-center py-4">
+                          No chat history
+                        </p>
                       ) : (
                         sessions.map((session) => (
-                          <div key={session.id} className="flex items-center gap-1 group">
+                          <div
+                            key={session.id}
+                            className="flex items-center gap-1 group"
+                          >
                             <button
                               onClick={() => {
-                                dispatch({ type: "SET_ACTIVE_SESSION", payload: session.id });
+                                dispatch({
+                                  type: "SET_ACTIVE_SESSION",
+                                  payload: session.id,
+                                });
                                 navigate("/chatbot");
                               }}
                               className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-xs
-                                ${activeSessionId === session.id 
-                                  ? "bg-orange-50 text-gray-700 font-medium" 
-                                  : "text-gray-500 hover:bg-gray-50"}`}
+                                ${
+                                  activeSessionId === session.id
+                                    ? "bg-orange-50 text-gray-700 font-medium"
+                                    : "text-gray-500 hover:bg-gray-50"
+                                }`}
                               title={session.title}
                             >
-                              <MessageSquare 
-                                size={12} 
-                                className={activeSessionId === session.id ? "text-[#F57600]" : "text-gray-400"}
+                              <MessageSquare
+                                size={12}
+                                className={
+                                  activeSessionId === session.id
+                                    ? "text-[#F57600]"
+                                    : "text-gray-400"
+                                }
                               />
                               <span className="flex-1 line-clamp-1 leading-tight">
                                 {session.title}
@@ -294,7 +343,11 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                             </button>
                             <button
                               onClick={() => {
-                                setDeleteConfirm({ open: true, sessionId: session.id, sessionTitle: session.title });
+                                setDeleteConfirm({
+                                  open: true,
+                                  sessionId: session.id,
+                                  sessionTitle: session.title,
+                                });
                               }}
                               className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
                               title="Delete chat"
@@ -385,7 +438,9 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setDeleteConfirm({ open: false, sessionId: null, sessionTitle: "" })}
+          onClick={() =>
+            setDeleteConfirm({ open: false, sessionId: null, sessionTitle: "" })
+          }
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
@@ -399,15 +454,27 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                 <Trash2 size={20} className="text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-gray-900">Delete chat?</h3>
+                <h3 className="text-lg font-black text-gray-900">
+                  Delete chat?
+                </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  This will permanently delete "<span className="font-semibold">{deleteConfirm.sessionTitle}</span>" and all its messages.
+                  This will permanently delete "
+                  <span className="font-semibold">
+                    {deleteConfirm.sessionTitle}
+                  </span>
+                  " and all its messages.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 justify-end">
               <button
-                onClick={() => setDeleteConfirm({ open: false, sessionId: null, sessionTitle: "" })}
+                onClick={() =>
+                  setDeleteConfirm({
+                    open: false,
+                    sessionId: null,
+                    sessionTitle: "",
+                  })
+                }
                 className="px-4 py-2.5 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors text-sm"
               >
                 Cancel
@@ -415,9 +482,16 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
               <button
                 onClick={() => {
                   if (deleteConfirm.sessionId) {
-                    dispatch({ type: "DELETE_SESSION", payload: deleteConfirm.sessionId });
+                    dispatch({
+                      type: "DELETE_SESSION",
+                      payload: deleteConfirm.sessionId,
+                    });
                   }
-                  setDeleteConfirm({ open: false, sessionId: null, sessionTitle: "" });
+                  setDeleteConfirm({
+                    open: false,
+                    sessionId: null,
+                    sessionTitle: "",
+                  });
                 }}
                 className="px-4 py-2.5 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors text-sm"
               >
@@ -817,32 +891,52 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                   `}</style>
                   <div className="chat-scroll h-full overflow-y-auto space-y-0.5 pb-2">
                     {sessions.length === 0 ? (
-                      <p className="text-xs text-gray-400 text-center py-4">No chat history yet</p>
+                      <p className="text-xs text-gray-400 text-center py-4">
+                        No chat history yet
+                      </p>
                     ) : (
                       sessions.map((session) => (
-                        <div key={session.id} className="flex items-center gap-1 group">
+                        <div
+                          key={session.id}
+                          className="flex items-center gap-1 group"
+                        >
                           <button
                             onClick={() => {
-                              dispatch({ type: "SET_ACTIVE_SESSION", payload: session.id });
+                              dispatch({
+                                type: "SET_ACTIVE_SESSION",
+                                payload: session.id,
+                              });
                               navigate("/chatbot");
                               setPanelOpen(false);
                             }}
                             className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors text-left
-                              ${activeSessionId === session.id 
-                                ? "bg-orange-50 border border-orange-200" 
-                                : "hover:bg-gray-50"}`}
+                              ${
+                                activeSessionId === session.id
+                                  ? "bg-orange-50 border border-orange-200"
+                                  : "hover:bg-gray-50"
+                              }`}
                           >
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
-                              ${activeSessionId === session.id 
-                                ? "bg-[#F57600]" 
-                                : "bg-orange-50"}`}>
-                              <MessageSquare 
-                                size={14} 
-                                className={activeSessionId === session.id ? "text-white" : "text-[#F57600]"} 
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
+                              ${
+                                activeSessionId === session.id
+                                  ? "bg-[#F57600]"
+                                  : "bg-orange-50"
+                              }`}
+                            >
+                              <MessageSquare
+                                size={14}
+                                className={
+                                  activeSessionId === session.id
+                                    ? "text-white"
+                                    : "text-[#F57600]"
+                                }
                               />
                             </div>
-                            <span className={`text-xs font-medium flex-1 line-clamp-2 leading-snug
-                              ${activeSessionId === session.id ? "text-gray-700" : "text-gray-500"}`}>
+                            <span
+                              className={`text-xs font-medium flex-1 line-clamp-2 leading-snug
+                              ${activeSessionId === session.id ? "text-gray-700" : "text-gray-500"}`}
+                            >
                               {session.title}
                             </span>
                             <ChevronRight
@@ -852,7 +946,10 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                           </button>
                           <button
                             onClick={() => {
-                              dispatch({ type: "DELETE_SESSION", payload: session.id });
+                              dispatch({
+                                type: "DELETE_SESSION",
+                                payload: session.id,
+                              });
                             }}
                             className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
                           >

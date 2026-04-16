@@ -15,9 +15,10 @@ export function useChat() {
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
+    const ac = abortControllerRef.current;
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (ac) {
+        ac.abort();
       }
     };
   }, []);
@@ -30,14 +31,14 @@ export function useChat() {
     (sessionId) => {
       dispatch({ type: "SET_ACTIVE_SESSION", payload: sessionId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const deleteSession = useCallback(
     (sessionId) => {
       dispatch({ type: "DELETE_SESSION", payload: sessionId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const sendMessage = useCallback(
@@ -92,7 +93,7 @@ export function useChat() {
         setIsBotTyping(false);
       }
     },
-    [activeSessionId, dispatch, isBotTyping]
+    [activeSessionId, dispatch, isBotTyping],
   );
 
   return {

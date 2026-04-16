@@ -50,6 +50,8 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [showDiscard, setShowDiscard] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // ── Save toast ──
   // saveToastVisible drives SaveToast — set true to show, SaveToast resets it via onDone
@@ -92,30 +94,36 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
     else onClose();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (nameError) return;
 
     const changed = hasAnyChanges();
 
-    onSave({
-      name,
-      bio,
-      avatarSrc,
-      flavors,
-      cookingStyles,
-      allergens,
-      dislikes,
-    });
-    setAvatarChanged(false);
-
     if (!changed) {
-      // Nothing actually changed — close silently
       onClose();
       return;
     }
 
-    // Show the save toast; onDone closes the modal after the toast finishes
-    setSaveToastVisible(true);
+    setSaveLoading(true);
+    setSaveError("");
+
+    try {
+      await onSave?.({
+        name,
+        bio,
+        avatarSrc,
+        flavors,
+        cookingStyles,
+        allergens,
+        dislikes,
+      });
+      setAvatarChanged(false);
+      setSaveToastVisible(true);
+    } catch (error) {
+      setSaveError(error.message || "Failed to save profile changes.");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleDeleteConfirm = (password) => {
@@ -194,6 +202,12 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
           className="overflow-y-auto custom-scrollbar px-5 sm:px-8 py-5 sm:py-6"
           style={{ maxHeight: "calc(100dvh - 280px)", minHeight: "200px" }}
         >
+          {saveError && (
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {saveError}
+            </div>
+          )}
+
           {activeTab === "profile" && (
             <ProfileTab
               avatarSrc={avatarSrc}
@@ -281,9 +295,10 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
             </button>
             <button
               onClick={handleSave}
+              disabled={saveLoading}
               className="px-5 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black bg-[#0060A9] text-white hover:bg-[#00B4FA] shadow-lg shadow-blue-200 uppercase transition-all active:scale-95"
             >
-              Save
+              {saveLoading ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
