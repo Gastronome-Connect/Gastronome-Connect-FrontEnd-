@@ -605,7 +605,7 @@ const AuthPage = () => {
                           onChange={(e) => setLoginEmail(e.target.value)}
                           onBlur={validateLoginIdentifier}
                           error={loginEmailError}
-                          label="Email address or admin username"
+                          label="Email address"
                         />
                         {loginEmailError && (
                           <p className="text-red-500 text-xs mt-1">
