@@ -9,7 +9,10 @@ const CATEGORIES = ["All", "User Request", "Accidental", "Compromised"];
 
 export default function RestoreAccounts() {
   const [accounts, setAccounts] = useState([]);
-  const [initialTotal, setInitialTotal] = useState(0);
+  const [restoreStats, setRestoreStats] = useState({
+    restoreRequests: 0,
+    restoredToday: 0,
+  });
   const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
@@ -23,15 +26,16 @@ export default function RestoreAccounts() {
         if (showLoading && isMounted) {
           setLoading(true);
         }
-        const response = await adminApi.get("/admin/deleted-accounts");
+        const [accountsResponse, statsResponse] = await Promise.all([
+          adminApi.get("/admin/deleted-accounts"),
+          adminApi.get("/admin/restore-stats"),
+        ]);
         if (!isMounted) {
           return;
         }
-        setAccounts(response.data);
-        setInitialTotal((current) =>
-          current === 0
-            ? response.data.length
-            : Math.max(current, response.data.length),
+        setAccounts(accountsResponse.data);
+        setRestoreStats(
+          statsResponse.data || { restoreRequests: 0, restoredToday: 0 },
         );
         setError(null);
         setLoading(false);
@@ -64,6 +68,10 @@ export default function RestoreAccounts() {
     try {
       await adminApi.post("/admin/restore-account", { userId: id });
       setAccounts((a) => a.filter((x) => x.id !== id));
+      setRestoreStats((current) => ({
+        restoreRequests: Math.max(0, current.restoreRequests - 1),
+        restoredToday: current.restoredToday + 1,
+      }));
     } catch (err) {
       alert("Failed to restore account.");
     }
@@ -150,7 +158,7 @@ export default function RestoreAccounts() {
                 Restore Requests
               </p>
               <p className="text-2xl font-black text-[#F57600]">
-                {accounts.length}
+                {restoreStats.restoreRequests}
               </p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
@@ -166,7 +174,7 @@ export default function RestoreAccounts() {
                 Restored Today
               </p>
               <p className="text-2xl font-black text-green-600">
-                {initialTotal - accounts.length}
+                {restoreStats.restoredToday}
               </p>
             </div>
           </div>
