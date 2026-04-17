@@ -11,6 +11,7 @@ import PostActions from "../Post Action/PostActions";
 import CommentSection from "../Comment Section/CommentSection";
 import AILogo from "../../../components/Assets/AILogo.png";
 import { useUserLibrary } from "../../../Context/UserLibraryContext";
+import { useChat } from "../../../Hooks/UseChats"; // ← adjust path if needed
 
 /* ── Shared unit pluralizer ── */
 const pluralizeUnit = (unit, amount) => {
@@ -92,6 +93,7 @@ const ExpandedView = ({
 }) => {
   const navigate = useNavigate();
   const { isArchived, addToArchives, removeFromArchives, addToHistory } = useUserLibrary();
+  const { startNewSession } = useChat(); // ← new
 
   const [current, setCurrent]           = useState(startIndex);
   const [showComments, setShowComments] = useState(false);
@@ -104,7 +106,7 @@ const ExpandedView = ({
   const pinnedTextareaRef = useRef(null);
   const historyTimerRef   = useRef(null);
   const historyAddedRef   = useRef(false);
-  const speakIntervalRef  = useRef(null); // ← keeps Chrome alive
+  const speakIntervalRef  = useRef(null);
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media       = post.mediaItems ?? [];
@@ -113,7 +115,6 @@ const ExpandedView = ({
   const postId      = post.id ?? post._id;
   const archived    = isArchived(postId);
 
-  // ── 5-second history timer ──────────────────────────────────────
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
@@ -134,11 +135,9 @@ const ExpandedView = ({
     setMenuOpen(false);
   };
 
-  // ── Fixed handleSpeak ───────────────────────────────────────────
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
-    // Toggle pause / resume if already speaking
     if (isSpeaking) {
       if (isPaused) {
         window.speechSynthesis.resume();
@@ -150,7 +149,6 @@ const ExpandedView = ({
       return;
     }
 
-    // Build the text to speak
     const ingredientsList =
       post.ingredients?.length > 0
         ? post.ingredients
@@ -169,8 +167,6 @@ const ExpandedView = ({
     if (post.caption)    parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    // Cancel anything queued, then wait one tick so the browser
-    // fully flushes before we queue the new utterance
     window.speechSynthesis.cancel();
 
     setTimeout(() => {
@@ -182,12 +178,8 @@ const ExpandedView = ({
       utterance.onstart = () => {
         setIsSpeaking(true);
         setIsPaused(false);
-        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
         speakIntervalRef.current = setInterval(() => {
-          if (
-            window.speechSynthesis.speaking &&
-            !window.speechSynthesis.paused
-          ) {
+          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
             window.speechSynthesis.pause();
             window.speechSynthesis.resume();
           }
@@ -201,7 +193,6 @@ const ExpandedView = ({
       };
 
       utterance.onerror = (e) => {
-        // "interrupted" is fired when we call cancel() ourselves — not a real error
         if (e.error === "interrupted") return;
         setIsSpeaking(false);
         setIsPaused(false);
@@ -231,7 +222,7 @@ const ExpandedView = ({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
       window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
+      clearInterval(speakIntervalRef.current);
     };
   }, [onClose, hasMultiple, media.length]);
 
@@ -249,6 +240,12 @@ const ExpandedView = ({
     commentSectionRef.current?.addComment(text);
     setPinnedInput("");
     if (pinnedTextareaRef.current) pinnedTextareaRef.current.style.height = "auto";
+  };
+
+  // ← new: start a fresh session then navigate with prefill
+  const handleChatbot = () => {
+    startNewSession();
+    navigate("/chatbot", { state: { prefill: buildChatbotPrefill(post) } });
   };
 
   return createPortal(
@@ -391,8 +388,9 @@ const ExpandedView = ({
                   <Volume2 size={13} />
                   <span className="hidden xs:inline">{!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}</span>
                 </button>
+                {/* ── Updated Chatbot button ── */}
                 <button
-                  onClick={() => navigate("/chatbot", { state: { prefill: buildChatbotPrefill(post) } })}
+                  onClick={handleChatbot}
                   className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
                 >
                   <img src={AILogo} alt="AI" className="w-3 h-3" />

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Heart, Archive, Flag, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
 import { FaEllipsisH } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useChatContext } from "../../Context/ChatContext";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
+import { useChat } from "../../Hooks/UseChats"; // ← adjust path if needed
 import AILogo from "../Assets/AILogo.png";
 
 /* ── Inline avatar ── */
@@ -91,7 +91,7 @@ const CardExpandedView = ({
   hideFavoriteAndOptions = false,
 }) => {
   const navigate = useNavigate();
-  const { dispatch } = useChatContext();
+  const { startNewSession } = useChat(); // ← new
   const {
     isFavorited, toggleFavorite,
     isArchived, addToArchives, removeFromArchives,
@@ -106,7 +106,7 @@ const CardExpandedView = ({
   const menuRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speakIntervalRef = useRef(null); // ← keeps Chrome alive
+  const speakIntervalRef = useRef(null);
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -115,7 +115,6 @@ const CardExpandedView = ({
   const saved = isFavorited(post);
   const archived = isArchived(postId);
 
-  // ── 5-second history timer ──────────────────────────────────────
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
@@ -133,19 +132,14 @@ const CardExpandedView = ({
   const handleSave = () => toggleFavorite(post);
 
   const handleArchive = () => {
-    if (archived) {
-      removeFromArchives(postId);
-    } else {
-      addToArchives(post);
-    }
+    if (archived) removeFromArchives(postId);
+    else addToArchives(post);
     setMenuOpen(false);
   };
 
-  // ── Fixed handleSpeak ───────────────────────────────────────────
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
-    // Toggle pause / resume if already speaking
     if (isSpeaking) {
       if (isPaused) {
         window.speechSynthesis.resume();
@@ -157,7 +151,6 @@ const CardExpandedView = ({
       return;
     }
 
-    // Build the text to speak
     const ingredientsText =
       post.ingredients?.length > 0
         ? post.ingredients
@@ -176,8 +169,6 @@ const CardExpandedView = ({
     if (post.caption)    parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    // Cancel anything queued, then wait one tick so the browser
-    // fully flushes before we queue the new utterance
     window.speechSynthesis.cancel();
 
     setTimeout(() => {
@@ -189,12 +180,8 @@ const CardExpandedView = ({
       utterance.onstart = () => {
         setIsSpeaking(true);
         setIsPaused(false);
-        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
         speakIntervalRef.current = setInterval(() => {
-          if (
-            window.speechSynthesis.speaking &&
-            !window.speechSynthesis.paused
-          ) {
+          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
             window.speechSynthesis.pause();
             window.speechSynthesis.resume();
           }
@@ -208,7 +195,6 @@ const CardExpandedView = ({
       };
 
       utterance.onerror = (e) => {
-        // "interrupted" is fired when we call cancel() ourselves — not a real error
         if (e.error === "interrupted") return;
         setIsSpeaking(false);
         setIsPaused(false);
@@ -219,20 +205,25 @@ const CardExpandedView = ({
     }, 100);
   };
 
+  // ← new: start a fresh session then navigate with prefill
   const handleChatbot = () => {
     const ingredientsText = post.ingredients?.length > 0
       ? post.ingredients.map((ing) => {
-          const measure = [ing.amount, ing.unit].filter(Boolean).join(" ");
-          return `${ing.name}${measure ? `, ${measure}` : ""}`;
-        }).join(", ")
+          const measure = ing.unit === "to taste"
+            ? "to taste"
+            : [ing.amount, ing.unit].filter(Boolean).join(" ");
+          const optional = ing.optional ? " (optional)" : "";
+          return `${measure ? `${measure} ` : ""}${ing.name}${optional}`;
+        }).join("\n")
       : "";
-    const recipeInfo = [
-      `Title:\n${post.title}`,
-      ingredientsText ? `Ingredients:\n${ingredientsText}` : "",
-      `Description:\n${post.caption || ""}`,
-    ].filter(Boolean).join("\n\n");
 
-    dispatch({ type: "NEW_SESSION", payload: { title: post.title || "Recipe Chat" } });
+    const recipeInfo = [
+      post.title     ? `Title:\n${post.title}`           : "",
+      ingredientsText ? `\nIngredients:\n${ingredientsText}` : "",
+      post.caption   ? `\nDescription:\n${post.caption}` : "",
+    ].filter(Boolean).join("\n");
+
+    startNewSession();
     onClose();
     navigate("/chatbot", { state: { prefill: recipeInfo } });
   };
@@ -249,7 +240,7 @@ const CardExpandedView = ({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
       window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
+      clearInterval(speakIntervalRef.current);
     };
   }, [onClose, hasMultiple, media.length]);
 
@@ -333,10 +324,7 @@ const CardExpandedView = ({
             <div className="flex items-center gap-1.5">
               {!hideFavoriteAndOptions && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSave();
-                  }}
+                  onClick={(e) => { e.stopPropagation(); handleSave(); }}
                   className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
                     ${saved
                       ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
@@ -348,7 +336,6 @@ const CardExpandedView = ({
                 </button>
               )}
 
-              {/* Speak */}
               <button
                 onClick={handleSpeak}
                 className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
@@ -361,7 +348,7 @@ const CardExpandedView = ({
                 <Volume2 size={15} fill={isSpeaking && !isPaused ? "currentColor" : "none"} strokeWidth={isSpeaking && !isPaused ? 0 : 2} />
               </button>
 
-              {/* Chatbot */}
+              {/* ── Updated Chatbot button ── */}
               <button
                 onClick={handleChatbot}
                 className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center transition-all duration-200 hover:border-orange-200 hover:bg-orange-50"
@@ -399,7 +386,6 @@ const CardExpandedView = ({
                   )}
                 </div>
               )}
-
             </div>
           </div>
 
