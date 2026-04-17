@@ -7,7 +7,9 @@ import PreferencesPanel from "./Panels/PreferencesPanel";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal from "../Modals/Create Post Components/UploadFailedModal";
 import PostCard from "../../Feed/Post Card/PostCard";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import useUpload from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
 import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
@@ -85,15 +87,16 @@ const GCProfile = () => {
     resetUpload,
   } = useUpload();
 
-  const handleNewPost = (newPost) => {
-    startUpload(newPost, (posted) => {
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+    onApprovedPost: (posted) => {
       setPosts((prev) => [posted, ...prev]);
       setProfileData((current) => ({
         ...current,
         postsCount: (current.postsCount || 0) + 1,
       }));
-    });
-  };
+    },
+  });
 
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
@@ -405,6 +408,7 @@ const GCProfile = () => {
         progress={progress}
         onDone={resetUpload}
       />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadFailedModal
         isOpen={uploadState === "failed"}
         onRetry={retryUpload}

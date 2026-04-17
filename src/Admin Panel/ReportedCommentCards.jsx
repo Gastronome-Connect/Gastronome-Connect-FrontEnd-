@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { motion } from "framer-motion";
 import { Trash2, CheckCircle, AlertTriangle, MessageSquare, CornerDownRight } from "lucide-react";
 
@@ -16,12 +16,16 @@ const REASON_STYLES = {
  *   onKeep   Function
  *   onRemove Function
  */
-export default function ReportedCommentCard({ item, onKeep, onRemove }) {
+const ReportedCommentCard = forwardRef(function ReportedCommentCard(
+  { item, onKeep, onRemove },
+  ref,
+) {
   const s = REASON_STYLES[item.category] ?? { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-100" };
   const isReply = item.type === "reply";
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -99,4 +103,6 @@ export default function ReportedCommentCard({ item, onKeep, onRemove }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default ReportedCommentCard;

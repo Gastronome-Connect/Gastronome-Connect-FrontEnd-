@@ -11,6 +11,8 @@ import { Trash2 } from "lucide-react";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal   from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import SkeletonRecipeGrid  from "../Skeletons/SkeletonRecipeGrid";
 import { useUserLibrary }  from "../../Context/UserLibraryContext";
 
@@ -38,7 +40,7 @@ const HistoryPage = () => {
   const { history, removeFromHistory, restoreHistory, clearHistory } = useUserLibrary();
 
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
-  const handleNewPost = (newPost) => startUpload(newPost, () => {});
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
 
   // Undo snapshot — stored locally since it's transient UI state
   const [undoSnapshot, setUndoSnapshot] = useState(null);
@@ -267,6 +269,7 @@ list = list.filter((r) => {
       )}
 
       <UndoToast visible={toast.visible} message={toast.message} onUndo={handleUndo} onDismiss={handleDismiss} />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadProgressToast uploadState={uploadState === "failed" ? "idle" : uploadState} progress={progress} onDone={resetUpload} />
       <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
     </div>

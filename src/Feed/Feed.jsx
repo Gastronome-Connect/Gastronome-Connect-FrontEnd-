@@ -10,7 +10,9 @@ import PostCard from "../Feed/Post Card/PostCard";
 import UploadProgressToast from "../components/Toast/UploadProgressToast";
 import UploadFailedModal from "../components/Modals/Create Post Components/UploadFailedModal";
 import FeedNotificationPopupStack from "../components/Popups/FeedNotificationPopupStack";
+import PostUnderReviewPopup from "../components/Popups/PostUnderReviewPopup";
 import useUpload from "../Hooks/UseUpload";
+import useModeratedPostCreation from "../Hooks/useModeratedPostCreation";
 import { SkeletonPostList } from "../components/Skeletons";
 import { apiFetch } from "../utils/api";
 import { useNotifications } from "../Context/NotificationContext";
@@ -101,14 +103,12 @@ export default function GCFeed() {
     dismissPopup,
   } = useNotifications();
 
-  const handleNewPost = useCallback(
-    (newPost) => {
-      startUpload(newPost, (posted) => {
-        setPosts((prev) => [posted, ...prev]);
-      });
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+    onApprovedPost: (posted) => {
+      setPosts((prev) => [posted, ...prev]);
     },
-    [startUpload],
-  );
+  });
 
   const fetchPage = useCallback(
     async (pageNum) => {
@@ -257,6 +257,9 @@ export default function GCFeed() {
       <FeedNotificationPopupStack
         notifications={popupQueue}
         onDismiss={dismissPopup}
+      />
+      <PostUnderReviewPopup
+        {...reviewPopupProps}
       />
       <UploadProgressToast
         uploadState={uploadState === "failed" ? "idle" : uploadState}

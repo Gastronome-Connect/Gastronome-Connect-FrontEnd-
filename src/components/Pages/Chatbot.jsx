@@ -9,6 +9,8 @@ import PopularRecipes from "../Feed Components/PopularRecipePanel";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import { useChat } from "../../Hooks/UseChats";
 
 function EmptyStateWithInput({ initialValue = "", isBotTyping }) {
@@ -74,10 +76,7 @@ export default function ChatbotPage() {
     cancelUpload,
     resetUpload,
   } = useUpload();
-
-  const handleNewPost = (newPost) => {
-    startUpload(newPost, () => {});
-  };
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
 
   useEffect(() => {
     if (location.state?.prefill) {
@@ -169,6 +168,7 @@ export default function ChatbotPage() {
         progress={progress}
         onDone={resetUpload}
       />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadFailedModal
         isOpen={uploadState === "failed"}
         onRetry={retryUpload}

@@ -1,18 +1,9 @@
-/**
- * FlaggedPosts.jsx
- *
- * Changes vs original:
- *  - Reads ONLY from ReportStore (posts reported by users), not from /posts.
- *  - Adds 7 category filter bubbles matching the report reasons.
- *  - Still calls adminApi.delete when admin removes a post.
- *  - Subscribes to store changes so new reports appear in real-time.
- */
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
 import { SkeletonAdminCardList } from "../components/Skeletons";
-import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore"; // ← adjust path
+import adminApi from "../utils/adminApi";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
@@ -27,52 +18,91 @@ const CATEGORIES = [
 ];
 
 export default function FlaggedPosts() {
-  // Pull initial snapshot; re-read on every store change
-  const [posts, setPosts] = useState(() => getSnapshot().posts);
-  const [initialTotal, setInitialTotal] = useState(
-    () => getSnapshot().posts.length,
-  );
+  const [posts, setPosts] = useState([]);
+  const [initialTotal, setInitialTotal] = useState(0);
   const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("all");
-  const [loading] = useState(false); // store is synchronous
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Subscribe to store updates (fires when a new report comes in)
   useEffect(() => {
-    const unsub = subscribe(() => {
-      const snap = getSnapshot();
-      setPosts([...snap.posts]);
-    });
-    return unsub;
-  }, []);
+    let isMounted = true;
 
-  // Track initial total for "Processed" counter
-  // Reset whenever the store resets (e.g. page reload / future API hydration)
-  useEffect(() => {
-    setInitialTotal((prev) => Math.max(prev, posts.length));
-  }, [posts.length]);
+    const fetchPosts = async (showLoading = false) => {
+      try {
+        if (showLoading && isMounted) {
+          setLoading(true);
+        }
+
+        const response = await adminApi.get("/admin/flagged-posts");
+        if (!isMounted) {
+          return;
+        }
+
+        const nextPosts = Array.isArray(response.data) ? response.data : [];
+        setPosts(nextPosts);
+        setInitialTotal((prev) => Math.max(prev, nextPosts.length));
+        setError(null);
+        setLoading(false);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        setError("Failed to fetch flagged posts.");
+        setLoading(false);
+      }
+    };
+
+    const handleFocus = () => {
+      fetchPosts();
+    };
+
+    fetchPosts(true);
+    const intervalId = window.setInterval(() => fetchPosts(), 15000);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
 
   // ── Admin actions ────────────────────────────────────────────────────────────
-  const handleKeep = useCallback((id) => {
-    // Admin reviewed & decided to keep: just clear it from the report queue
-    removePostReport(id);
+  const handleKeep = useCallback(async (postId) => {
+    try {
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "post",
+        postId,
+        action: "approve",
+        notes: "Approved by admin.",
+      });
+      setPosts((current) => current.filter((post) => post.postId !== postId));
+    } catch (err) {
+      setError("Failed to approve flagged post.");
+    }
   }, []);
 
-  const handleRemove = useCallback(async (id) => {
+  const handleRemove = useCallback(async (postId) => {
     try {
-      // When the backend is ready, uncomment:
-      // await adminApi.delete(`/posts/${id}`);
-      removePostReport(id);
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "post",
+        postId,
+        action: "reject",
+        notes: "Rejected by admin.",
+      });
+      setPosts((current) => current.filter((post) => post.postId !== postId));
     } catch (err) {
-      setError("Failed to remove post.");
+      setError("Failed to reject flagged post.");
     }
   }, []);
 
   // ── Filtering ────────────────────────────────────────────────────────────────
   const filtered = posts.filter((post) => {
     const matchSearch =
-      post.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.caption.toLowerCase().includes(searchTerm.toLowerCase());
+      (post.author || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.caption || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.detail || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter =
       activeFilter === "all" || post.categoryId === activeFilter;
     return matchSearch && matchFilter;
@@ -192,8 +222,8 @@ export default function FlaggedPosts() {
                   <FlaggedPostCard
                     key={post.id}
                     post={post}
-                    onKeep={() => handleKeep(post.id)}
-                    onRemove={() => handleRemove(post.id)}
+                    onKeep={() => handleKeep(post.postId || post.id)}
+                    onRemove={() => handleRemove(post.postId || post.id)}
                   />
                 ))}
               </AnimatePresence>

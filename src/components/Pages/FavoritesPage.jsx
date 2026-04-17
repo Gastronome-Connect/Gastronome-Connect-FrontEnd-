@@ -8,6 +8,8 @@ import { HiChevronDown, HiChevronLeft, HiChevronRight } from "react-icons/hi";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal   from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload           from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import SkeletonRecipeGrid  from "../Skeletons/SkeletonRecipeGrid";
 import { useUserLibrary }  from "../../Context/UserLibraryContext";
 
@@ -35,7 +37,7 @@ const FavoritesPage = () => {
   const { favorites, removeFromFavorites } = useUserLibrary();
 
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
-  const handleNewPost = (newPost) => startUpload(newPost, () => {});
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
@@ -212,6 +214,7 @@ list = list.filter((r) => {
         </div>
       </main>
 
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadProgressToast uploadState={uploadState === "failed" ? "idle" : uploadState} progress={progress} onDone={resetUpload} />
       <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
     </div>

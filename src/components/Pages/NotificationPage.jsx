@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Sidebar from "../../Feed/SideBar";
 import { Bell } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -7,6 +7,8 @@ import NotificationCard from "../Cards/NotificationCard";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal from "../Modals/Create Post Components/UploadFailedModal";
 import useUpload from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import { SkeletonNotificationCard } from "../Skeletons";
 import { useNotifications } from "../../Context/NotificationContext";
 
@@ -64,7 +66,7 @@ export default function NotificationsPage() {
   const sortRef = useRef(null);
 
   const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
-  const handleNewPost = useCallback((newPost) => startUpload(newPost, () => {}), [startUpload]);
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
 
   const {
     visibleNotifications,
@@ -300,6 +302,7 @@ export default function NotificationsPage() {
         progress={progress}
         onDone={resetUpload}
       />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
     </div>
   );

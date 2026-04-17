@@ -1,20 +1,9 @@
-/**
- * ReportedComments.jsx
- *
- * Changes vs original:
- *  - Reads ONLY from ReportStore (comments reported by users), not from /posts.
- *  - Adds 7 category filter bubbles matching the report reasons.
- *  - Subscribes to store changes so new reports appear in real-time.
- */
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MessageSquareWarning } from "lucide-react";
 import ReportedCommentCard from "./ReportedCommentCards";
-import {
-  subscribe,
-  getSnapshot,
-  removeCommentReport,
-} from "../Store/ReportStore"; // ← adjust path
+import adminApi from "../utils/adminApi";
+import { SkeletonAdminCardList } from "../components/Skeletons";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
@@ -29,47 +18,97 @@ const CATEGORIES = [
 ];
 
 export default function ReportedComments() {
-  const [items, setItems] = useState(() => getSnapshot().comments);
-  const [initialTotal, setInitialTotal] = useState(
-    () => getSnapshot().comments.length,
-  );
+  const [items, setItems] = useState([]);
+  const [initialTotal, setInitialTotal] = useState(0);
   const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("all");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Subscribe to store updates
   useEffect(() => {
-    const unsub = subscribe(() => {
-      const snap = getSnapshot();
-      setItems([...snap.comments]);
-    });
-    return unsub;
+    let isMounted = true;
+
+    const fetchComments = async (showLoading = false) => {
+      try {
+        if (showLoading && isMounted) {
+          setLoading(true);
+        }
+
+        const response = await adminApi.get("/admin/flagged-comments");
+        if (!isMounted) {
+          return;
+        }
+
+        const nextItems = Array.isArray(response.data) ? response.data : [];
+        setItems(nextItems);
+        setInitialTotal((prev) => Math.max(prev, nextItems.length));
+        setError(null);
+        setLoading(false);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        setError("Failed to fetch flagged comments.");
+        setLoading(false);
+      }
+    };
+
+    const handleFocus = () => {
+      fetchComments();
+    };
+
+    fetchComments(true);
+    const intervalId = window.setInterval(() => fetchComments(), 15000);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
-
-  useEffect(() => {
-    setInitialTotal((prev) => Math.max(prev, items.length));
-  }, [items.length]);
 
   // ── Admin actions ────────────────────────────────────────────────────────────
-  const handleKeep = useCallback((id) => {
-    removeCommentReport(id);
+  const handleKeep = useCallback(async (item) => {
+    try {
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "comment",
+        postId: item.postId,
+        commentId: item.commentId || item.id,
+        action: "approve",
+        notes: "Approved by admin.",
+      });
+      setItems((current) =>
+        current.filter((entry) => (entry.commentId || entry.id) !== (item.commentId || item.id)),
+      );
+    } catch (err) {
+      setError("Failed to approve flagged comment.");
+    }
   }, []);
 
-  const handleRemove = useCallback(async (id) => {
+  const handleRemove = useCallback(async (item) => {
     try {
-      // When backend is ready, uncomment & adjust endpoint:
-      // await adminApi.delete(`/comments/${id}`);
-      removeCommentReport(id);
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "comment",
+        postId: item.postId,
+        commentId: item.commentId || item.id,
+        action: "reject",
+        notes: "Rejected by admin.",
+      });
+      setItems((current) =>
+        current.filter((entry) => (entry.commentId || entry.id) !== (item.commentId || item.id)),
+      );
     } catch (err) {
-      setError("Failed to remove comment.");
+      setError("Failed to reject flagged comment.");
     }
   }, []);
 
   // ── Filtering ────────────────────────────────────────────────────────────────
   const filtered = items.filter((item) => {
     const matchSearch =
-      item.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.text.toLowerCase().includes(searchTerm.toLowerCase());
+      (item.author || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.text || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.detail || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter =
       activeFilter === "all" || item.categoryId === activeFilter;
     return matchSearch && matchFilter;
@@ -176,15 +215,18 @@ export default function ReportedComments() {
         </div>
 
         {/* Cards */}
-        <>
+        {loading ? (
+          <SkeletonAdminCardList count={5} />
+        ) : (
+          <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
               {filtered.map((item) => (
                 <ReportedCommentCard
                   key={item.id}
                   item={item}
-                  onKeep={() => handleKeep(item.id)}
-                  onRemove={() => handleRemove(item.id)}
+                  onKeep={() => handleKeep(item)}
+                  onRemove={() => handleRemove(item)}
                 />
               ))}
             </AnimatePresence>
@@ -206,7 +248,8 @@ export default function ReportedComments() {
               </p>
             </motion.div>
           )}
-        </>
+          </>
+        )}
       </motion.div>
     </div>
   );

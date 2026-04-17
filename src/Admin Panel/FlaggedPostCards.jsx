@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { forwardRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Flag, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 
@@ -16,12 +16,16 @@ const REASON_STYLES = {
  *   onKeep   Function
  *   onRemove Function
  */
-export default function FlaggedPostCard({ post, onKeep, onRemove }) {
+const FlaggedPostCard = forwardRef(function FlaggedPostCard(
+  { post, onKeep, onRemove },
+  ref,
+) {
   const [expanded, setExpanded] = useState(false);
   const s = REASON_STYLES[post.category] ?? { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-100" };
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -102,4 +106,6 @@ export default function FlaggedPostCard({ post, onKeep, onRemove }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default FlaggedPostCard;
