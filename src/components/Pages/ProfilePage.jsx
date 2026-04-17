@@ -32,7 +32,7 @@ const DEFAULT_PROFILE_DATA = {
 const normalizeProfileData = (user = {}) => ({
   id: user._id || user.id || "",
   name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
-  username: user.username || "",
+  username: user.accountUsername || user.username || "",
   bio: user.bio || "",
   avatarSrc: resolveUploadUrl(user.avatar || ""),
   followersCount:
@@ -162,6 +162,10 @@ const GCProfile = () => {
           displayNameData.user?.displayName ||
           displayNameData.user?.username ||
           displayName;
+        nextProfile.username =
+          displayNameData.user?.accountUsername ||
+          displayNameData.user?.username ||
+          profileData.username;
 
         setPosts((prev) =>
           prev.map((post) =>
@@ -170,7 +174,9 @@ const GCProfile = () => {
                   ...post,
                   author: nextProfile.name,
                   authorDisplayName: nextProfile.name,
-                  authorUsername: nextProfile.name,
+                  authorUsername: nextProfile.username,
+                  username: nextProfile.username,
+                  accountUsername: nextProfile.username,
                 }
               : post,
           ),

@@ -36,15 +36,13 @@ function useUserInfo() {
 
   useEffect(() => {
     const updateFromProfile = (profile = {}) => {
-<<<<<<< Updated upstream
       const nextName = profile.displayName || profile.name || profile.username;
       if (nextName) {
         setUserName(nextName);
       }
-=======
-      if (profile.name)     setUserName(profile.name);
-      if (profile.username) setUserUsername(profile.username);
->>>>>>> Stashed changes
+      if (profile.username) {
+        setUserUsername(profile.username);
+      }
       setUserAvatar(
         profile.avatarSrc ? resolveUploadUrl(profile.avatarSrc) : null,
       );
@@ -54,13 +52,11 @@ function useUserInfo() {
       try {
         const response = await apiFetch("/api/user");
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to fetch sidebar user");
+        if (!response.ok)
+          throw new Error(data.message || "Failed to fetch sidebar user");
 
         setUserName(data.user?.displayName || data.user?.username || "");
-<<<<<<< Updated upstream
-=======
         setUserUsername(data.user?.username || "");
->>>>>>> Stashed changes
         setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
       } catch (error) {
         console.error("Failed to fetch sidebar user:", error);
@@ -402,21 +398,27 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                     </div>
                   )}
                 </div>
-<div className={`${textTransitionClass} flex flex-col items-start min-w-0 z-10`}>
-  <span className={`font-bold text-sm truncate w-full leading-tight ${isProfile ? "text-[#0060A9]" : "text-white"}`}>
-    {userName || "User"}
-  </span>
-  {userUsername && !isProfile && (
-    <span className={`text-[10px] font-medium truncate w-full opacity-70 text-white`}>
-      @{userUsername}
-    </span>
-  )}
-  {isProfile && (
-    <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
-      Active Profile
-    </span>
-  )}
-</div>
+                <div
+                  className={`${textTransitionClass} flex flex-col items-start min-w-0 z-10`}
+                >
+                  <span
+                    className={`font-bold text-sm truncate w-full leading-tight ${isProfile ? "text-[#0060A9]" : "text-white"}`}
+                  >
+                    {userName || "User"}
+                  </span>
+                  {userUsername && !isProfile && (
+                    <span
+                      className={`text-[10px] font-medium truncate w-full opacity-70 text-white`}
+                    >
+                      @{userUsername}
+                    </span>
+                  )}
+                  {isProfile && (
+                    <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
+                      Active Profile
+                    </span>
+                  )}
+                </div>
               </button>
               <button
                 onClick={(e) => {
@@ -819,16 +821,16 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                     )}
                   </div>
                   {/* Name */}
-<div className="flex-1 flex flex-col items-start min-w-0">
-  <span className="font-black text-sm text-white truncate w-full leading-tight">
-    {userName || "User"}
-  </span>
-  {userUsername && (
-    <span className="text-[10px] text-white/70 font-medium truncate w-full">
-      @{userUsername}
-    </span>
-  )}
-</div>
+                  <div className="flex-1 flex flex-col items-start min-w-0">
+                    <span className="font-black text-sm text-white truncate w-full leading-tight">
+                      {userName || "User"}
+                    </span>
+                    {userUsername && (
+                      <span className="text-[10px] text-white/70 font-medium truncate w-full">
+                        @{userUsername}
+                      </span>
+                    )}
+                  </div>
                   {/* Arrow */}
                   <ChevronRight
                     size={18}
