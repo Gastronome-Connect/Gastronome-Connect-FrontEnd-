@@ -25,13 +25,16 @@ const TagEditor = ({
     [availableOptions],
   );
 
+  // Show all unselected options when input is empty, filtered + sorted alphabetically otherwise
   const filteredOptions = useMemo(
     () =>
-      normalizedOptions.filter(
-        (option) =>
-          !items.includes(option) &&
-          option.toLowerCase().includes(input.trim().toLowerCase()),
-      ),
+      normalizedOptions
+        .filter(
+          (option) =>
+            !items.includes(option) &&
+            option.toLowerCase().includes(input.trim().toLowerCase()),
+        )
+        .sort((a, b) => a.localeCompare(b)),
     [normalizedOptions, items, input],
   );
 
@@ -109,8 +112,8 @@ const TagEditor = ({
     }
   };
 
-  const showDropdown =
-    open && filteredOptions.length > 0 && input.trim().length > 0;
+  // Show dropdown on focus even with empty input (shows all available options)
+  const showDropdown = open && filteredOptions.length > 0;
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -151,7 +154,7 @@ const TagEditor = ({
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => input.trim() && setOpen(true)}
+            onFocus={() => setOpen(true)}
             placeholder={placeholder}
             className="flex-1 text-xs bg-gray-50 border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-[#0060A9] focus:bg-white transition-all font-medium"
           />
@@ -163,9 +166,9 @@ const TagEditor = ({
           </button>
         </div>
 
-        {/* Custom suggestion dropdown */}
+        {/* Dropdown with scrollbar and max height */}
         {showDropdown && (
-          <div className="absolute left-0 right-10 mt-1.5 z-50 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+          <div className="absolute left-0 right-10 mt-1.5 z-50 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden max-h-44 overflow-y-auto">
             {filteredOptions.map((option, idx) => (
               <button
                 key={option}
@@ -197,7 +200,7 @@ const TagEditor = ({
           </p>
         ) : normalizedOptions.length > 0 ? (
           <p className="text-[11px] font-medium text-gray-400">
-            Start typing to see suggestions.
+            Click the field to see all options.
           </p>
         ) : null}
       </div>
