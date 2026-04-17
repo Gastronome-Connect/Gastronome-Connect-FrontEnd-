@@ -35,8 +35,9 @@ function useUserInfo() {
 
   useEffect(() => {
     const updateFromProfile = (profile = {}) => {
-      if (profile.name) {
-        setUserName(profile.name);
+      const nextName = profile.displayName || profile.name || profile.username;
+      if (nextName) {
+        setUserName(nextName);
       }
       setUserAvatar(
         profile.avatarSrc ? resolveUploadUrl(profile.avatarSrc) : null,
@@ -51,7 +52,7 @@ function useUserInfo() {
           throw new Error(data.message || "Failed to fetch sidebar user");
         }
 
-        setUserName(data.user?.username || "");
+        setUserName(data.user?.displayName || data.user?.username || "");
         setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
       } catch (error) {
         console.error("Failed to fetch sidebar user:", error);

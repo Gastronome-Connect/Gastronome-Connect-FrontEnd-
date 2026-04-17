@@ -11,30 +11,31 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
-import adminApi from "../utils/adminApi";
 import { SkeletonAdminCardList } from "../components/Skeletons";
 import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore"; // ← adjust path
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
-  { id: "all",        label: "All"                          },
-  { id: "spam",       label: "Spam or Misleading"           },
-  { id: "harassment", label: "Harassment or Bullying"       },
-  { id: "hate",       label: "Hate Speech"                  },
-  { id: "violence",   label: "Violence or Dangerous Content"},
-  { id: "false",      label: "False Information"            },
-  { id: "nudity",     label: "Nudity or Sexual Content"     },
-  { id: "other",      label: "Others"                       },
+  { id: "all", label: "All" },
+  { id: "spam", label: "Spam or Misleading" },
+  { id: "harassment", label: "Harassment or Bullying" },
+  { id: "hate", label: "Hate Speech" },
+  { id: "violence", label: "Violence or Dangerous Content" },
+  { id: "false", label: "False Information" },
+  { id: "nudity", label: "Nudity or Sexual Content" },
+  { id: "other", label: "Others" },
 ];
 
 export default function FlaggedPosts() {
   // Pull initial snapshot; re-read on every store change
-  const [posts, setPosts]             = useState(() => getSnapshot().posts);
-  const [initialTotal, setInitialTotal] = useState(() => getSnapshot().posts.length);
-  const [searchTerm, setSearch]       = useState("");
-  const [activeFilter, setFilter]     = useState("all");
-  const [loading, setLoading]         = useState(false); // store is synchronous
-  const [error, setError]             = useState(null);
+  const [posts, setPosts] = useState(() => getSnapshot().posts);
+  const [initialTotal, setInitialTotal] = useState(
+    () => getSnapshot().posts.length,
+  );
+  const [searchTerm, setSearch] = useState("");
+  const [activeFilter, setFilter] = useState("all");
+  const [loading] = useState(false); // store is synchronous
+  const [error, setError] = useState(null);
 
   // Subscribe to store updates (fires when a new report comes in)
   useEffect(() => {
@@ -103,7 +104,10 @@ export default function FlaggedPosts() {
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by author or content..."
@@ -128,16 +132,23 @@ export default function FlaggedPosts() {
             >
               {cat.label}
               {/* Show count badge on non-active bubbles so admin can see at a glance */}
-              {cat.id !== "all" && (() => {
-                const count = posts.filter((p) => p.categoryId === cat.id).length;
-                return count > 0 ? (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                    activeFilter === cat.id ? "bg-white/30 text-white" : "bg-red-100 text-red-500"
-                  }`}>
-                    {count}
-                  </span>
-                ) : null;
-              })()}
+              {cat.id !== "all" &&
+                (() => {
+                  const count = posts.filter(
+                    (p) => p.categoryId === cat.id,
+                  ).length;
+                  return count > 0 ? (
+                    <span
+                      className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                        activeFilter === cat.id
+                          ? "bg-white/30 text-white"
+                          : "bg-red-100 text-red-500"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
             </button>
           ))}
         </div>
@@ -146,16 +157,26 @@ export default function FlaggedPosts() {
         {!loading && (
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Review Queue</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Review Queue
+              </p>
               <p className="text-2xl font-black text-red-500">{posts.length}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Showing</p>
-              <p className="text-2xl font-black text-[#0060A9]">{filtered.length}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Showing
+              </p>
+              <p className="text-2xl font-black text-[#0060A9]">
+                {filtered.length}
+              </p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Processed</p>
-              <p className="text-2xl font-black text-[#F57600]">{initialTotal - posts.length}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Processed
+              </p>
+              <p className="text-2xl font-black text-[#F57600]">
+                {initialTotal - posts.length}
+              </p>
             </div>
           </div>
         )}

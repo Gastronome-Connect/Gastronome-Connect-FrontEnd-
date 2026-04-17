@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { X, Plus, Hash } from "lucide-react";
 
 const TagEditor = ({
@@ -95,9 +95,7 @@ const TagEditor = ({
       setHighlightedIdx((i) => (i + 1) % filteredOptions.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightedIdx((i) =>
-        i <= 0 ? filteredOptions.length - 1 : i - 1,
-      );
+      setHighlightedIdx((i) => (i <= 0 ? filteredOptions.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (highlightedIdx >= 0) {
@@ -111,7 +109,8 @@ const TagEditor = ({
     }
   };
 
-  const showDropdown = open && filteredOptions.length > 0 && input.trim().length > 0;
+  const showDropdown =
+    open && filteredOptions.length > 0 && input.trim().length > 0;
 
   return (
     <div className="animate-in fade-in duration-500">

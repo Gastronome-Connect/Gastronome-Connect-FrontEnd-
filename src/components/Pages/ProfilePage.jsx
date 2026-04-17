@@ -30,7 +30,8 @@ const DEFAULT_PROFILE_DATA = {
 
 const normalizeProfileData = (user = {}) => ({
   id: user._id || user.id || "",
-  name: user.username || user.name || DEFAULT_PROFILE_DATA.name,
+  name:
+    user.displayName || user.username || user.name || DEFAULT_PROFILE_DATA.name,
   bio: user.bio || "",
   avatarSrc: resolveUploadUrl(user.avatar || ""),
   followersCount:
@@ -128,6 +129,41 @@ const GCProfile = () => {
   const handleProfileSave = async (updated) => {
     const nextProfile = { ...profileData };
 
+    if (typeof updated.name === "string" && updated.name.trim()) {
+      const displayName = updated.name.trim();
+
+      if (displayName !== profileData.name) {
+        const displayNameResponse = await apiFetch("/api/display-name", {
+          method: "PUT",
+          body: JSON.stringify({ displayName }),
+        });
+        const displayNameData = await displayNameResponse.json();
+        if (!displayNameResponse.ok) {
+          throw new Error(
+            displayNameData.message || "Failed to update display name",
+          );
+        }
+
+        nextProfile.name =
+          displayNameData.user?.displayName ||
+          displayNameData.user?.username ||
+          displayName;
+
+        setPosts((prev) =>
+          prev.map((post) =>
+            String(post.userId) === String(profileData.id)
+              ? {
+                  ...post,
+                  author: nextProfile.name,
+                  authorDisplayName: nextProfile.name,
+                  authorUsername: nextProfile.name,
+                }
+              : post,
+          ),
+        );
+      }
+    }
+
     if (typeof updated.bio === "string" && updated.bio !== profileData.bio) {
       const bioResponse = await apiFetch("/api/bio", {
         method: "PUT",
@@ -166,10 +202,6 @@ const GCProfile = () => {
             : post,
         ),
       );
-    }
-
-    if (typeof updated.name === "string" && updated.name.trim()) {
-      nextProfile.name = updated.name.trim();
     }
 
     const preferencesChanged =

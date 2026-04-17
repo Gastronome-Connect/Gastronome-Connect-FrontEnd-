@@ -1,5 +1,5 @@
 // src/components/Post Card/PostCard.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PostHeader from "../Post Card/Post Header/PostHeader";
 import PostContent from "../Post Card/Post Content/PostContent";
@@ -66,6 +66,10 @@ const PostCard = ({
   const [showReportModal, setShowReportModal] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setPost(normalizePost(initialPost));
+  }, [initialPost]);
 
   const handleVisitProfile = () => navigate(`/profile/${post.userId}`);
 
@@ -196,7 +200,7 @@ const PostCard = ({
 
       {!isOwner && showReportModal && (
         <ReportModal
-        post={post}                           // ← ADD THIS
+          post={post} // ← ADD THIS
           onConfirm={handleConfirmReport}
           onCancel={() => setShowReportModal(false)}
         />

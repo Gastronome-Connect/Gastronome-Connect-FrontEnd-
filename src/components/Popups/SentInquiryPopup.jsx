@@ -22,12 +22,11 @@ const ContactSuccessPopup = ({ onDone }) => {
       >
         {/* Header Section: 30% Blue Palette */}
         <div className="bg-gradient-to-br from-[#00B4FA] to-[#0060A9] text-white text-center py-14 px-6 relative">
-          
           {/* Animated Background Element */}
-          <motion.div 
-            animate={{ 
+          <motion.div
+            animate={{
               rotate: 360,
-              scale: [1, 1.1, 1]
+              scale: [1, 1.1, 1],
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
             className="absolute -top-10 -right-10 opacity-10 pointer-events-none"
@@ -41,10 +40,13 @@ const ContactSuccessPopup = ({ onDone }) => {
             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             className="w-24 h-24 bg-white/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 backdrop-blur-xl border border-white/20 relative shadow-inner"
           >
-            <Send size={36} className="text-white translate-x-1 -translate-y-1" />
-            
+            <Send
+              size={36}
+              className="text-white translate-x-1 -translate-y-1"
+            />
+
             {/* Success Badge: 10% Orange Highlight */}
-            <motion.div 
+            <motion.div
               initial={{ scale: 0, rotate: -45 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
@@ -65,25 +67,28 @@ const ContactSuccessPopup = ({ onDone }) => {
         {/* Body Section: 60% White Palette */}
         <div className="p-10 text-center">
           <div className="flex justify-center mb-4">
-             <Heart size={20} className="text-[#F57600] fill-[#F57600]/10" />
+            <Heart size={20} className="text-[#F57600] fill-[#F57600]/10" />
           </div>
-          
+
           <p className="text-gray-500 text-[15px] leading-relaxed mb-10 font-medium">
-            Your message has safely reached our dev team. We're excited to collaborate and will get back to you  
-            <span className="text-[#0060A9] font-bold block mt-1">as soon as possible!</span>
+            Your message has safely reached our dev team. We're excited to
+            collaborate and will get back to you
+            <span className="text-[#0060A9] font-bold block mt-1">
+              as soon as possible!
+            </span>
           </p>
 
           <div className="flex flex-col gap-4">
             {/* Primary Action Button: Orange */}
             <motion.button
-              whileHover={{ 
-                scale: 1.03, 
+              whileHover={{
+                scale: 1.03,
                 backgroundColor: "#f0ae35",
-                boxShadow: "0 15px 30px -10px rgba(245, 118, 0, 0.4)" 
+                boxShadow: "0 15px 30px -10px rgba(245, 118, 0, 0.4)",
               }}
               whileTap={{ scale: 0.97 }}
               onClick={onDone}
-              className="w-full py-4.5 rounded-[1.5rem] bg-[#F57600] text-white font-black text-xs tracking-[0.2em] shadow-xl shadow-orange-100 uppercase transition-all"
+              className="w-full min-h-[56px] px-6 py-4 rounded-[1.5rem] bg-[#F57600] text-white font-black text-sm tracking-[0.2em] shadow-xl shadow-orange-100 uppercase transition-all"
             >
               Sounds Great
             </motion.button>
@@ -100,10 +105,10 @@ const ContactSuccessPopup = ({ onDone }) => {
 
         {/* Footer Accent Gradient */}
         <div className="h-2 w-full flex">
-            <div className="flex-1 bg-[#0060A9]" />
-            <div className="flex-1 bg-[#00B4FA]" />
-            <div className="flex-1 bg-[#F57600]" />
-            <div className="flex-1 bg-[#F0AE35]" />
+          <div className="flex-1 bg-[#0060A9]" />
+          <div className="flex-1 bg-[#00B4FA]" />
+          <div className="flex-1 bg-[#F57600]" />
+          <div className="flex-1 bg-[#F0AE35]" />
         </div>
       </motion.div>
     </div>

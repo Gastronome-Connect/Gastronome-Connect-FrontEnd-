@@ -10,27 +10,32 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MessageSquareWarning } from "lucide-react";
 import ReportedCommentCard from "./ReportedCommentCards";
-import { SkeletonAdminCardList } from "../components/Skeletons";
-import { subscribe, getSnapshot, removeCommentReport } from "../Store/ReportStore"; // ← adjust path
+import {
+  subscribe,
+  getSnapshot,
+  removeCommentReport,
+} from "../Store/ReportStore"; // ← adjust path
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
-  { id: "all",        label: "All"                          },
-  { id: "spam",       label: "Spam or Misleading"           },
-  { id: "harassment", label: "Harassment or Bullying"       },
-  { id: "hate",       label: "Hate Speech"                  },
-  { id: "violence",   label: "Violence or Dangerous Content"},
-  { id: "false",      label: "False Information"            },
-  { id: "nudity",     label: "Nudity or Sexual Content"     },
-  { id: "other",      label: "Others"                       },
+  { id: "all", label: "All" },
+  { id: "spam", label: "Spam or Misleading" },
+  { id: "harassment", label: "Harassment or Bullying" },
+  { id: "hate", label: "Hate Speech" },
+  { id: "violence", label: "Violence or Dangerous Content" },
+  { id: "false", label: "False Information" },
+  { id: "nudity", label: "Nudity or Sexual Content" },
+  { id: "other", label: "Others" },
 ];
 
 export default function ReportedComments() {
-  const [items, setItems]               = useState(() => getSnapshot().comments);
-  const [initialTotal, setInitialTotal] = useState(() => getSnapshot().comments.length);
-  const [searchTerm, setSearch]         = useState("");
-  const [activeFilter, setFilter]       = useState("all");
-  const [error, setError]               = useState(null);
+  const [items, setItems] = useState(() => getSnapshot().comments);
+  const [initialTotal, setInitialTotal] = useState(
+    () => getSnapshot().comments.length,
+  );
+  const [searchTerm, setSearch] = useState("");
+  const [activeFilter, setFilter] = useState("all");
+  const [error, setError] = useState(null);
 
   // Subscribe to store updates
   useEffect(() => {
@@ -96,7 +101,10 @@ export default function ReportedComments() {
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by author or content..."
@@ -120,16 +128,23 @@ export default function ReportedComments() {
               }`}
             >
               {cat.label}
-              {cat.id !== "all" && (() => {
-                const count = items.filter((i) => i.categoryId === cat.id).length;
-                return count > 0 ? (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                    activeFilter === cat.id ? "bg-white/30 text-white" : "bg-red-100 text-red-500"
-                  }`}>
-                    {count}
-                  </span>
-                ) : null;
-              })()}
+              {cat.id !== "all" &&
+                (() => {
+                  const count = items.filter(
+                    (i) => i.categoryId === cat.id,
+                  ).length;
+                  return count > 0 ? (
+                    <span
+                      className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                        activeFilter === cat.id
+                          ? "bg-white/30 text-white"
+                          : "bg-red-100 text-red-500"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
             </button>
           ))}
         </div>
@@ -137,16 +152,26 @@ export default function ReportedComments() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Review Queue</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Review Queue
+            </p>
             <p className="text-2xl font-black text-[#0060A9]">{items.length}</p>
           </div>
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Showing</p>
-            <p className="text-2xl font-black text-[#F57600]">{filtered.length}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Showing
+            </p>
+            <p className="text-2xl font-black text-[#F57600]">
+              {filtered.length}
+            </p>
           </div>
           <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Processed</p>
-            <p className="text-2xl font-black text-green-600">{initialTotal - items.length}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+              Processed
+            </p>
+            <p className="text-2xl font-black text-green-600">
+              {initialTotal - items.length}
+            </p>
           </div>
         </div>
 

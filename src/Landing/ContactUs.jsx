@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../Landing/NavigationBar";
 import { buildApiUrl } from "../utils/api";
 import Footer from "../components/Footer/Footer";
+import ContactSuccessPopup from "../components/Popups/SentInquiryPopup";
 import mail from "../components/Assets/MailContact.png";
 import contact from "../components/Assets/PhoneContact.png";
 import pencil from "../components/Assets/Pencil.png";
@@ -14,6 +15,7 @@ function ContactUs() {
   const [isButtonEnabled, setIsButtonEnabled] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const orangeFilter = {
     filter:
@@ -60,6 +62,7 @@ function ContactUs() {
       setEmail("");
       setPhone("");
       setConcern("");
+      setShowSuccessPopup(true);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -109,6 +112,10 @@ function ContactUs() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FFF5E9] overflow-x-hidden">
+      {showSuccessPopup && (
+        <ContactSuccessPopup onDone={() => setShowSuccessPopup(false)} />
+      )}
+
       <Navbar />
 
       <main className="flex-grow flex flex-col items-center py-12 sm:py-16 px-5 sm:px-8 lg:px-20">
