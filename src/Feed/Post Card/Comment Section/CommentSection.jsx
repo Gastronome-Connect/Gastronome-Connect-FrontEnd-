@@ -30,9 +30,18 @@ const CommentSection = forwardRef(
       if (!text?.trim()) return;
 
       try {
+        // Get userId from localStorage (set during login)
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          throw new Error("User not authenticated. Please login again.");
+        }
+
         const response = await apiFetch(`/api/posts/${postId}/comments`, {
           method: "POST",
-          body: JSON.stringify({ text: text.trim() }),
+          body: JSON.stringify({ 
+            userId: userId,
+            text: text.trim() 
+          }),
         });
         const data = await response.json();
 

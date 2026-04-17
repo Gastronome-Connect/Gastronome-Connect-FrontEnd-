@@ -141,9 +141,18 @@ const PostCard = ({
   const handleRepost = async () => {
     try {
       const postId = post.id || post._id;
+      const userId = localStorage.getItem("userId");
+      
+      if (!userId) {
+        throw new Error("User not authenticated. Please login again.");
+      }
+
       await runPostMutation(
         `/api/posts/${postId}/repost`,
-        { method: "POST" },
+        { 
+          method: "POST",
+          body: JSON.stringify({ userId: userId })
+        },
         "Failed to update repost",
       );
     } catch (error) {
