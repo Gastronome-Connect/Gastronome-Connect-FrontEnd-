@@ -284,7 +284,7 @@ const Allergens = () => {
       }
 
       const signupData = JSON.parse(signupDataStr);
-      const { email } = signupData;
+      const { email, password, confirmPassword } = signupData;
       const tempPreferencesStr = sessionStorage.getItem("tempPreferences");
       const tempPreferences = tempPreferencesStr
         ? JSON.parse(tempPreferencesStr)
@@ -299,6 +299,8 @@ const Allergens = () => {
           },
           body: JSON.stringify({
             email,
+            password,
+            confirmPassword,
             preferences: {
               flavors: Array.isArray(tempPreferences.flavors)
                 ? tempPreferences.flavors
