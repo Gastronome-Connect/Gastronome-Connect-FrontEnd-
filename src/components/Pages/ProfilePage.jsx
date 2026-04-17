@@ -7,17 +7,20 @@ import PreferencesPanel from "./Panels/PreferencesPanel";
 import UploadProgressToast from "../Toast/UploadProgressToast";
 import UploadFailedModal from "../Modals/Create Post Components/UploadFailedModal";
 import PostCard from "../../Feed/Post Card/PostCard";
+import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import useUpload from "../../Hooks/UseUpload";
+import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
 import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
 import SkeletonAllergensPanel from "../Skeletons/SkeletonAllergensPanel";
-import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
 const DEFAULT_PROFILE_DATA = {
   id: "",
   name: "Juan Dela Cruz",
-  bio: "",
+  username: "juandelacruz",
+  bio: "Hilu",
   avatarSrc: "",
   followersCount: 0,
   followingCount: 0,
@@ -30,7 +33,8 @@ const DEFAULT_PROFILE_DATA = {
 
 const normalizeProfileData = (user = {}) => ({
   id: user._id || user.id || "",
-  name: user.username || user.name || DEFAULT_PROFILE_DATA.name,
+  name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
+  username: user.accountUsername || user.username || "",
   bio: user.bio || "",
   avatarSrc: resolveUploadUrl(user.avatar || ""),
   followersCount:
@@ -83,9 +87,16 @@ const GCProfile = () => {
     resetUpload,
   } = useUpload();
 
-  const handleNewPost = (newPost) => {
-    startUpload(newPost, (posted) => setPosts((prev) => [posted, ...prev]));
-  };
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+    onApprovedPost: (posted) => {
+      setPosts((prev) => [posted, ...prev]);
+      setProfileData((current) => ({
+        ...current,
+        postsCount: (current.postsCount || 0) + 1,
+      }));
+    },
+  });
 
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
@@ -109,11 +120,12 @@ const GCProfile = () => {
           return;
         }
 
-        const postsResponse = await fetch(
-          buildApiUrl(`/api/posts?userId=${normalizedProfile.id}`),
+        const postsResponse = await apiFetch(
+          `/api/posts?userId=${normalizedProfile.id}&includeReposts=true`,
         );
         const postsData = await postsResponse.json();
-        setPosts(Array.isArray(postsData) ? postsData : []);
+        const normalizedPosts = Array.isArray(postsData) ? postsData : [];
+        setPosts(normalizedPosts);
       } catch (error) {
         console.error("Failed to fetch profile or posts:", error);
       } finally {
@@ -127,6 +139,47 @@ const GCProfile = () => {
 
   const handleProfileSave = async (updated) => {
     const nextProfile = { ...profileData };
+
+    if (typeof updated.name === "string" && updated.name.trim()) {
+      const displayName = updated.name.trim();
+
+      if (displayName !== profileData.name) {
+        const displayNameResponse = await apiFetch("/api/display-name", {
+          method: "PUT",
+          body: JSON.stringify({ displayName }),
+        });
+        const displayNameData = await displayNameResponse.json();
+        if (!displayNameResponse.ok) {
+          throw new Error(
+            displayNameData.message || "Failed to update display name",
+          );
+        }
+
+        nextProfile.name =
+          displayNameData.user?.displayName ||
+          displayNameData.user?.username ||
+          displayName;
+        nextProfile.username =
+          displayNameData.user?.accountUsername ||
+          displayNameData.user?.username ||
+          profileData.username;
+
+        setPosts((prev) =>
+          prev.map((post) =>
+            String(post.userId) === String(profileData.id)
+              ? {
+                  ...post,
+                  author: nextProfile.name,
+                  authorDisplayName: nextProfile.name,
+                  authorUsername: nextProfile.username,
+                  username: nextProfile.username,
+                  accountUsername: nextProfile.username,
+                }
+              : post,
+          ),
+        );
+      }
+    }
 
     if (typeof updated.bio === "string" && updated.bio !== profileData.bio) {
       const bioResponse = await apiFetch("/api/bio", {
@@ -166,10 +219,6 @@ const GCProfile = () => {
             : post,
         ),
       );
-    }
-
-    if (typeof updated.name === "string" && updated.name.trim()) {
-      nextProfile.name = updated.name.trim();
     }
 
     const preferencesChanged =
@@ -271,15 +320,50 @@ const GCProfile = () => {
                 key={post.id}
                 post={post}
                 isOwner
-                onDelete={(id) =>
-                  setPosts((prev) => prev.filter((item) => item.id !== id))
-                }
+                onDelete={async (id) => {
+                  try {
+                    const response = await apiFetch(`/api/posts/${id}`, {
+                      method: "DELETE",
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                      throw new Error(data.message || "Failed to delete post");
+                    }
+
+                    setPosts((prev) => prev.filter((item) => item.id !== id));
+                    setProfileData((current) => ({
+                      ...current,
+                      postsCount:
+                        typeof data.postsCount === "number"
+                          ? data.postsCount
+                          : Math.max((current.postsCount || 1) - 1, 0),
+                    }));
+                  } catch (error) {
+                    console.error("Failed to delete post:", error);
+                  }
+                }}
                 onUpdate={(updated) =>
-                  setPosts((prev) =>
-                    prev.map((item) =>
-                      item.id === updated.id ? updated : item,
-                    ),
-                  )
+                  setPosts((prev) => {
+                    if (
+                      !updated.repostedByViewer &&
+                      String(updated.userId) !== String(profileData.id)
+                    ) {
+                      return prev.filter((item) => item.id !== updated.id);
+                    }
+
+                    let didUpdate = false;
+                    const nextPosts = prev.map((item) => {
+                      if (item.id !== updated.id) {
+                        return item;
+                      }
+
+                      didUpdate = true;
+                      return updated;
+                    });
+
+                    return didUpdate ? nextPosts : [updated, ...prev];
+                  })
                 }
               />
             ))}
@@ -324,6 +408,7 @@ const GCProfile = () => {
         progress={progress}
         onDone={resetUpload}
       />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadFailedModal
         isOpen={uploadState === "failed"}
         onRetry={retryUpload}

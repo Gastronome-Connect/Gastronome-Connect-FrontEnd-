@@ -1,77 +1,141 @@
-/**
- * FlaggedPosts.jsx
- *
- * Changes vs original:
- *  - Reads ONLY from ReportStore (posts reported by users), not from /posts.
- *  - Adds 7 category filter bubbles matching the report reasons.
- *  - Still calls adminApi.delete when admin removes a post.
- *  - Subscribes to store changes so new reports appear in real-time.
- */
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
-import adminApi from "../utils/adminApi";
 import { SkeletonAdminCardList } from "../components/Skeletons";
-import { subscribe, getSnapshot, removePostReport } from "../Store/ReportStore"; // ← adjust path
+import adminApi from "../utils/adminApi";
+import {
+  subscribe,
+  getSnapshot,
+  removePostReport,
+  syncReportedPosts,
+} from "../Store/ReportStore";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
-  { id: "all",        label: "All"                          },
-  { id: "spam",       label: "Spam or Misleading"           },
-  { id: "harassment", label: "Harassment or Bullying"       },
-  { id: "hate",       label: "Hate Speech"                  },
-  { id: "violence",   label: "Violence or Dangerous Content"},
-  { id: "false",      label: "False Information"            },
-  { id: "nudity",     label: "Nudity or Sexual Content"     },
-  { id: "other",      label: "Others"                       },
+  { id: "all", label: "All" },
+  { id: "spam", label: "Spam or Misleading" },
+  { id: "harassment", label: "Harassment or Bullying" },
+  { id: "hate", label: "Hate Speech" },
+  { id: "violence", label: "Violence or Dangerous Content" },
+  { id: "false", label: "False Information" },
+  { id: "nudity", label: "Nudity or Sexual Content" },
+  { id: "other", label: "Others" },
 ];
 
 export default function FlaggedPosts() {
-  // Pull initial snapshot; re-read on every store change
-  const [posts, setPosts]             = useState(() => getSnapshot().posts);
-  const [initialTotal, setInitialTotal] = useState(() => getSnapshot().posts.length);
-  const [searchTerm, setSearch]       = useState("");
-  const [activeFilter, setFilter]     = useState("all");
-  const [loading, setLoading]         = useState(false); // store is synchronous
-  const [error, setError]             = useState(null);
+  const [posts, setPosts] = useState(() => getSnapshot().posts ?? []);
+  const [initialTotal, setInitialTotal] = useState(
+    () => (getSnapshot().posts ?? []).length,
+  );
+  const [searchTerm, setSearch] = useState("");
+  const [activeFilter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Subscribe to store updates (fires when a new report comes in)
   useEffect(() => {
     const unsub = subscribe(() => {
       const snap = getSnapshot();
-      setPosts([...snap.posts]);
+      setPosts([...(snap.posts ?? [])]);
     });
     return unsub;
   }, []);
 
-  // Track initial total for "Processed" counter
-  // Reset whenever the store resets (e.g. page reload / future API hydration)
   useEffect(() => {
     setInitialTotal((prev) => Math.max(prev, posts.length));
   }, [posts.length]);
 
-  // ── Admin actions ────────────────────────────────────────────────────────────
-  const handleKeep = useCallback((id) => {
-    // Admin reviewed & decided to keep: just clear it from the report queue
-    removePostReport(id);
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPosts = async (showLoading = false) => {
+      try {
+        if (showLoading && isMounted) {
+          setLoading(true);
+        }
+
+        const response = await adminApi.get("/admin/flagged-posts");
+        if (!isMounted) {
+          return;
+        }
+
+        const nextPosts = Array.isArray(response.data) ? response.data : [];
+        const localReportedPosts = getSnapshot().posts ?? [];
+        const mergedPosts =
+          nextPosts.length > 0
+            ? [
+                ...nextPosts,
+                ...localReportedPosts.filter(
+                  (localPost) =>
+                    !nextPosts.some(
+                      (serverPost) =>
+                        (serverPost.postId || serverPost.id) ===
+                        (localPost.postId || localPost.id),
+                    ),
+                ),
+              ]
+            : localReportedPosts;
+
+        syncReportedPosts(mergedPosts);
+        setPosts(mergedPosts);
+        setInitialTotal((prev) => Math.max(prev, mergedPosts.length));
+        setError(null);
+        setLoading(false);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        setError(null);
+        setLoading(false);
+      }
+    };
+
+    const handleFocus = () => {
+      fetchPosts();
+    };
+
+    fetchPosts(true);
+    const intervalId = window.setInterval(() => fetchPosts(), 15000);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
-  const handleRemove = useCallback(async (id) => {
+  // ── Admin actions ────────────────────────────────────────────────────────────
+  const handleKeep = useCallback(async (postId) => {
     try {
-      // When the backend is ready, uncomment:
-      // await adminApi.delete(`/posts/${id}`);
-      removePostReport(id);
-    } catch (err) {
-      setError("Failed to remove post.");
-    }
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "post",
+        postId,
+        action: "approve",
+        notes: "Approved by admin.",
+      });
+    } catch (err) {}
+    removePostReport(postId);
+  }, []);
+
+  const handleRemove = useCallback(async (postId) => {
+    try {
+      await adminApi.post("/admin/moderation/resolve", {
+        type: "post",
+        postId,
+        action: "reject",
+        notes: "Rejected by admin.",
+      });
+    } catch (err) {}
+    removePostReport(postId);
   }, []);
 
   // ── Filtering ────────────────────────────────────────────────────────────────
   const filtered = posts.filter((post) => {
     const matchSearch =
-      post.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.caption.toLowerCase().includes(searchTerm.toLowerCase());
+      (post.author || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.caption || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.detail || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter =
       activeFilter === "all" || post.categoryId === activeFilter;
     return matchSearch && matchFilter;
@@ -103,7 +167,10 @@ export default function FlaggedPosts() {
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by author or content..."
@@ -128,16 +195,23 @@ export default function FlaggedPosts() {
             >
               {cat.label}
               {/* Show count badge on non-active bubbles so admin can see at a glance */}
-              {cat.id !== "all" && (() => {
-                const count = posts.filter((p) => p.categoryId === cat.id).length;
-                return count > 0 ? (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                    activeFilter === cat.id ? "bg-white/30 text-white" : "bg-red-100 text-red-500"
-                  }`}>
-                    {count}
-                  </span>
-                ) : null;
-              })()}
+              {cat.id !== "all" &&
+                (() => {
+                  const count = posts.filter(
+                    (p) => p.categoryId === cat.id,
+                  ).length;
+                  return count > 0 ? (
+                    <span
+                      className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                        activeFilter === cat.id
+                          ? "bg-white/30 text-white"
+                          : "bg-red-100 text-red-500"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
             </button>
           ))}
         </div>
@@ -146,16 +220,26 @@ export default function FlaggedPosts() {
         {!loading && (
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Review Queue</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Review Queue
+              </p>
               <p className="text-2xl font-black text-red-500">{posts.length}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Showing</p>
-              <p className="text-2xl font-black text-[#0060A9]">{filtered.length}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Showing
+              </p>
+              <p className="text-2xl font-black text-[#0060A9]">
+                {filtered.length}
+              </p>
             </div>
             <div className="bg-white rounded-xl p-4 border-2 border-gray-100">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Processed</p>
-              <p className="text-2xl font-black text-[#F57600]">{initialTotal - posts.length}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Processed
+              </p>
+              <p className="text-2xl font-black text-[#F57600]">
+                {initialTotal - posts.length}
+              </p>
             </div>
           </div>
         )}
@@ -171,8 +255,8 @@ export default function FlaggedPosts() {
                   <FlaggedPostCard
                     key={post.id}
                     post={post}
-                    onKeep={() => handleKeep(post.id)}
-                    onRemove={() => handleRemove(post.id)}
+                    onKeep={() => handleKeep(post.postId || post.id)}
+                    onRemove={() => handleRemove(post.postId || post.id)}
                   />
                 ))}
               </AnimatePresence>

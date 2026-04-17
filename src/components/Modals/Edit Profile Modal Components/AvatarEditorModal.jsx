@@ -11,10 +11,10 @@ import {
   RefreshCw,
   Move,
 } from "lucide-react";
-import DiscardChangesModal from "../DiscardChangesModal"; // adjust path as needed
+import DiscardChangesModal from "../DiscardChangesModal";
 
 // ─────────────────────────────────────────────
-//  Utility: draw canvas with transform
+//  Draw WITH circle clip — used for the live preview canvas only
 // ─────────────────────────────────────────────
 function drawCanvas({ canvas, image, zoom, offset, rotation }) {
   if (!canvas || !image) return;
@@ -30,7 +30,7 @@ function drawCanvas({ canvas, image, zoom, offset, rotation }) {
   ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
   ctx.restore();
 
-  // Circular clip overlay
+  // Circle clip overlay — PREVIEW ONLY, not used for export
   ctx.save();
   ctx.globalCompositeOperation = "destination-in";
   ctx.beginPath();
@@ -40,10 +40,28 @@ function drawCanvas({ canvas, image, zoom, offset, rotation }) {
 }
 
 // ─────────────────────────────────────────────
+//  Draw WITHOUT circle clip — used for export only
+// ─────────────────────────────────────────────
+function drawCanvasClean({ canvas, image, zoom, offset, rotation }) {
+  if (!canvas || !image) return;
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.scale(zoom, zoom);
+  ctx.translate(offset.x, offset.y);
+  ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+  ctx.restore();
+  // No arc/clip — exports full rectangle
+}
+
+// ─────────────────────────────────────────────
 //  Main AvatarEditorModal
 // ─────────────────────────────────────────────
 const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
-  // "upload" = pick-a-file screen, "edit" = editor screen
   const [step, setStep] = useState("upload");
   const [imageSrc, setImageSrc] = useState(null);
   const [loadedImage, setLoadedImage] = useState(null);
@@ -59,7 +77,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const animFrameRef = useRef(null);
-  // Stores the cover-zoom baseline so we can detect real changes vs reset state
   const initialStateRef = useRef({
     zoom: 1,
     offset: { x: 0, y: 0 },
@@ -78,7 +95,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
         CANVAS_SIZE / img.naturalWidth,
         CANVAS_SIZE / img.naturalHeight,
       );
-      // Save initial state so reset and discard detection work correctly
       initialStateRef.current = {
         zoom: scale,
         offset: { x: 0, y: 0 },
@@ -92,7 +108,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // Clamp zoom: minimum is always "cover" so image never leaves the circle
   const getMinZoom = useCallback(() => {
     if (!loadedImage) return 0.5;
     return Math.max(
@@ -101,7 +116,7 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     );
   }, [loadedImage]);
 
-  // Render canvas
+  // Render preview canvas
   useEffect(() => {
     if (!loadedImage || !canvasRef.current) return;
     cancelAnimationFrame(animFrameRef.current);
@@ -116,28 +131,19 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     });
   }, [loadedImage, zoom, offset, rotation]);
 
-  // ── Clamp offset so image always covers the circle ──
   const clampOffset = useCallback(
     (ox, oy, currentZoom, currentRotation) => {
       if (!loadedImage) return { x: ox, y: oy };
-
-      // Half-dimensions of the image at current zoom (in image-space, before zoom applied by canvas)
       const rad = (currentRotation * Math.PI) / 180;
       const cos = Math.abs(Math.cos(rad));
       const sin = Math.abs(Math.sin(rad));
-
-      // Rotated bounding box of the image at zoom=1 (image-space)
       const rw =
         (loadedImage.naturalWidth * cos + loadedImage.naturalHeight * sin) / 2;
       const rh =
         (loadedImage.naturalWidth * sin + loadedImage.naturalHeight * cos) / 2;
-
-      // In image-space, the circle radius maps to CANVAS_SIZE / 2 / zoom
       const circleR = CANVAS_SIZE / 2 / currentZoom;
-
       const maxX = Math.max(0, rw - circleR);
       const maxY = Math.max(0, rh - circleR);
-
       return {
         x: Math.min(maxX, Math.max(-maxX, ox)),
         y: Math.min(maxY, Math.max(-maxY, oy)),
@@ -146,7 +152,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     [loadedImage],
   );
 
-  // ── Pointer drag ──
   const getPoint = (e) => {
     const touch = e.touches?.[0];
     return {
@@ -182,13 +187,11 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     setDragStart(null);
   }, []);
 
-  // ── Wheel zoom ──
   const onWheel = useCallback(
     (e) => {
       e.preventDefault();
       setZoom((z) => {
         const next = Math.min(4, Math.max(getMinZoom(), z - e.deltaY * 0.001));
-        // Re-clamp offset at new zoom level
         setOffset((o) => clampOffset(o.x, o.y, next, rotation));
         return next;
       });
@@ -196,12 +199,10 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     [getMinZoom, rotation, clampOffset],
   );
 
-  // ── File upload / drag-drop ──
   const loadFile = (file) => {
     if (!file || !file.type.startsWith("image/")) return;
     const url = URL.createObjectURL(file);
     setImageSrc(url);
-    // zoom/offset/rotation are reset inside the useEffect onload handler
     setStep("edit");
   };
 
@@ -225,7 +226,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     setRotation(r);
   };
 
-  // True only if the user has made real changes from the initial loaded state
   const hasEdits = () => {
     if (step !== "edit") return false;
     const init = initialStateRef.current;
@@ -237,18 +237,27 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
     );
   };
 
-  // Only warn if there are actual edits beyond the initial loaded state
   const handleAttemptClose = () => {
     if (hasEdits()) setShowDiscard(true);
     else onClose();
   };
 
-  // ── Save / export ──
+  // ── Export: draws to a fresh off-screen canvas WITHOUT the circle mask ──
   const handleSave = () => {
-    if (!canvasRef.current) return;
+    if (!loadedImage) return;
     setSaving(true);
     setTimeout(() => {
-      const dataUrl = canvasRef.current.toDataURL("image/png");
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = CANVAS_SIZE;
+      exportCanvas.height = CANVAS_SIZE;
+      drawCanvasClean({
+        canvas: exportCanvas,
+        image: loadedImage,
+        zoom,
+        offset,
+        rotation,
+      });
+      const dataUrl = exportCanvas.toDataURL("image/png");
       onSave(dataUrl);
       setSaving(false);
       onClose();
@@ -266,7 +275,7 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
         style={{ maxHeight: "calc(100dvh - 32px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Shared Header ── */}
+        {/* ── Header ── */}
         <div className="bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white px-6 py-5 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-black uppercase tracking-tighter">
@@ -292,7 +301,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
         {step === "upload" && (
           <>
             <div className="px-6 py-8 flex flex-col items-center gap-5">
-              {/* Drop zone */}
               <div
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
@@ -336,7 +344,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
                 onChange={handleFileChange}
               />
 
-              {/* Or keep current — only shown when there's an existing avatar */}
               {currentSrc && (
                 <div className="w-full flex flex-col items-center gap-3">
                   <div className="flex items-center gap-3 w-full">
@@ -364,6 +371,7 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
                       </p>
                       <p className="text-[10px] text-gray-400 font-medium">
                         Crop or adjust your existing photo
+      
                       </p>
                     </div>
                   </button>
@@ -371,7 +379,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-4 bg-gray-50/60 border-t border-gray-100 flex justify-end">
               <button
                 onClick={onClose}
@@ -393,7 +400,7 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
                 <Move size={11} /> Drag to reposition · Scroll to zoom
               </p>
 
-              {/* Circle canvas */}
+              {/* Circle preview canvas */}
               <div
                 className="relative"
                 style={{
@@ -436,7 +443,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
                     setOffset((o) => clampOffset(o.x, o.y, next, rotation));
                   }}
                   className="p-1 rounded-full hover:bg-gray-100 transition-colors active:scale-90"
-                  title="Zoom out 1%"
                 >
                   <ZoomOut size={16} className="text-gray-400 shrink-0" />
                 </button>
@@ -460,7 +466,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
                     setOffset((o) => clampOffset(o.x, o.y, next, rotation));
                   }}
                   className="p-1 rounded-full hover:bg-gray-100 transition-colors active:scale-90"
-                  title="Zoom in 1%"
                 >
                   <ZoomIn size={16} className="text-gray-400 shrink-0" />
                 </button>
@@ -506,7 +511,6 @@ const AvatarEditorModal = ({ currentSrc, onClose, onSave }) => {
 
             {/* Footer */}
             <div className="px-6 py-5 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between gap-3">
-              {/* ← Back to upload */}
               <button
                 onClick={() => {
                   setStep("upload");

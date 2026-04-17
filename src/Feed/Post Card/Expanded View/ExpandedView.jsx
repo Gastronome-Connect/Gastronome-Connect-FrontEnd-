@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, Send, UtensilsCrossed } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Volume2,
+  Send,
+  UtensilsCrossed,
+} from "lucide-react";
 import { FaEllipsisH } from "react-icons/fa";
 
 import Avatar from "../Post Header/Avatar";
@@ -11,13 +19,22 @@ import PostActions from "../Post Action/PostActions";
 import CommentSection from "../Comment Section/CommentSection";
 import AILogo from "../../../components/Assets/AILogo.png";
 import { useUserLibrary } from "../../../Context/UserLibraryContext";
+import { useChat } from "../../../Hooks/UseChats"; // ← adjust path if needed
 
 /* ── Shared unit pluralizer ── */
 const pluralizeUnit = (unit, amount) => {
   if (!unit || unit === "to taste") return unit;
   const num = parseFloat(amount);
   if (!num || num <= 1) return unit;
-  const plurals = { cup: "cups", tsp: "tsps", tbsp: "tbsps", piece: "pieces", pinch: "pinches", oz: "ozs", lb: "lbs" };
+  const plurals = {
+    cup: "cups",
+    tsp: "tsps",
+    tbsp: "tbsps",
+    piece: "pieces",
+    pinch: "pinches",
+    oz: "ozs",
+    lb: "lbs",
+  };
   return plurals[unit] ?? unit;
 };
 
@@ -39,7 +56,9 @@ const IngredientList = ({ ingredients }) => {
     <div className="mx-4 sm:mx-5 mb-3 rounded-2xl border border-orange-100 bg-orange-50/60 px-3.5 py-3">
       <div className="flex items-center gap-1.5 mb-2">
         <UtensilsCrossed size={13} className="text-[#F57600]" />
-        <span className="text-xs font-extrabold text-[#F57600] uppercase tracking-wide">Ingredients</span>
+        <span className="text-xs font-extrabold text-[#F57600] uppercase tracking-wide">
+          Ingredients
+        </span>
         <span className="ml-auto text-[10px] text-orange-400 font-medium">
           {ingredients.length} item{ingredients.length !== 1 ? "s" : ""}
         </span>
@@ -47,19 +66,38 @@ const IngredientList = ({ ingredients }) => {
       <ul className="space-y-1 overflow-y-auto pr-0.5">
         {visible.map((ing) => {
           const measure = fmt(ing);
-          const displayName = ing.name ? ing.name.charAt(0).toUpperCase() + ing.name.slice(1) : ing.name;
+          const displayName = ing.name
+            ? ing.name.charAt(0).toUpperCase() + ing.name.slice(1)
+            : ing.name;
           return (
             <li key={ing.id} className="flex items-baseline gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F57600] shrink-0 mt-1.5" />
-              {measure && <span className="text-[11px] font-bold text-[#F57600] shrink-0 min-w-[52px]">{measure}</span>}
-              <span className="text-sm text-gray-700 leading-snug">{displayName}</span>
+              {measure && (
+                <span className="text-[11px] font-bold text-[#F57600] shrink-0 min-w-[52px]">
+                  {measure}
+                </span>
+              )}
+              <span className="text-sm text-gray-700 leading-snug">
+                {displayName}
+              </span>
             </li>
           );
         })}
       </ul>
       {showToggle && (
-        <button onClick={() => setExpanded((p) => !p)} className="mt-2 flex items-center gap-1 text-[#F57600] text-xs font-bold hover:underline">
-          {expanded ? <><ChevronUp size={12} /> Show less</> : <><ChevronDown size={12} /> +{ingredients.length - PREVIEW} more</>}
+        <button
+          onClick={() => setExpanded((p) => !p)}
+          className="mt-2 flex items-center gap-1 text-[#F57600] text-xs font-bold hover:underline"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp size={12} /> Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown size={12} /> +{ingredients.length - PREVIEW} more
+            </>
+          )}
         </button>
       )}
     </div>
@@ -72,7 +110,10 @@ const buildChatbotPrefill = (post) => {
   if (post.ingredients?.length > 0) {
     lines.push("\nIngredients:");
     post.ingredients.forEach((ing) => {
-      const measure = ing.unit === "to taste" ? "to taste" : [ing.amount, ing.unit].filter(Boolean).join(" ");
+      const measure =
+        ing.unit === "to taste"
+          ? "to taste"
+          : [ing.amount, ing.unit].filter(Boolean).join(" ");
       const optional = ing.optional ? " (optional)" : "";
       lines.push(`${measure ? `${measure} ` : ""}${ing.name}${optional}`);
     });
@@ -86,34 +127,43 @@ const ExpandedView = ({
   startIndex = 0,
   isOwner = false,
   onClose,
+  onPostUpdate,
+  onLike,
+  onDislike,
+  onRepost,
   onEdit,
   onDelete,
   onReport,
 }) => {
   const navigate = useNavigate();
-  const { isArchived, addToArchives, removeFromArchives, addToHistory } = useUserLibrary();
+  const { isArchived, addToArchives, removeFromArchives, addToHistory } =
+    useUserLibrary();
+  const { startNewSession } = useChat(); // ← new
 
-  const [current, setCurrent]           = useState(startIndex);
+  const [current, setCurrent] = useState(startIndex);
   const [showComments, setShowComments] = useState(false);
-  const [menuOpen, setMenuOpen]         = useState(false);
-  const [isSpeaking, setIsSpeaking]     = useState(false);
-  const [isPaused, setIsPaused]         = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const menuRef           = useRef(null);
+  const menuRef = useRef(null);
   const commentSectionRef = useRef(null);
   const pinnedTextareaRef = useRef(null);
-  const historyTimerRef   = useRef(null);
-  const historyAddedRef   = useRef(false);
-  const speakIntervalRef  = useRef(null); // ← keeps Chrome alive
+  const historyTimerRef = useRef(null);
+  const historyAddedRef = useRef(false);
+  const speechChunksRef = useRef([]);
+  const speechIndexRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const speechTimeoutRef = useRef(null);
+  const currentUtteranceRef = useRef(null);
   const [pinnedInput, setPinnedInput] = useState("");
 
-  const media       = post.mediaItems ?? [];
+  const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
-  const item        = media[current] ?? null;
-  const postId      = post.id ?? post._id;
-  const archived    = isArchived(postId);
+  const item = media[current] ?? null;
+  const postId = post.id ?? post._id;
+  const archived = isArchived(postId);
 
-  // ── 5-second history timer ──────────────────────────────────────
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
@@ -125,8 +175,14 @@ const ExpandedView = ({
     return () => clearTimeout(historyTimerRef.current);
   }, [post, addToHistory]);
 
-  const goPrev = (e) => { e.stopPropagation(); setCurrent((p) => (p - 1 + media.length) % media.length); };
-  const goNext = (e) => { e.stopPropagation(); setCurrent((p) => (p + 1) % media.length); };
+  const goPrev = (e) => {
+    e.stopPropagation();
+    setCurrent((p) => (p - 1 + media.length) % media.length);
+  };
+  const goNext = (e) => {
+    e.stopPropagation();
+    setCurrent((p) => (p + 1) % media.length);
+  };
 
   const handleArchive = () => {
     if (archived) removeFromArchives(postId);
@@ -134,11 +190,67 @@ const ExpandedView = ({
     setMenuOpen(false);
   };
 
-  // ── Fixed handleSpeak ───────────────────────────────────────────
+  const stopSpeaking = () => {
+    speechActiveRef.current = false;
+    speechChunksRef.current = [];
+    speechIndexRef.current = 0;
+    currentUtteranceRef.current = null;
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+  };
+
+  const queueNextChunk = (nextIndex) => {
+    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+    speechTimeoutRef.current = setTimeout(() => {
+      speakChunk(nextIndex);
+    }, 75);
+  };
+
+  const speakChunk = (index = 0) => {
+    const chunks = speechChunksRef.current;
+    if (!speechActiveRef.current || index >= chunks.length) {
+      currentUtteranceRef.current = null;
+      setIsSpeaking(false);
+      setIsPaused(false);
+      speechActiveRef.current = false;
+      return;
+    }
+
+    speechIndexRef.current = index;
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    currentUtteranceRef.current = utterance;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.lang = "en-US";
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      if (!speechActiveRef.current) return;
+      queueNextChunk(index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === "interrupted" || e.error === "canceled") return;
+      queueNextChunk(index + 1);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
-    // Toggle pause / resume if already speaking
     if (isSpeaking) {
       if (isPaused) {
         window.speechSynthesis.resume();
@@ -150,7 +262,6 @@ const ExpandedView = ({
       return;
     }
 
-    // Build the text to speak
     const ingredientsList =
       post.ingredients?.length > 0
         ? post.ingredients
@@ -166,50 +277,21 @@ const ExpandedView = ({
 
     const parts = [`Title: ${post.title}`];
     if (ingredientsList) parts.push(`Ingredients: ${ingredientsList}`);
-    if (post.caption)    parts.push(`Description: ${post.caption}`);
+    if (post.caption) parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    // Cancel anything queued, then wait one tick so the browser
-    // fully flushes before we queue the new utterance
+    const chunks = textToSpeak
+      .split(/(?<=[.!?])\s+/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (chunks.length === 0) return;
+
     window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate   = 0.9;
-      utterance.pitch  = 1;
-      utterance.volume = 1;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
-        speakIntervalRef.current = setInterval(() => {
-          if (
-            window.speechSynthesis.speaking &&
-            !window.speechSynthesis.paused
-          ) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 10000);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      utterance.onerror = (e) => {
-        // "interrupted" is fired when we call cancel() ourselves — not a real error
-        if (e.error === "interrupted") return;
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }, 100);
+    speechChunksRef.current = chunks;
+    speechIndexRef.current = 0;
+    speechActiveRef.current = true;
+    speakChunk(0);
   };
 
   useEffect(() => {
@@ -222,33 +304,42 @@ const ExpandedView = ({
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft"  && hasMultiple) setCurrent((p) => (p - 1 + media.length) % media.length);
-      if (e.key === "ArrowRight" && hasMultiple) setCurrent((p) => (p + 1) % media.length);
+      if (e.key === "ArrowLeft" && hasMultiple)
+        setCurrent((p) => (p - 1 + media.length) % media.length);
+      if (e.key === "ArrowRight" && hasMultiple)
+        setCurrent((p) => (p + 1) % media.length);
     };
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
-      window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
+      stopSpeaking();
     };
   }, [onClose, hasMultiple, media.length]);
 
   useEffect(() => {
     const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const submitComment = () => {
+  const submitComment = async () => {
     const text = pinnedInput.trim();
     if (!text) return;
-    commentSectionRef.current?.addComment(text);
+    await commentSectionRef.current?.addComment(text);
     setPinnedInput("");
-    if (pinnedTextareaRef.current) pinnedTextareaRef.current.style.height = "auto";
+    if (pinnedTextareaRef.current)
+      pinnedTextareaRef.current.style.height = "auto";
+  };
+
+  // ← new: start a fresh session then navigate with prefill
+  const handleChatbot = () => {
+    startNewSession();
+    navigate("/chatbot", { state: { prefill: buildChatbotPrefill(post) } });
   };
 
   return createPortal(
@@ -275,19 +366,36 @@ const ExpandedView = ({
             </div>
           )}
 
-          {item && (item.type === "image" ? (
-            <img src={item.url} alt="" className="absolute inset-0 w-full h-full object-contain" />
-          ) : (
-            <video key={item.url} src={item.url} controls autoPlay className="absolute inset-0 w-full h-full object-contain" />
-          ))}
+          {item &&
+            (item.type === "image" ? (
+              <img
+                src={item.url}
+                alt=""
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            ) : (
+              <video
+                key={item.url}
+                src={item.url}
+                controls
+                autoPlay
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            ))}
 
           {hasMultiple && (
             <>
-              <button onClick={goPrev} className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white">
+              <button
+                onClick={goPrev}
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
+              >
                 <ChevronLeft size={22} className="sm:hidden" />
                 <ChevronLeft size={28} className="hidden sm:block" />
               </button>
-              <button onClick={goNext} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white">
+              <button
+                onClick={goNext}
+                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
+              >
                 <ChevronRight size={22} className="sm:hidden" />
                 <ChevronRight size={28} className="hidden sm:block" />
               </button>
@@ -299,7 +407,10 @@ const ExpandedView = ({
               {media.map((_, i) => (
                 <button
                   key={i}
-                  onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrent(i);
+                  }}
                   className={`rounded-full transition-all ${i === current ? "bg-white w-5 h-2" : "bg-white/40 w-2 h-2"}`}
                 />
               ))}
@@ -309,13 +420,19 @@ const ExpandedView = ({
 
         {/* ── RIGHT: content panel ── */}
         <div className="flex flex-col flex-1 sm:w-[45%] bg-white overflow-hidden min-h-0">
-
           {/* Header */}
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <Avatar src={post.avatar} alt={post.author} size={9} />
               <div>
-                <p className="text-sm font-bold text-gray-900 leading-tight">{post.author}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-gray-900 leading-tight">
+                    {post.author}
+                  </p>
+                  {post.username && (
+                    <p className="text-xs text-gray-400">@{post.username}</p>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400">{post.date}</p>
               </div>
             </div>
@@ -332,10 +449,21 @@ const ExpandedView = ({
                   <PostMenu
                     isOwner={isOwner}
                     isArchived={archived}
-                    onEdit={() => { setMenuOpen(false); onEdit?.(); onClose(); }}
-                    onDelete={() => { setMenuOpen(false); onDelete?.(); onClose(); }}
+                    onEdit={() => {
+                      setMenuOpen(false);
+                      onEdit?.();
+                      onClose();
+                    }}
+                    onDelete={() => {
+                      setMenuOpen(false);
+                      onDelete?.();
+                      onClose();
+                    }}
                     onArchive={handleArchive}
-                    onReport={() => { setMenuOpen(false); onReport?.(); }}
+                    onReport={() => {
+                      setMenuOpen(false);
+                      onReport?.();
+                    }}
                   />
                 )}
               </div>
@@ -346,15 +474,20 @@ const ExpandedView = ({
           <div className="flex-1 overflow-y-auto min-h-0">
             {/* Title */}
             {(() => {
-              const hasPerMedia  = media.length > 1 && (item?.title || item?.caption);
+              const hasPerMedia =
+                media.length > 1 && (item?.title || item?.caption);
               const displayTitle = hasPerMedia ? item.title : post.title;
               if (!displayTitle) return null;
               return (
                 <div className="px-4 sm:px-5 pt-3 sm:pt-4 pb-1">
                   {hasPerMedia && (
-                    <p className="text-[10px] font-bold text-[#F57600] uppercase tracking-wide mb-1">Photo {current + 1} of {media.length}</p>
+                    <p className="text-[10px] font-bold text-[#F57600] uppercase tracking-wide mb-1">
+                      Photo {current + 1} of {media.length}
+                    </p>
                   )}
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">{displayTitle}</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                    {displayTitle}
+                  </h3>
                 </div>
               );
             })()}
@@ -363,16 +496,22 @@ const ExpandedView = ({
 
             {/* Caption */}
             {(() => {
-              const hasPerMedia    = media.length > 1 && (item?.title || item?.caption);
+              const hasPerMedia =
+                media.length > 1 && (item?.title || item?.caption);
               const displayCaption = hasPerMedia ? item.caption : post.caption;
-              if (!displayCaption && !(hasPerMedia && post.caption)) return null;
+              if (!displayCaption && !(hasPerMedia && post.caption))
+                return null;
               return (
                 <div className="px-4 sm:px-5 pb-3 sm:pb-4">
                   {displayCaption && (
-                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{displayCaption}</p>
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {displayCaption}
+                    </p>
                   )}
                   {hasPerMedia && post.caption && (
-                    <p className="text-gray-400 text-xs leading-relaxed mt-3 pt-3 border-t border-gray-100 whitespace-pre-wrap">{post.caption}</p>
+                    <p className="text-gray-400 text-xs leading-relaxed mt-3 pt-3 border-t border-gray-100 whitespace-pre-wrap">
+                      {post.caption}
+                    </p>
                   )}
                 </div>
               );
@@ -380,19 +519,31 @@ const ExpandedView = ({
 
             {/* Actions bar */}
             <div className="sticky top-0 bg-white z-10 border-t border-b border-gray-100 flex items-center justify-between pr-3 sm:pr-5">
-              <PostActions post={post} onComment={() => setShowComments((s) => !s)} commentsOpen={showComments} />
+              <PostActions
+                post={post}
+                onComment={() => setShowComments((s) => !s)}
+                commentsOpen={showComments}
+                onLike={onLike}
+                onDislike={onDislike}
+                onRepost={onRepost}
+              />
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSpeak}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shrink-0 ${
-                    isSpeaking && !isPaused ? "bg-[#F57600] text-white shadow" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    isSpeaking && !isPaused
+                      ? "bg-[#F57600] text-white shadow"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <Volume2 size={13} />
-                  <span className="hidden xs:inline">{!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}</span>
+                  <span className="hidden xs:inline">
+                    {!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}
+                  </span>
                 </button>
+                {/* ── Updated Chatbot button ── */}
                 <button
-                  onClick={() => navigate("/chatbot", { state: { prefill: buildChatbotPrefill(post) } })}
+                  onClick={handleChatbot}
                   className="flex items-center gap-1.5 bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow hover:opacity-90 transition-all shrink-0"
                 >
                   <img src={AILogo} alt="AI" className="w-3 h-3" />
@@ -405,10 +556,8 @@ const ExpandedView = ({
               <CommentSection
                 ref={commentSectionRef}
                 postId={post.id}
-                initialComments={post.commentsList ?? [
-                  { id: "s1", author: "FoodieChef", avatar: "https://i.pravatar.cc/100?img=5", text: "This looks absolutely delicious! 😍", time: "2h ago", replies: [] },
-                  { id: "s2", author: "RecipeLover", avatar: "https://i.pravatar.cc/100?img=9", text: "Can I substitute the butter with olive oil?", time: "1h ago", replies: [] },
-                ]}
+                initialComments={post.comments || []}
+                onPostUpdate={onPostUpdate}
                 hideInput
               />
             )}
@@ -417,16 +566,27 @@ const ExpandedView = ({
           {showComments && (
             <div
               className="border-t border-gray-100 shrink-0 px-3 sm:px-4 pb-3 pt-2 flex items-center gap-2 bg-white"
-              style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}
+              style={{
+                paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+              }}
             >
-              <img src="https://i.pravatar.cc/100?img=12" alt="You" className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-200" />
+              <img
+                src="https://i.pravatar.cc/100?img=12"
+                alt="You"
+                className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-200"
+              />
               <div className="flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-[#F57600] transition-colors">
                 <textarea
                   ref={pinnedTextareaRef}
                   rows={1}
                   value={pinnedInput}
                   onChange={(e) => setPinnedInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      submitComment();
+                    }
+                  }}
                   placeholder="Write a comment..."
                   className="flex-1 text-xs text-gray-700 placeholder-gray-400 border-none focus:ring-0 outline-none bg-transparent resize-none overflow-y-auto leading-relaxed"
                   style={{ minHeight: "18px", maxHeight: "100px" }}
@@ -444,7 +604,7 @@ const ExpandedView = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 

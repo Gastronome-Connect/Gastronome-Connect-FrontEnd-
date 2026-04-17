@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Flag,
   MessageSquareWarning,
+  UsersRound,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -29,11 +30,12 @@ export default function AdminSidebar({ onCollapse }) {
   };
 
   const menuItems = [
-    { id: "dashboard",  label: "Dashboard",        icon: LayoutDashboard,      path: "/admin" },
+    { id: "dashboard",  label: "Dashboard",         icon: LayoutDashboard,      path: "/admin" },
     { id: "timeout",    label: "Timeout Users",     icon: Clock,                path: "/admin/timeout" },
     { id: "restore",    label: "Restore Account",   icon: RefreshCw,            path: "/admin/restore" },
     { id: "flagged",    label: "Flagged Posts",     icon: Flag,                 path: "/admin/flagged" },
     { id: "reported",   label: "Reported Comments", icon: MessageSquareWarning, path: "/admin/reported" },
+    { id: "profiles",   label: "Reported Profiles", icon: UsersRound,           path: "/admin/reported-profiles" },
     { id: "statistics", label: "Statistics",        icon: BarChart3,            path: "/admin/statistics" },
   ];
 

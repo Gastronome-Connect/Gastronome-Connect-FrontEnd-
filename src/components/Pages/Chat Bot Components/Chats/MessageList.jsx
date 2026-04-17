@@ -1,11 +1,37 @@
 import React from "react";
 import UserMessageBubble from "../Chat Bubbles/UserBubble";
 import BotMessageBubble from "../Chat Bubbles/ChatbotBubble";
+import CardExpandedView from "../../../../components/Cards/CardViewer";
 import { useChatContext } from "../../../../Context/ChatContext";
+import { useUserLibrary } from "../../../../Context/UserLibraryContext";
 
 const PAGE_SIZE = 3;
 
-function SmallRecipeCard({ recipe }) {
+function mapRecipeToViewerPost(recipe = {}) {
+  const title = recipe.title || recipe.name || "Recipe";
+  const image = recipe.image || recipe.img || recipe.mediaItems?.[0]?.url || "";
+  const description = recipe.description || recipe.caption || "";
+  const date = recipe.date || recipe.dateCreate || recipe.dateCreated || "";
+  const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+
+  return {
+    id: recipe.id || `chatbot-${title.toLowerCase().replace(/\s+/g, "-")}`,
+    title,
+    caption: description,
+    author: recipe.author || "Unknown",
+    avatar: recipe.avatar || image,
+    date,
+    ingredients,
+    mediaItems:
+      Array.isArray(recipe.mediaItems) && recipe.mediaItems.length > 0
+        ? recipe.mediaItems
+        : image
+          ? [{ type: "image", url: image, title, caption: description }]
+          : [],
+  };
+}
+
+function SmallRecipeCard({ recipe, onClick }) {
   const {
     title = "Recipe",
     image = "",
@@ -15,7 +41,11 @@ function SmallRecipeCard({ recipe }) {
   } = recipe || {};
 
   return (
-    <div className="bg-white rounded-[16px] sm:rounded-[20px] shadow-md border border-gray-100 p-2.5 sm:p-3 w-[140px] sm:w-[160px] flex-shrink-0 hover:scale-[1.02] transition-transform">
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-white text-left rounded-[16px] sm:rounded-[20px] shadow-md border border-gray-100 p-2.5 sm:p-3 w-[140px] sm:w-[160px] flex-shrink-0 hover:scale-[1.02] hover:border-orange-200 transition-transform transition-colors"
+    >
       <div className="w-full h-16 sm:h-20 rounded-xl overflow-hidden mb-2 bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center">
         {image ? (
           <img src={image} alt={title} className="w-full h-full object-cover" />
@@ -34,11 +64,12 @@ function SmallRecipeCard({ recipe }) {
         Date: <span className="font-medium">{dateCreate}</span>
       </p>
       <p className="text-[9px] sm:text-[10px] text-gray-400 line-clamp-2 leading-snug">{description}</p>
-    </div>
+      <p className="mt-2 text-[9px] sm:text-[10px] font-bold text-[#F57600]">Tap to view recipe</p>
+    </button>
   );
 }
 
-function RecipeCarousel({ recipes }) {
+function RecipeCarousel({ recipes, onRecipeClick }) {
   const [page, setPage] = React.useState(0);
   const totalPages = Math.ceil(recipes.length / PAGE_SIZE);
   const canPrev = page > 0;
@@ -57,7 +88,7 @@ function RecipeCarousel({ recipes }) {
         <div className="recipe-scroll flex gap-2">
           {recipes.map((recipe, i) => (
             <div key={i} style={{ scrollSnapAlign: "start" }}>
-              <SmallRecipeCard recipe={recipe} />
+              <SmallRecipeCard recipe={recipe} onClick={() => onRecipeClick(recipe)} />
             </div>
           ))}
         </div>
@@ -75,7 +106,7 @@ function RecipeCarousel({ recipes }) {
         </button>
         <div className="flex" style={{ gap: "8px" }}>
           {visible.map((recipe, i) => (
-            <SmallRecipeCard key={i} recipe={recipe} />
+            <SmallRecipeCard key={i} recipe={recipe} onClick={() => onRecipeClick(recipe)} />
           ))}
         </div>
         <button
@@ -124,6 +155,8 @@ function ActionBar({ time }) {
 export default function MessageList({ messages, isBotTyping, bottomRef }) {
   // ← Pull context so we can dispatch MARK_MESSAGE_SEEN
   const { activeSessionId, dispatch } = useChatContext();
+  const { isArchived } = useUserLibrary();
+  const [selectedRecipe, setSelectedRecipe] = React.useState(null);
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col py-3 sm:py-4">
@@ -152,6 +185,10 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
         }
 
         if (msg.type === "recipe") {
+          const visibleRecipes = msg.recipes.filter(
+            (recipe) => !isArchived(mapRecipeToViewerPost(recipe).id)
+          );
+
           return (
             <div key={msg.id} className="flex flex-col gap-2 py-2 group">
               <BotMessageBubble
@@ -166,14 +203,18 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
                 }
               />
               <p className="text-[11px] text-gray-400 pl-9 sm:pl-20">
-                {msg.recipes.length} recipe{msg.recipes.length !== 1 ? "s" : ""} found
+                {visibleRecipes.length} recipe{visibleRecipes.length !== 1 ? "s" : ""} found
                 <span className="hidden sm:inline">
-                  {Math.ceil(msg.recipes.length / PAGE_SIZE) > 1 && ` · use arrows to browse`}
+                  {Math.ceil(visibleRecipes.length / PAGE_SIZE) > 1 && ` · use arrows to browse`}
                 </span>
                 <span className="inline sm:hidden"> · swipe to browse</span>
               </p>
               <div className="pl-9 sm:pl-20 overflow-hidden">
-                <RecipeCarousel recipes={msg.recipes} />
+                {visibleRecipes.length > 0 ? (
+                  <RecipeCarousel recipes={visibleRecipes} onRecipeClick={(recipe) => setSelectedRecipe(recipe)} />
+                ) : (
+                  <p className="text-sm text-gray-400">All recipe cards from this message are archived.</p>
+                )}
               </div>
               <ActionBar time={msg.time} />
             </div>
@@ -185,6 +226,14 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
 
       {isBotTyping && <BotMessageBubble isLoading />}
       <div ref={bottomRef} />
+
+      {selectedRecipe && (
+        <CardExpandedView
+          post={mapRecipeToViewerPost(selectedRecipe)}
+          onClose={() => setSelectedRecipe(null)}
+          hideOptionsMenu
+        />
+      )}
     </div>
   );
 }

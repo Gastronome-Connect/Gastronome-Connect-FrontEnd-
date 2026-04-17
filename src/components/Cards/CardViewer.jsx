@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Heart, Archive, Flag, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
 import { FaEllipsisH } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useChatContext } from "../../Context/ChatContext";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
+import { useChat } from "../../Hooks/UseChats"; // ← adjust path if needed
 import AILogo from "../Assets/AILogo.png";
 
 /* ── Inline avatar ── */
@@ -89,9 +89,10 @@ const CardExpandedView = ({
   onClose,
   onReport,
   hideFavoriteAndOptions = false,
+  hideOptionsMenu = false,
 }) => {
   const navigate = useNavigate();
-  const { dispatch } = useChatContext();
+  const { startNewSession } = useChat(); // ← new
   const {
     isFavorited, toggleFavorite,
     isArchived, addToArchives, removeFromArchives,
@@ -106,7 +107,11 @@ const CardExpandedView = ({
   const menuRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speakIntervalRef = useRef(null); // ← keeps Chrome alive
+  const speechChunksRef = useRef([]);
+  const speechIndexRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const speechTimeoutRef = useRef(null);
+  const currentUtteranceRef = useRef(null);
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -115,7 +120,6 @@ const CardExpandedView = ({
   const saved = isFavorited(post);
   const archived = isArchived(postId);
 
-  // ── 5-second history timer ──────────────────────────────────────
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
@@ -133,19 +137,72 @@ const CardExpandedView = ({
   const handleSave = () => toggleFavorite(post);
 
   const handleArchive = () => {
-    if (archived) {
-      removeFromArchives(postId);
-    } else {
-      addToArchives(post);
-    }
+    if (archived) removeFromArchives(postId);
+    else addToArchives(post);
     setMenuOpen(false);
   };
 
-  // ── Fixed handleSpeak ───────────────────────────────────────────
+  const stopSpeaking = React.useCallback(() => {
+    speechActiveRef.current = false;
+    speechChunksRef.current = [];
+    speechIndexRef.current = 0;
+    currentUtteranceRef.current = null;
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+  }, []);
+
+  const queueNextChunk = React.useCallback((nextIndex) => {
+    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+    speechTimeoutRef.current = setTimeout(() => {
+      speakChunk(nextIndex);
+    }, 75);
+  }, []);
+
+  const speakChunk = React.useCallback((index = 0) => {
+    const chunks = speechChunksRef.current;
+    if (!speechActiveRef.current || index >= chunks.length) {
+      currentUtteranceRef.current = null;
+      setIsSpeaking(false);
+      setIsPaused(false);
+      speechActiveRef.current = false;
+      return;
+    }
+
+    speechIndexRef.current = index;
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    currentUtteranceRef.current = utterance;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.lang = "en-US";
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      if (!speechActiveRef.current) return;
+      queueNextChunk(index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === "interrupted" || e.error === "canceled") return;
+      queueNextChunk(index + 1);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, [queueNextChunk]);
+
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
-    // Toggle pause / resume if already speaking
     if (isSpeaking) {
       if (isPaused) {
         window.speechSynthesis.resume();
@@ -157,7 +214,6 @@ const CardExpandedView = ({
       return;
     }
 
-    // Build the text to speak
     const ingredientsText =
       post.ingredients?.length > 0
         ? post.ingredients
@@ -173,73 +229,49 @@ const CardExpandedView = ({
 
     const parts = [`Title: ${post.title}`];
     if (ingredientsText) parts.push(`Ingredients: ${ingredientsText}`);
-    if (post.caption)    parts.push(`Description: ${post.caption}`);
+    if (post.caption) parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    // Cancel anything queued, then wait one tick so the browser
-    // fully flushes before we queue the new utterance
+    const chunks = textToSpeak
+      .split(/(?<=[.!?])\s+/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (chunks.length === 0) return;
+
     window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate   = 0.9;
-      utterance.pitch  = 1;
-      utterance.volume = 1;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-        // Chrome bug workaround: pause+resume every 10 s to prevent auto-stop
-        speakIntervalRef.current = setInterval(() => {
-          if (
-            window.speechSynthesis.speaking &&
-            !window.speechSynthesis.paused
-          ) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 10000);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      utterance.onerror = (e) => {
-        // "interrupted" is fired when we call cancel() ourselves — not a real error
-        if (e.error === "interrupted") return;
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }, 100);
+    speechChunksRef.current = chunks;
+    speechIndexRef.current = 0;
+    speechActiveRef.current = true;
+    speakChunk(0);
   };
 
+  // ← new: start a fresh session then navigate with prefill
   const handleChatbot = () => {
     const ingredientsText = post.ingredients?.length > 0
       ? post.ingredients.map((ing) => {
-          const measure = [ing.amount, ing.unit].filter(Boolean).join(" ");
-          return `${ing.name}${measure ? `, ${measure}` : ""}`;
-        }).join(", ")
+          const measure = ing.unit === "to taste"
+            ? "to taste"
+            : [ing.amount, ing.unit].filter(Boolean).join(" ");
+          const optional = ing.optional ? " (optional)" : "";
+          return `${measure ? `${measure} ` : ""}${ing.name}${optional}`;
+        }).join("\n")
       : "";
-    const recipeInfo = [
-      `Title:\n${post.title}`,
-      ingredientsText ? `Ingredients:\n${ingredientsText}` : "",
-      `Description:\n${post.caption || ""}`,
-    ].filter(Boolean).join("\n\n");
 
-    dispatch({ type: "NEW_SESSION", payload: { title: post.title || "Recipe Chat" } });
+    const recipeInfo = [
+      post.title     ? `Title:\n${post.title}`           : "",
+      ingredientsText ? `\nIngredients:\n${ingredientsText}` : "",
+      post.caption   ? `\nDescription:\n${post.caption}` : "",
+    ].filter(Boolean).join("\n");
+
+    startNewSession();
     onClose();
     navigate("/chatbot", { state: { prefill: recipeInfo } });
   };
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") { window.speechSynthesis.cancel(); onClose(); }
+      if (e.key === "Escape") { stopSpeaking(); onClose(); }
       if (e.key === "ArrowLeft"  && hasMultiple) setCurrent((p) => (p - 1 + media.length) % media.length);
       if (e.key === "ArrowRight" && hasMultiple) setCurrent((p) => (p + 1) % media.length);
     };
@@ -248,10 +280,9 @@ const CardExpandedView = ({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
-      window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current); // ← clean up interval on unmount
+      stopSpeaking();
     };
-  }, [onClose, hasMultiple, media.length]);
+  }, [onClose, hasMultiple, media.length, stopSpeaking]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -324,31 +355,46 @@ const CardExpandedView = ({
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <Avatar src={post.avatar} alt={post.author} size={9} />
-              <div>
-                <p className="text-sm font-bold text-gray-900 leading-tight">{post.author}</p>
-                <p className="text-xs text-gray-400">{post.date}</p>
-              </div>
+<div>
+  <div className="flex items-center gap-1.5">
+    <p className="text-sm font-bold text-gray-900 leading-tight">{post.author}</p>
+    {post.username && (
+      <p className="text-xs text-gray-400">@{post.username}</p>
+    )}
+  </div>
+  <p className="text-xs text-gray-400">{post.date}</p>
+</div>
             </div>
 
             <div className="flex items-center gap-1.5">
               {!hideFavoriteAndOptions && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSave();
-                  }}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
-                    ${saved
-                      ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
-                      : "border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400"
-                    }`}
-                  title={saved ? "Unsave" : "Save recipe"}
-                >
-                  <Heart size={15} fill={saved ? "currentColor" : "none"} strokeWidth={saved ? 0 : 2} />
-                </button>
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
+                      ${saved
+                        ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+                        : "border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400"
+                      }`}
+                    title={saved ? "Unsave" : "Save recipe"}
+                  >
+                    <Heart size={15} fill={saved ? "currentColor" : "none"} strokeWidth={saved ? 0 : 2} />
+                  </button>
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleArchive(); }}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
+                      ${archived
+                        ? "bg-orange-50 border-orange-200 text-[#F57600] hover:bg-orange-100"
+                        : "border-gray-200 text-gray-400 hover:bg-orange-50 hover:border-orange-200 hover:text-[#F57600]"
+                      }`}
+                    title={archived ? "Unarchive recipe" : "Archive recipe"}
+                  >
+                    <Archive size={15} fill={archived ? "currentColor" : "none"} strokeWidth={archived ? 0 : 2} />
+                  </button>
+                </>
               )}
 
-              {/* Speak */}
               <button
                 onClick={handleSpeak}
                 className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
@@ -361,7 +407,7 @@ const CardExpandedView = ({
                 <Volume2 size={15} fill={isSpeaking && !isPaused ? "currentColor" : "none"} strokeWidth={isSpeaking && !isPaused ? 0 : 2} />
               </button>
 
-              {/* Chatbot */}
+              {/* ── Updated Chatbot button ── */}
               <button
                 onClick={handleChatbot}
                 className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center transition-all duration-200 hover:border-orange-200 hover:bg-orange-50"
@@ -370,7 +416,7 @@ const CardExpandedView = ({
                 <img src={AILogo} alt="AI Chatbot" className="w-4 h-4 object-contain" />
               </button>
 
-              {!hideFavoriteAndOptions && (
+              {!hideFavoriteAndOptions && !hideOptionsMenu && (
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen((o) => !o)}
@@ -399,7 +445,6 @@ const CardExpandedView = ({
                   )}
                 </div>
               )}
-
             </div>
           </div>
 

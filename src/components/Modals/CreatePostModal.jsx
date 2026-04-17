@@ -8,7 +8,7 @@ import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
 import useDraft from "../Modals/Draft";
-import { buildApiUrl } from "../../utils/api";
+import { apiFetch, buildApiUrl } from "../../utils/api";
 
 const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
@@ -39,10 +39,25 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const isPostEmpty = !postText.trim() && mediaItems.length === 0;
 
   useEffect(() => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (token) setUserName(jwtDecode(token).username);
-    } catch {}
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await apiFetch("/api/user");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch current user");
+        }
+
+        setUserName(data.user?.displayName || data.user?.username || "");
+      } catch {
+        try {
+          const token = localStorage.getItem("accessToken");
+          if (token) setUserName(jwtDecode(token).username);
+        } catch {}
+      }
+    };
+
+    fetchCurrentUser();
   }, []);
 
   const hardClose = useCallback(() => {
