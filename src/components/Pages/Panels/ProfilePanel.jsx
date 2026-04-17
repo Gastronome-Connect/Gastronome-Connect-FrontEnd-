@@ -10,7 +10,8 @@ import { addProfileReport } from "../../../Store/ReportStore";
 
 const DEFAULT_PROFILE = {
   name: "Juan Dela Cruz",
-  bio: "",
+  username: "@juandelacruz",
+  bio: "Hilu",
   avatarSrc: "",
   postsCount: 0,
   followersCount: 0,
@@ -405,14 +406,19 @@ function ProfilePanel({
 
           {/* Name, bio, stats */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-6 lg:gap-8 mt-1 sm:mt-2">
-            <div className="space-y-1 sm:space-y-2 text-center sm:text-left">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tighter leading-tight">
-                {mergedProfile.name}
-              </h2>
-              <p className="text-slate-700 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-2xl opacity-90 mx-auto sm:mx-0">
-                {mergedProfile.bio}
-              </p>
-            </div>
+<div className="space-y-1 sm:space-y-2 text-center sm:text-left">
+  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tighter leading-tight">
+    {mergedProfile.name}
+  </h2>
+  {mergedProfile.username && (
+    <p className="text-sm sm:text-base font-semibold text-orange-500 tracking-tight -mt-0.5">
+      @{mergedProfile.username}
+    </p>
+  )}
+  <p className="text-slate-700 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-2xl opacity-90 mx-auto sm:mx-0">
+    {mergedProfile.bio}
+  </p>
+</div>
 
             <div className="flex justify-center lg:justify-end gap-6 sm:gap-8 md:gap-10 lg:gap-12 border-t lg:border-t-0 pt-5 sm:pt-6 lg:pt-0 border-slate-100 shrink-0">
               {statItems.map(({ label, value }) => (

@@ -2,6 +2,7 @@ import React from "react";
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import { CarouselProvider } from "./components/Carousel Background/CarouselContext";
 import { ChatProvider } from "./Context/ChatContext";
+import { NotificationProvider } from "./Context/NotificationContext";
 
 import ChatbotPage from "./components/Pages/Chatbot";
 import NotificationsPage from "./components/Pages/NotificationPage";
@@ -60,30 +61,28 @@ import ReportedProfiles from "./Admin Panel/ReportedProfiles";
 // Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
 
-import { UserLibraryProvider } from "./Context/UserLibraryContext"; // add this import
+import { UserLibraryProvider } from "./Context/UserLibraryContext";
 
-// ── Root layout — ChatProvider + CarouselProvider + ErrorBoundary wrap the whole app
 const RootLayout = () => (
   <ErrorBoundary>
     <ChatProvider>
       <CarouselProvider>
-        <UserLibraryProvider>   {/* ← add this */}
-          <Outlet />
+        <UserLibraryProvider>
+          <NotificationProvider>
+            <Outlet />
+          </NotificationProvider>
         </UserLibraryProvider>
       </CarouselProvider>
     </ChatProvider>
   </ErrorBoundary>
 );
 
-
-// Admin layout wrapper — separate boundary so admin crashes don't kill the whole app
 const AdminLayoutWithBoundary = () => (
   <ErrorBoundary fallbackTitle="Admin panel failed to load">
     <AdminLayout />
   </ErrorBoundary>
 );
 
-// Protected Admin layout
 const ProtectedAdminLayout = () => (
   <ProtectedRoute Component={AdminLayoutWithBoundary} requireAdmin={true} />
 );
@@ -93,7 +92,6 @@ export const router = createBrowserRouter([
     path: "/",
     Component: RootLayout,
     children: [
-      // Landing
       { index: true, Component: () => <PublicRoute Component={Home} /> },
       { path: "home", Component: () => <PublicRoute Component={Home} /> },
       {
@@ -105,7 +103,6 @@ export const router = createBrowserRouter([
         Component: () => <PublicRoute Component={ContactUs} />,
       },
 
-      // Auth (Public-only - redirect to feed/admin if already logged in)
       { path: "login", Component: () => <PublicRoute Component={LogIn} /> },
       {
         path: "verification",
@@ -136,13 +133,11 @@ export const router = createBrowserRouter([
         Component: () => <ProtectedRoute Component={ProfChangePassword} blockAdmin={true} />,
       },
 
-      // Feed
       { path: "feed", Component: () => <ProtectedRoute Component={Feed} blockAdmin={true} /> },
       { path: "sidebar", Component: SideBar },
       { path: "searchbar", Component: SearchBar },
       { path: "navigationbar", Component: NavigationBar },
 
-      // User Pages (Protected)
       {
         path: "profile",
         Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
@@ -168,11 +163,9 @@ export const router = createBrowserRouter([
         Component: () => <ProtectedRoute Component={NotificationsPage} blockAdmin={true} />,
       },
 
-      // Utility
       { path: "buffer", Component: Buffer },
       { path: "error", Component: Error },
 
-      // Admin — own ErrorBoundary so it's isolated, with authentication protection
       {
         path: "admin",
         Component: ProtectedAdminLayout,
@@ -187,7 +180,6 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Error Pages
       { path: "401", Component: Error401 },
       { path: "403", Component: Error403 },
       { path: "500", Component: Error500 },

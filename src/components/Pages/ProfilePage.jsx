@@ -17,7 +17,8 @@ import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
 const DEFAULT_PROFILE_DATA = {
   id: "",
   name: "Juan Dela Cruz",
-  bio: "",
+  username: "juandelacruz",
+  bio: "Hilu",
   avatarSrc: "",
   followersCount: 0,
   followingCount: 0,
@@ -30,8 +31,8 @@ const DEFAULT_PROFILE_DATA = {
 
 const normalizeProfileData = (user = {}) => ({
   id: user._id || user.id || "",
-  name:
-    user.displayName || user.username || user.name || DEFAULT_PROFILE_DATA.name,
+  name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
+  username: user.username || "",
   bio: user.bio || "",
   avatarSrc: resolveUploadUrl(user.avatar || ""),
   followersCount:

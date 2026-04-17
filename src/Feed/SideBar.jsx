@@ -31,14 +31,20 @@ import PopularRecipes from "../components/Feed Components/PopularRecipePanel";
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function useUserInfo() {
   const [userName, setUserName] = useState("");
+  const [userUsername, setUserUsername] = useState("");
   const [userAvatar, setUserAvatar] = useState(null);
 
   useEffect(() => {
     const updateFromProfile = (profile = {}) => {
+<<<<<<< Updated upstream
       const nextName = profile.displayName || profile.name || profile.username;
       if (nextName) {
         setUserName(nextName);
       }
+=======
+      if (profile.name)     setUserName(profile.name);
+      if (profile.username) setUserUsername(profile.username);
+>>>>>>> Stashed changes
       setUserAvatar(
         profile.avatarSrc ? resolveUploadUrl(profile.avatarSrc) : null,
       );
@@ -48,11 +54,13 @@ function useUserInfo() {
       try {
         const response = await apiFetch("/api/user");
         const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch sidebar user");
-        }
+        if (!response.ok) throw new Error(data.message || "Failed to fetch sidebar user");
 
         setUserName(data.user?.displayName || data.user?.username || "");
+<<<<<<< Updated upstream
+=======
+        setUserUsername(data.user?.username || "");
+>>>>>>> Stashed changes
         setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
       } catch (error) {
         console.error("Failed to fetch sidebar user:", error);
@@ -61,20 +69,16 @@ function useUserInfo() {
 
     fetchUser();
 
-    const handleProfileUpdated = (event) =>
-      updateFromProfile(event.detail || {});
+    const handleProfileUpdated = (e) => updateFromProfile(e.detail || {});
     window.addEventListener("profile-updated", handleProfileUpdated);
-
-    const handleStorage = () => fetchUser();
-    window.addEventListener("storage", handleStorage);
-
+    window.addEventListener("storage", fetchUser);
     return () => {
       window.removeEventListener("profile-updated", handleProfileUpdated);
-      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("storage", fetchUser);
     };
   }, []);
 
-  return { userName, userAvatar };
+  return { userName, userUsername, userAvatar };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ function useUserInfo() {
 function DesktopSidebar({ onNewPost, hasNotifications }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userName, userAvatar } = useUserInfo();
+  const { userName, userUsername, userAvatar } = useUserInfo();
   const { sessions, activeSessionId, dispatch } = useChatContext();
 
   const [collapsed, setCollapsed] = useState(
@@ -398,20 +402,21 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                     </div>
                   )}
                 </div>
-                <div
-                  className={`${textTransitionClass} flex flex-col items-start min-w-0 z-10`}
-                >
-                  <span
-                    className={`font-bold text-sm truncate w-full ${isProfile ? "text-[#0060A9]" : "text-white"}`}
-                  >
-                    {userName || "User"}
-                  </span>
-                  {isProfile && (
-                    <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
-                      Active Profile
-                    </span>
-                  )}
-                </div>
+<div className={`${textTransitionClass} flex flex-col items-start min-w-0 z-10`}>
+  <span className={`font-bold text-sm truncate w-full leading-tight ${isProfile ? "text-[#0060A9]" : "text-white"}`}>
+    {userName || "User"}
+  </span>
+  {userUsername && !isProfile && (
+    <span className={`text-[10px] font-medium truncate w-full opacity-70 text-white`}>
+      @{userUsername}
+    </span>
+  )}
+  {isProfile && (
+    <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
+      Active Profile
+    </span>
+  )}
+</div>
               </button>
               <button
                 onClick={(e) => {
@@ -561,8 +566,7 @@ function DesktopNavItem({
 function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userName, userAvatar } = useUserInfo();
-
+  const { userName, userUsername, userAvatar } = useUserInfo();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -815,9 +819,16 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                     )}
                   </div>
                   {/* Name */}
-                  <span className="flex-1 text-left font-black text-sm text-white truncate">
-                    {userName || "User"}
-                  </span>
+<div className="flex-1 flex flex-col items-start min-w-0">
+  <span className="font-black text-sm text-white truncate w-full leading-tight">
+    {userName || "User"}
+  </span>
+  {userUsername && (
+    <span className="text-[10px] text-white/70 font-medium truncate w-full">
+      @{userUsername}
+    </span>
+  )}
+</div>
                   {/* Arrow */}
                   <ChevronRight
                     size={18}

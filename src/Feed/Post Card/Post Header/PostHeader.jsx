@@ -21,7 +21,6 @@ const PostHeader = ({ post, isOwner = false, onEdit, onDelete, onArchive, onRepo
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-3">
 
-        {/* Clickable avatar */}
         <Avatar
           src={post.avatar}
           alt={post.author}
@@ -29,14 +28,21 @@ const PostHeader = ({ post, isOwner = false, onEdit, onDelete, onArchive, onRepo
           onClick={onVisitProfile}
         />
 
-        {/* Clickable name + date block */}
         <div>
-          <p
+          {/* Display name + username inline */}
+          <div
             onClick={onVisitProfile}
-            className="text-sm font-bold text-gray-900 leading-tight cursor-pointer hover:text-orange-500 transition-colors w-fit"
+            className="flex items-center gap-1.5 cursor-pointer group w-fit"
           >
-            {post.author}
-          </p>
+            <p className="text-sm font-bold text-gray-900 leading-tight group-hover:text-orange-500 transition-colors">
+              {post.author}
+            </p>
+            {post.username && (
+              <p className="text-xs text-gray-400 leading-tight group-hover:text-orange-400 transition-colors">
+                @{post.username}
+              </p>
+            )}
+          </div>
           <p className="text-xs text-gray-400">{post.date}</p>
         </div>
 
