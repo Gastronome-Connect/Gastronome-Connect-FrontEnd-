@@ -1,8 +1,12 @@
-// src/components/PreferencesPanel/PreferencesPanel.jsx
 import InfoPill from "./Pills";
 
-const PreferencesPanel = ({ flavors = [], cookingStyles = [] }) => {
+// isOwner: when false, empty-state placeholder is hidden (no point showing
+// "no preferences set" on someone else's profile)
+const PreferencesPanel = ({ flavors = [], cookingStyles = [], compressed, isOwner = true }) => {
   const hasContent = flavors.length > 0 || cookingStyles.length > 0;
+
+  // Nothing to show and we're not the owner — don't render the panel at all
+  if (!hasContent && !isOwner) return null;
 
   return (
     <div className="font-sans xl:h-full flex flex-col">
@@ -48,7 +52,8 @@ const PreferencesPanel = ({ flavors = [], cookingStyles = [] }) => {
             </div>
           )}
 
-          {!hasContent && (
+          {/* Empty state — only shown to the owner */}
+          {!hasContent && isOwner && (
             <div className="flex flex-col items-center justify-center py-10 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
               <p className="text-sm font-semibold text-gray-600">
                 Culinary Explorer

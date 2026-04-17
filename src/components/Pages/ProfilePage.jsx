@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import Sidebar from "../../Feed/SideBar";
 import Chatbot from "../Feed Components/ChatbotWidget";
 import ProfilePanel from "./Panels/ProfilePanel";
@@ -71,11 +72,18 @@ const areStringArraysEqual = (left = [], right = []) =>
   JSON.stringify(left) === JSON.stringify(right);
 
 const GCProfile = () => {
+  // ── If a :userId param exists we're viewing someone else's profile ──
+  const { userId: paramUserId } = useParams();
+
   const [posts, setPosts] = useState([]);
   const [chatExpanded, setChatExpanded] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
   const [profileData, setProfileData] = useState(DEFAULT_PROFILE_DATA);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // isOwner is true only when viewing your own profile
+  const isOwner = !paramUserId || (currentUserId && currentUserId === profileData.id);
 
   const mainRef = useRef(null);
   const {
@@ -101,12 +109,34 @@ const GCProfile = () => {
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
       try {
-        const profileResponse = await apiFetch("/api/user");
-        const profileDataResponse = await profileResponse.json();
-        if (!profileResponse.ok) {
-          throw new Error(
-            profileDataResponse.message || "Failed to fetch profile",
-          );
+        // Always fetch the logged-in user first so we know who "self" is
+        const selfResponse = await apiFetch("/api/user");
+        const selfData = await selfResponse.json();
+        if (!selfResponse.ok) {
+          throw new Error(selfData.message || "Failed to fetch current user");
+        }
+        const selfId = selfData.user?._id || selfData.user?.id || null;
+        setCurrentUserId(selfId);
+
+        // If a userId param was provided and it differs from self, fetch that user
+        const targetEndpoint =
+          paramUserId && paramUserId !== selfId
+            ? `/api/user/${paramUserId}`
+            : "/api/user";
+
+        let profileResponse, profileDataResponse;
+
+        if (targetEndpoint === "/api/user") {
+          // Re-use the already-fetched self data
+          profileDataResponse = selfData;
+        } else {
+          profileResponse = await apiFetch(targetEndpoint);
+          profileDataResponse = await profileResponse.json();
+          if (!profileResponse.ok) {
+            throw new Error(
+              profileDataResponse.message || "Failed to fetch profile",
+            );
+          }
         }
 
         const normalizedProfile = normalizeProfileData(
@@ -135,9 +165,12 @@ const GCProfile = () => {
     };
 
     fetchProfileAndPosts();
-  }, []);
+  }, [paramUserId]); // re-run whenever the viewed userId changes
 
   const handleProfileSave = async (updated) => {
+    // Only the owner can save — guard just in case
+    if (!isOwner) return;
+
     const nextProfile = { ...profileData };
 
     if (typeof updated.name === "string" && updated.name.trim()) {
@@ -271,7 +304,7 @@ const GCProfile = () => {
             <ProfilePanel
               profile={profileData}
               onProfileSave={handleProfileSave}
-              isOwner={true}
+              isOwner={isOwner}
             />
           )}
 
@@ -286,10 +319,12 @@ const GCProfile = () => {
                 <PreferencesPanel
                   flavors={profileData.flavors}
                   cookingStyles={profileData.cookingStyles}
+                  isOwner={isOwner}
                 />
                 <AllergensPanel
                   allergens={profileData.allergens}
                   dislikes={profileData.dislikes}
+                  isOwner={isOwner}
                 />
               </>
             )}
@@ -310,7 +345,9 @@ const GCProfile = () => {
 
           {!postsLoading && posts.length === 0 && (
             <p className="text-center text-gray-400 py-16">
-              No posts yet. Share your first recipe!
+              {isOwner
+                ? "No posts yet. Share your first recipe!"
+                : "This user hasn't posted anything yet."}
             </p>
           )}
 
@@ -319,30 +356,38 @@ const GCProfile = () => {
               <PostCard
                 key={post.id}
                 post={post}
-                isOwner
-                onDelete={async (id) => {
-                  try {
-                    const response = await apiFetch(`/api/posts/${id}`, {
-                      method: "DELETE",
-                    });
-                    const data = await response.json();
+                isOwner={isOwner}
+                onDelete={
+                  isOwner
+                    ? async (id) => {
+                        try {
+                          const response = await apiFetch(`/api/posts/${id}`, {
+                            method: "DELETE",
+                          });
+                          const data = await response.json();
 
-                    if (!response.ok) {
-                      throw new Error(data.message || "Failed to delete post");
-                    }
+                          if (!response.ok) {
+                            throw new Error(
+                              data.message || "Failed to delete post",
+                            );
+                          }
 
-                    setPosts((prev) => prev.filter((item) => item.id !== id));
-                    setProfileData((current) => ({
-                      ...current,
-                      postsCount:
-                        typeof data.postsCount === "number"
-                          ? data.postsCount
-                          : Math.max((current.postsCount || 1) - 1, 0),
-                    }));
-                  } catch (error) {
-                    console.error("Failed to delete post:", error);
-                  }
-                }}
+                          setPosts((prev) =>
+                            prev.filter((item) => item.id !== id),
+                          );
+                          setProfileData((current) => ({
+                            ...current,
+                            postsCount:
+                              typeof data.postsCount === "number"
+                                ? data.postsCount
+                                : Math.max((current.postsCount || 1) - 1, 0),
+                          }));
+                        } catch (error) {
+                          console.error("Failed to delete post:", error);
+                        }
+                      }
+                    : undefined
+                }
                 onUpdate={(updated) =>
                   setPosts((prev) => {
                     if (
@@ -354,10 +399,7 @@ const GCProfile = () => {
 
                     let didUpdate = false;
                     const nextPosts = prev.map((item) => {
-                      if (item.id !== updated.id) {
-                        return item;
-                      }
-
+                      if (item.id !== updated.id) return item;
                       didUpdate = true;
                       return updated;
                     });
@@ -383,6 +425,7 @@ const GCProfile = () => {
                 flavors={profileData.flavors}
                 cookingStyles={profileData.cookingStyles}
                 compressed={chatExpanded}
+                isOwner={isOwner}
               />
             )}
           </div>
@@ -394,6 +437,7 @@ const GCProfile = () => {
                 allergens={profileData.allergens}
                 dislikes={profileData.dislikes}
                 compressed={chatExpanded}
+                isOwner={isOwner}
               />
             )}
           </div>
@@ -403,17 +447,22 @@ const GCProfile = () => {
         </div>
       </div>
 
-      <UploadProgressToast
-        uploadState={uploadState === "failed" ? "idle" : uploadState}
-        progress={progress}
-        onDone={resetUpload}
-      />
-      <PostUnderReviewPopup {...reviewPopupProps} />
-      <UploadFailedModal
-        isOpen={uploadState === "failed"}
-        onRetry={retryUpload}
-        onCancel={cancelUpload}
-      />
+      {/* Upload/post toasts — only relevant for owner */}
+      {isOwner && (
+        <>
+          <UploadProgressToast
+            uploadState={uploadState === "failed" ? "idle" : uploadState}
+            progress={progress}
+            onDone={resetUpload}
+          />
+          <PostUnderReviewPopup {...reviewPopupProps} />
+          <UploadFailedModal
+            isOpen={uploadState === "failed"}
+            onRetry={retryUpload}
+            onCancel={cancelUpload}
+          />
+        </>
+      )}
     </div>
   );
 };
