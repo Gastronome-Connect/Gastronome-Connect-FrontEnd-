@@ -6,7 +6,9 @@ import ReportModal from "../Modals/ReportModal";
 
 const buildPreviewText = (recipe) => {
   const rawText = String(
-    recipe.description || recipe.caption || `Tap to view the full recipe from ${recipe.author}.`,
+    recipe.description ||
+      recipe.caption ||
+      `Tap to view the full recipe from ${recipe.author}.`,
   )
     .replace(/\s+/g, " ")
     .trim();
@@ -33,16 +35,16 @@ const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
 
   // Normalize to the post shape CardExpandedView expects.
   const post = {
-    id:          recipe.id ?? recipe._id,
-    _id:         recipe._id,
-    title:       recipe.title ?? recipe.name,
-    caption:     recipe.caption ?? recipe.description ?? "",
-    author:      recipe.author,
+    id: recipe.id ?? recipe._id,
+    _id: recipe._id,
+    title: recipe.title ?? recipe.name,
+    caption: recipe.caption ?? recipe.description ?? "",
+    author: recipe.author,
     sourceLabel: recipe.sourceLabel,
-    avatar:      recipe.avatar ?? recipe.img,
-    date:        recipe.date ?? "",
+    avatar: recipe.avatar ?? recipe.img,
+    date: recipe.date ?? "",
     ingredients: recipe.ingredients ?? [],
-    mediaItems:  recipe.mediaItems ?? [{ type: "image", url: recipe.img }],
+    mediaItems: recipe.mediaItems ?? [{ type: "image", url: recipe.img }],
   };
 
   return (
@@ -66,8 +68,16 @@ const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
 
             {/* Floating Author Badge */}
             <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-white/80 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-full flex items-center gap-1 sm:gap-1.5 border border-white/20 shadow-sm">
-              <User size={8} className="text-[#F57600] sm:hidden" strokeWidth={3} />
-              <User size={10} className="text-[#F57600] hidden sm:block" strokeWidth={3} />
+              <User
+                size={8}
+                className="text-[#F57600] sm:hidden"
+                strokeWidth={3}
+              />
+              <User
+                size={10}
+                className="text-[#F57600] hidden sm:block"
+                strokeWidth={3}
+              />
               <span className="text-[8px] sm:text-[9px] font-black text-gray-700 uppercase tracking-tighter truncate max-w-[60px] sm:max-w-none">
                 {recipe.author}
               </span>
@@ -76,7 +86,11 @@ const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
             {/* Arrow on hover */}
             <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-[#0060A9] p-1.5 sm:p-2 rounded-full text-white opacity-0 -translate-y-2 group-hover/card:opacity-100 group-hover/card:translate-y-0 transition-all duration-300">
               <ArrowUpRight size={11} className="sm:hidden" strokeWidth={3} />
-              <ArrowUpRight size={14} className="hidden sm:block" strokeWidth={3} />
+              <ArrowUpRight
+                size={14}
+                className="hidden sm:block"
+                strokeWidth={3}
+              />
             </div>
           </div>
 

@@ -1,4 +1,12 @@
-import { X, Plus, Play, Image as ImageIcon, Video, Pencil, ChevronLeft } from "lucide-react";
+import {
+  X,
+  Plus,
+  Play,
+  Image as ImageIcon,
+  Video,
+  Pencil,
+  ChevronLeft,
+} from "lucide-react";
 import IngredientInput from "../IngredientsInput";
 
 const TITLE_MAX = 60;
@@ -6,8 +14,10 @@ const TITLE_MAX = 60;
 export default function ComposeStep({
   userName,
   userAvatar,
-  title,          setTitle,
-  postText,       setPostText,
+  title,
+  setTitle,
+  postText,
+  setPostText,
   mediaItems,
   hasMultiple,
   captionedCount,
@@ -32,7 +42,9 @@ export default function ComposeStep({
     >
       {/* Header */}
       <div className="relative px-4 py-3.5 sm:p-5 border-b-2 border-[#F57600] flex justify-center items-center shrink-0">
-        <h2 className="text-base sm:text-xl font-bold text-gray-800">Create Post</h2>
+        <h2 className="text-base sm:text-xl font-bold text-gray-800">
+          Create Post
+        </h2>
         <button
           onClick={onAttemptClose}
           className="absolute right-4 sm:right-5 p-1 rounded-full bg-orange-50 text-[#F57600] hover:bg-orange-100 transition-colors"
@@ -43,7 +55,6 @@ export default function ComposeStep({
 
       {/* Scrollable body */}
       <div className="px-4 py-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
-
         {/* Avatar + username */}
         <div className="flex items-center gap-3 mb-4">
           {userAvatar ? (
@@ -57,7 +68,9 @@ export default function ComposeStep({
               {userName?.[0]?.toUpperCase() ?? "?"}
             </div>
           )}
-          <span className="font-bold text-sm sm:text-base text-gray-800">{userName}</span>
+          <span className="font-bold text-sm sm:text-base text-gray-800">
+            {userName}
+          </span>
         </div>
 
         {/* 1. Title */}
@@ -69,7 +82,9 @@ export default function ComposeStep({
           className="w-full text-sm sm:text-base font-semibold text-gray-800 placeholder-gray-300 border-none focus:ring-0 outline-none"
         />
         <div className="flex justify-end mb-1">
-          <span className={`text-xs font-medium ${title.length >= TITLE_MAX ? "text-red-400" : "text-gray-300"}`}>
+          <span
+            className={`text-xs font-medium ${title.length >= TITLE_MAX ? "text-red-400" : "text-gray-300"}`}
+          >
             {title.length}/{TITLE_MAX}
           </span>
         </div>
@@ -109,12 +124,23 @@ export default function ComposeStep({
                   <X size={12} />
                 </button>
                 {item.type === "image" ? (
-                  <img src={item.url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <div className="relative w-full h-full bg-gray-900">
-                    <video src={item.url} className="w-full h-full object-cover opacity-80" muted />
+                    <video
+                      src={item.url}
+                      className="w-full h-full object-cover opacity-80"
+                      muted
+                    />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Play size={24} className="text-white fill-white opacity-90" />
+                      <Play
+                        size={24}
+                        className="text-white fill-white opacity-90"
+                      />
                     </div>
                   </div>
                 )}
@@ -142,10 +168,14 @@ export default function ComposeStep({
           >
             <div className="flex gap-3">
               <ImageIcon size={24} className="text-[#F57600]" />
-              <Video     size={24} className="text-[#0060A9]" />
+              <Video size={24} className="text-[#0060A9]" />
             </div>
-            <span className="text-sm font-semibold">Add photos &amp; videos</span>
-            <span className="text-xs text-gray-300">PNG, JPEG · All video formats</span>
+            <span className="text-sm font-semibold">
+              Add photos &amp; videos
+            </span>
+            <span className="text-xs text-gray-300">
+              PNG, JPEG · All video formats
+            </span>
           </button>
         )}
 
@@ -162,7 +192,6 @@ export default function ComposeStep({
 
       {/* Footer */}
       <div className="px-4 py-3 sm:p-5 border-t border-gray-100 shrink-0 flex flex-col gap-2 sm:gap-3">
-
         {/* Edit titles & captions — only shown when multiple media uploaded */}
         {hasMultiple && (
           <button
@@ -195,9 +224,10 @@ export default function ComposeStep({
           onClick={onPost}
           disabled={isPostEmpty}
           className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm font-bold shadow transition-all
-            ${isPostEmpty
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white hover:opacity-90 active:scale-[0.98]"
+            ${
+              isPostEmpty
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white hover:opacity-90 active:scale-[0.98]"
             }`}
         >
           Post

@@ -87,7 +87,7 @@ const SkeletonRecommendationCard = () => (
 );
 
 export default function Recommendation() {
-  const scrollRef               = useRef(null);
+  const scrollRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const { isSuppressedByArchive } = useUserLibrary();
@@ -103,7 +103,9 @@ export default function Recommendation() {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(data?.message || "Failed to load daily pick recipes.");
+          throw new Error(
+            data?.message || "Failed to load daily pick recipes.",
+          );
         }
 
         if (!cancelled) {
@@ -135,9 +137,10 @@ export default function Recommendation() {
     if (!scrollRef.current) return;
     const { scrollLeft, clientWidth } = scrollRef.current;
     scrollRef.current.scrollTo({
-      left: direction === "left"
-        ? scrollLeft - clientWidth * 0.8
-        : scrollLeft + clientWidth * 0.8,
+      left:
+        direction === "left"
+          ? scrollLeft - clientWidth * 0.8
+          : scrollLeft + clientWidth * 0.8,
       behavior: "smooth",
     });
   };
@@ -182,9 +185,11 @@ export default function Recommendation() {
                 <SkeletonRecommendationCard key={`skeleton-${i}`} />
               ))
             : visibleRecommendedRecipes.map((recipe, index) => (
-                <RecommendationCard key={recipe.id || `recipe-${recipe.name}-${index}`} recipe={recipe} />
-              ))
-          }
+                <RecommendationCard
+                  key={recipe.id || `recipe-${recipe.name}-${index}`}
+                  recipe={recipe}
+                />
+              ))}
           <div className="min-w-[24px] sm:min-w-[40px] flex-shrink-0" />
         </div>
 

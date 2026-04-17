@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 
 const UserLibraryContext = createContext(null);
 const AUTH_STATE_EVENT = "auth-state-changed";
@@ -6,17 +12,64 @@ const STORAGE_KEY_PREFIX = "gastro";
 const DEFAULT_STORAGE_OWNER = "guest";
 
 const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
-  "is", "it", "its", "this", "that", "i", "my", "we", "you", "he", "she", "they",
-  "was", "are", "be", "been", "as", "by", "from", "up", "out", "so", "if", "do",
-  "not", "no", "can", "has", "have", "had", "will", "just", "also", "very", "into",
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "is",
+  "it",
+  "its",
+  "this",
+  "that",
+  "i",
+  "my",
+  "we",
+  "you",
+  "he",
+  "she",
+  "they",
+  "was",
+  "are",
+  "be",
+  "been",
+  "as",
+  "by",
+  "from",
+  "up",
+  "out",
+  "so",
+  "if",
+  "do",
+  "not",
+  "no",
+  "can",
+  "has",
+  "have",
+  "had",
+  "will",
+  "just",
+  "also",
+  "very",
+  "into",
 ]);
 
 export const extractKeywords = (text = "") => {
   if (!text) return new Set();
   return new Set(
-    text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
-      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word)),
   );
 };
 
@@ -49,10 +102,19 @@ const hasSameCoreContent = (postA, postB) => {
 
   const sameTitle = !!titleA && !!titleB && titleA === titleB;
   const sameDescription = !!descA && !!descB && descA === descB;
-  const titleContains = !!titleA && !!titleB && (titleA.includes(titleB) || titleB.includes(titleA));
-  const descContains = !!descA && !!descB && (descA.includes(descB) || descB.includes(descA));
+  const titleContains =
+    !!titleA &&
+    !!titleB &&
+    (titleA.includes(titleB) || titleB.includes(titleA));
+  const descContains =
+    !!descA && !!descB && (descA.includes(descB) || descB.includes(descA));
 
-  return sameTitle || sameDescription || (titleContains && sameDescription) || (sameTitle && descContains);
+  return (
+    sameTitle ||
+    sameDescription ||
+    (titleContains && sameDescription) ||
+    (sameTitle && descContains)
+  );
 };
 
 export const SIMILARITY_THRESHOLD = 2;
@@ -91,7 +153,10 @@ const loadScopedEntries = (bucket, owner = getStorageOwner()) => {
 
 const saveScopedEntries = (bucket, owner, value) => {
   try {
-    localStorage.setItem(getScopedStorageKey(bucket, owner), JSON.stringify(value));
+    localStorage.setItem(
+      getScopedStorageKey(bucket, owner),
+      JSON.stringify(value),
+    );
   } catch {}
 };
 
@@ -120,18 +185,22 @@ export const normalizeEntry = (raw) => {
     date: raw.date ?? raw.dateCreate ?? new Date().toLocaleDateString(),
     ingredients: raw.ingredients ?? [],
     image: raw.image ?? raw.img ?? raw.mediaItems?.[0]?.url ?? "",
-    mediaItems: raw.mediaItems ?? (raw.image
-      ? [{ type: "image", url: raw.image }]
-      : raw.img
-        ? [{ type: "image", url: raw.img }]
-        : []),
+    mediaItems:
+      raw.mediaItems ??
+      (raw.image
+        ? [{ type: "image", url: raw.image }]
+        : raw.img
+          ? [{ type: "image", url: raw.img }]
+          : []),
     savedAt: raw.savedAt ?? Date.now(),
   };
 };
 
 export const UserLibraryProvider = ({ children }) => {
   const [storageOwner, setStorageOwner] = useState(() => getStorageOwner());
-  const [favorites, setFavorites] = useState(() => loadScopedEntries("favorites"));
+  const [favorites, setFavorites] = useState(() =>
+    loadScopedEntries("favorites"),
+  );
   const [archives, setArchives] = useState(() => loadScopedEntries("archives"));
   const [history, setHistory] = useState(() => loadScopedEntries("history"));
 
@@ -157,7 +226,11 @@ export const UserLibraryProvider = ({ children }) => {
 
   useEffect(() => {
     const handleStorage = (event) => {
-      if (event?.key && event.key !== "userId" && !event.key.startsWith(`${STORAGE_KEY_PREFIX}_`)) {
+      if (
+        event?.key &&
+        event.key !== "userId" &&
+        !event.key.startsWith(`${STORAGE_KEY_PREFIX}_`)
+      ) {
         return;
       }
 
@@ -176,7 +249,7 @@ export const UserLibraryProvider = ({ children }) => {
   const addToFavorites = useCallback((post) => {
     const entry = normalizeEntry(post);
     setFavorites((prev) =>
-      prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev]
+      prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev],
     );
   }, []);
 
@@ -190,7 +263,7 @@ export const UserLibraryProvider = ({ children }) => {
       if (!id) return false;
       return favorites.some((item) => item.id === id);
     },
-    [favorites]
+    [favorites],
   );
 
   const toggleFavorite = useCallback((post) => {
@@ -198,14 +271,14 @@ export const UserLibraryProvider = ({ children }) => {
     setFavorites((prev) =>
       prev.some((item) => item.id === entry.id)
         ? prev.filter((item) => item.id !== entry.id)
-        : [entry, ...prev]
+        : [entry, ...prev],
     );
   }, []);
 
   const addToArchives = useCallback((post) => {
     const entry = normalizeEntry(post);
     setArchives((prev) =>
-      prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev]
+      prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev],
     );
   }, []);
 
@@ -215,7 +288,7 @@ export const UserLibraryProvider = ({ children }) => {
 
   const isArchived = useCallback(
     (id) => archives.some((item) => item.id === id),
-    [archives]
+    [archives],
   );
 
   const isSuppressedByArchive = useCallback(
@@ -225,12 +298,13 @@ export const UserLibraryProvider = ({ children }) => {
 
       if (archives.some((item) => item.id === feedId)) return true;
 
-      return archives.some((archivedPost) =>
-        hasSameCoreContent(archivedPost, feedPost) ||
-        sharedKeywordCount(archivedPost, feedPost) >= SIMILARITY_THRESHOLD
+      return archives.some(
+        (archivedPost) =>
+          hasSameCoreContent(archivedPost, feedPost) ||
+          sharedKeywordCount(archivedPost, feedPost) >= SIMILARITY_THRESHOLD,
       );
     },
-    [archives]
+    [archives],
   );
 
   const addToHistory = useCallback((post) => {
@@ -258,9 +332,21 @@ export const UserLibraryProvider = ({ children }) => {
   return (
     <UserLibraryContext.Provider
       value={{
-        favorites, addToFavorites, removeFromFavorites, isFavorited, toggleFavorite,
-        archives, addToArchives, removeFromArchives, isArchived, isSuppressedByArchive,
-        history, addToHistory, removeFromHistory, restoreHistory, clearHistory,
+        favorites,
+        addToFavorites,
+        removeFromFavorites,
+        isFavorited,
+        toggleFavorite,
+        archives,
+        addToArchives,
+        removeFromArchives,
+        isArchived,
+        isSuppressedByArchive,
+        history,
+        addToHistory,
+        removeFromHistory,
+        restoreHistory,
+        clearHistory,
       }}
     >
       {children}
@@ -270,7 +356,8 @@ export const UserLibraryProvider = ({ children }) => {
 
 export const useUserLibrary = () => {
   const ctx = useContext(UserLibraryContext);
-  if (!ctx) throw new Error("useUserLibrary must be used inside <UserLibraryProvider>");
+  if (!ctx)
+    throw new Error("useUserLibrary must be used inside <UserLibraryProvider>");
   return ctx;
 };
 

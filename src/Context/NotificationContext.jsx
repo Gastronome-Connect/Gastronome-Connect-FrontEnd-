@@ -25,7 +25,8 @@ const SEED_NOTIFICATIONS = [
     id: "notif-1",
     type: "like",
     actorName: "Ariana Cruz",
-    actorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80",
+    actorAvatar:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80",
     actorUsername: "@arianacruz",
     content: 'liked your recipe "Creamy Garlic Pasta".',
     caption: "Your post is getting attention from pasta lovers.",
@@ -41,7 +42,8 @@ const SEED_NOTIFICATIONS = [
     id: "notif-2",
     type: "comment",
     actorName: "Marco Villanueva",
-    actorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
+    actorAvatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
     actorUsername: "@marcov",
     content: 'commented on your post: "This looks restaurant-worthy!"',
     caption: "Tap to view the conversation on your feed.",
@@ -58,9 +60,11 @@ const SEED_NOTIFICATIONS = [
     id: "notif-3",
     type: "reply",
     actorName: "Jamie Flores",
-    actorAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
+    actorAvatar:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
     actorUsername: "@jamief",
-    content: 'replied to your comment: "I used coconut cream and it worked great!"',
+    content:
+      'replied to your comment: "I used coconut cream and it worked great!"',
     caption: "Your discussion keeps growing.",
     timestamp: Date.now() - 1000 * 60 * 58,
     read: true,
@@ -72,7 +76,8 @@ const SEED_NOTIFICATIONS = [
     id: "notif-4",
     type: "follow",
     actorName: "Sofia Dela Peña",
-    actorAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80",
+    actorAvatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80",
     actorUsername: "@sofiacooks",
     content: "started following you.",
     caption: "You have a new foodie follower.",
@@ -86,7 +91,8 @@ const SEED_NOTIFICATIONS = [
     id: "notif-5",
     type: "repost",
     actorName: "Nico Tan",
-    actorAvatar: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=120&q=80",
+    actorAvatar:
+      "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=120&q=80",
     actorUsername: "@nicotan",
     content: 'shared your post "Ultimate Chicken Adobo".',
     caption: "More people can now discover your recipe.",
@@ -123,7 +129,10 @@ const loadNotifications = (owner = getStorageOwner()) => {
 
     const legacyParsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
-      localStorage.setItem(getScopedStorageKey(owner), JSON.stringify(legacyParsed));
+      localStorage.setItem(
+        getScopedStorageKey(owner),
+        JSON.stringify(legacyParsed),
+      );
       localStorage.removeItem(STORAGE_KEY);
       return legacyParsed;
     }
@@ -136,7 +145,10 @@ const loadNotifications = (owner = getStorageOwner()) => {
 
 const persistNotifications = (owner, notifications) => {
   try {
-    localStorage.setItem(getScopedStorageKey(owner), JSON.stringify(notifications));
+    localStorage.setItem(
+      getScopedStorageKey(owner),
+      JSON.stringify(notifications),
+    );
   } catch {}
 };
 
@@ -168,10 +180,17 @@ const normalizeNotification = (notification) => {
       `notif-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
     type: notification.type || "like",
     actorName: notification.actorName || notification.author || "Someone",
-    actorAvatar: notification.actorAvatar || notification.avatar || DEFAULT_AVATAR,
+    actorAvatar:
+      notification.actorAvatar || notification.avatar || DEFAULT_AVATAR,
     actorUsername: notification.actorUsername || "",
-    content: notification.content || notification.caption || "interacted with your post.",
-    caption: notification.caption || notification.content || "There is new activity on your account.",
+    content:
+      notification.content ||
+      notification.caption ||
+      "interacted with your post.",
+    caption:
+      notification.caption ||
+      notification.content ||
+      "There is new activity on your account.",
     timestamp,
     timeAgo: notification.timeAgo || getTimeAgo(timestamp),
     read: Boolean(notification.read),
@@ -182,9 +201,8 @@ const normalizeNotification = (notification) => {
         ? notification.images
         : notification.image
           ? [notification.image]
-          : notification.mediaItems
-            ?.map((item) => item?.url)
-            .filter(Boolean) || [],
+          : notification.mediaItems?.map((item) => item?.url).filter(Boolean) ||
+            [],
     image: notification.image || notification.images?.[0] || FALLBACK_IMAGE,
     metadata: notification.metadata || null,
   };
@@ -193,7 +211,7 @@ const normalizeNotification = (notification) => {
 export function NotificationProvider({ children }) {
   const [storageOwner, setStorageOwner] = useState(() => getStorageOwner());
   const [notifications, setNotifications] = useState(() =>
-    loadNotifications().map(normalizeNotification)
+    loadNotifications().map(normalizeNotification),
   );
   const [popupQueue, setPopupQueue] = useState([]);
   const hydratedRef = useRef(false);
@@ -212,7 +230,11 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     const handleStorage = (event) => {
-      if (event?.key && event.key !== "userId" && !event.key.startsWith(STORAGE_KEY)) {
+      if (
+        event?.key &&
+        event.key !== "userId" &&
+        !event.key.startsWith(STORAGE_KEY)
+      ) {
         return;
       }
 
@@ -241,7 +263,9 @@ export function NotificationProvider({ children }) {
 
     setPopupQueue((prev) => {
       const existingIds = new Set(prev.map((item) => item.id));
-      const additions = unreadVisible.filter((item) => !existingIds.has(item.id));
+      const additions = unreadVisible.filter(
+        (item) => !existingIds.has(item.id),
+      );
       return additions.length > 0 ? [...additions, ...prev].slice(0, 4) : prev;
     });
   }, [notifications]);
@@ -255,7 +279,9 @@ export function NotificationProvider({ children }) {
     });
 
     setNotifications((prev) => [entry, ...prev]);
-    setPopupQueue((prev) => [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, 4));
+    setPopupQueue((prev) =>
+      [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, 4),
+    );
 
     return entry;
   }, []);
@@ -263,14 +289,14 @@ export function NotificationProvider({ children }) {
   const markAsRead = useCallback((id) => {
     setNotifications((prev) =>
       prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
     );
   }, []);
 
   const markAllAsRead = useCallback(() => {
     setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
+      prev.map((notification) => ({ ...notification, read: true })),
     );
     setPopupQueue([]);
   }, []);
@@ -278,31 +304,43 @@ export function NotificationProvider({ children }) {
   const hideNotification = useCallback((id) => {
     setNotifications((prev) =>
       prev.map((notification) =>
-        notification.id === id ? { ...notification, hidden: true, read: true } : notification
-      )
+        notification.id === id
+          ? { ...notification, hidden: true, read: true }
+          : notification,
+      ),
     );
-    setPopupQueue((prev) => prev.filter((notification) => notification.id !== id));
+    setPopupQueue((prev) =>
+      prev.filter((notification) => notification.id !== id),
+    );
   }, []);
 
   const unhideNotification = useCallback((id) => {
     setNotifications((prev) =>
       prev.map((notification) =>
-        notification.id === id ? { ...notification, hidden: false } : notification
-      )
+        notification.id === id
+          ? { ...notification, hidden: false }
+          : notification,
+      ),
     );
   }, []);
 
   const deleteNotification = useCallback((id) => {
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
-    setPopupQueue((prev) => prev.filter((notification) => notification.id !== id));
+    setNotifications((prev) =>
+      prev.filter((notification) => notification.id !== id),
+    );
+    setPopupQueue((prev) =>
+      prev.filter((notification) => notification.id !== id),
+    );
   }, []);
 
   const dismissPopup = useCallback((id) => {
-    setPopupQueue((prev) => prev.filter((notification) => notification.id !== id));
+    setPopupQueue((prev) =>
+      prev.filter((notification) => notification.id !== id),
+    );
     setNotifications((prev) =>
       prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
     );
   }, []);
 
@@ -311,17 +349,21 @@ export function NotificationProvider({ children }) {
       {
         type: "like",
         actorName: "Ella Reyes",
-        actorAvatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=120&q=80",
+        actorAvatar:
+          "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=120&q=80",
         actorUsername: "@ellareyes",
         content: 'liked your recipe "Spicy Tuna Pasta".',
         caption: "Your recipe just got another heart.",
         targetRoute: "/feed",
-        images: ["https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=600&q=80"],
+        images: [
+          "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=600&q=80",
+        ],
       },
       {
         type: "comment",
         actorName: "Paolo Santos",
-        actorAvatar: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=120&q=80",
+        actorAvatar:
+          "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=120&q=80",
         actorUsername: "@paolos",
         content: 'commented: "Can you share the full ingredient list?"',
         caption: "Someone wants to cook your recipe too.",
@@ -330,16 +372,18 @@ export function NotificationProvider({ children }) {
       {
         type: "reply",
         actorName: "Kim Alvarez",
-        actorAvatar: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=120&q=80",
+        actorAvatar:
+          "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=120&q=80",
         actorUsername: "@kimalvarez",
-        content: 'replied to your thread about adobo.',
+        content: "replied to your thread about adobo.",
         caption: "Your conversation has a new reply.",
         targetRoute: "/feed",
       },
       {
         type: "follow",
         actorName: "David Ong",
-        actorAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
+        actorAvatar:
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
         actorUsername: "@davidong",
         content: "started following you.",
         caption: "A new foodie joined your community.",
@@ -353,17 +397,18 @@ export function NotificationProvider({ children }) {
 
   const visibleNotifications = useMemo(
     () => notifications.filter((notification) => !notification.hidden),
-    [notifications]
+    [notifications],
   );
 
   const hiddenNotifications = useMemo(
     () => notifications.filter((notification) => notification.hidden),
-    [notifications]
+    [notifications],
   );
 
   const unreadCount = useMemo(
-    () => visibleNotifications.filter((notification) => !notification.read).length,
-    [visibleNotifications]
+    () =>
+      visibleNotifications.filter((notification) => !notification.read).length,
+    [visibleNotifications],
   );
 
   const value = useMemo(
@@ -397,7 +442,7 @@ export function NotificationProvider({ children }) {
       unhideNotification,
       deleteNotification,
       dismissPopup,
-    ]
+    ],
   );
 
   return (
@@ -411,7 +456,9 @@ export const useNotifications = () => {
   const context = useContext(NotificationContext);
 
   if (!context) {
-    throw new Error("useNotifications must be used inside <NotificationProvider>");
+    throw new Error(
+      "useNotifications must be used inside <NotificationProvider>",
+    );
   }
 
   return context;

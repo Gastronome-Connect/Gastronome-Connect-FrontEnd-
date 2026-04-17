@@ -38,8 +38,13 @@ function loadSessions(owner = getStorageOwner()) {
 
 function saveSessions(owner, sessions) {
   try {
-    const nonEmptySessions = sessions.filter((session) => session.messages.length > 0);
-    localStorage.setItem(getScopedStorageKey(owner), JSON.stringify(nonEmptySessions));
+    const nonEmptySessions = sessions.filter(
+      (session) => session.messages.length > 0,
+    );
+    localStorage.setItem(
+      getScopedStorageKey(owner),
+      JSON.stringify(nonEmptySessions),
+    );
   } catch {}
 }
 
@@ -98,7 +103,9 @@ function reducer(state, action) {
     case "DELETE_SESSION":
       return {
         ...state,
-        sessions: state.sessions.filter((session) => session.id !== action.payload),
+        sessions: state.sessions.filter(
+          (session) => session.id !== action.payload,
+        ),
         activeSessionId:
           state.activeSessionId === action.payload
             ? null
@@ -115,9 +122,11 @@ function reducer(state, action) {
             : {
                 ...session,
                 messages: session.messages.map((message) =>
-                  message.id !== messageId ? message : { ...message, isNew: false }
+                  message.id !== messageId
+                    ? message
+                    : { ...message, isNew: false },
                 ),
-              }
+              },
         ),
       };
     }
@@ -142,7 +151,11 @@ export function ChatProvider({ children }) {
     };
 
     const handleStorage = (event) => {
-      if (event?.key && event.key !== "userId" && !event.key.startsWith(STORAGE_KEY)) {
+      if (
+        event?.key &&
+        event.key !== "userId" &&
+        !event.key.startsWith(STORAGE_KEY)
+      ) {
         return;
       }
 
@@ -159,7 +172,8 @@ export function ChatProvider({ children }) {
   }, []);
 
   const activeSession =
-    state.sessions.find((session) => session.id === state.activeSessionId) || null;
+    state.sessions.find((session) => session.id === state.activeSessionId) ||
+    null;
 
   return (
     <ChatContext.Provider value={{ ...state, activeSession, dispatch }}>
@@ -170,6 +184,7 @@ export function ChatProvider({ children }) {
 
 export function useChatContext() {
   const ctx = useContext(ChatContext);
-  if (!ctx) throw new Error("useChatContext must be used inside <ChatProvider>");
+  if (!ctx)
+    throw new Error("useChatContext must be used inside <ChatProvider>");
   return ctx;
 }
