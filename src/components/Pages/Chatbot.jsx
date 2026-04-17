@@ -104,6 +104,14 @@ export default function ChatbotPage() {
               Gastro AI Chat
             </h1>
             <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
+            <button
+              onClick={handleNewChat}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white text-xs font-bold hover:opacity-90 transition-all flex-shrink-0"
+              title="Start a new conversation"
+            >
+              <Plus size={14} />
+              New Chat
+            </button>
           </div>
 
           <div className="flex-1 min-h-0 bg-white mx-3 rounded-2xl overflow-hidden flex flex-col mb-2">
@@ -127,7 +135,7 @@ export default function ChatbotPage() {
           <div className="flex flex-col gap-4 min-w-0 min-h-0">
             <div className="flex items-center gap-4 flex-shrink-0">
               <h1 className="text-3xl font-black text-gray-800 tracking-tight">
-                AI Chat
+                Gastro AI Chat
               </h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
               <button

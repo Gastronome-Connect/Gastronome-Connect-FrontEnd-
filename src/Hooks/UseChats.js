@@ -46,6 +46,10 @@ export function useChat() {
       if (!text.trim() || isBotTyping) return;
 
       let sessionId = activeSessionId;
+      const history = (activeSession?.messages || []).map((message) => ({
+        role: message.role === "bot" ? "assistant" : "user",
+        content: message.text,
+      }));
 
       if (!sessionId) {
         const newId = Date.now().toString();
@@ -70,9 +74,16 @@ export function useChat() {
       });
 
       setIsBotTyping(true);
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       try {
-        const botMsg = await sendMessageToBot(text, formatTime);
+        const botMsg = await sendMessageToBot(
+          text,
+          formatTime,
+          history,
+          abortController.signal,
+        );
 
         dispatch({
           type: "ADD_MESSAGE",
@@ -88,12 +99,31 @@ export function useChat() {
       } catch (err) {
         if (err.name !== "AbortError") {
           console.error("Bot response error:", err);
+
+          dispatch({
+            type: "ADD_MESSAGE",
+            payload: {
+              sessionId,
+              message: {
+                id: (Date.now() + 1).toString(),
+                role: "bot",
+                type: "text",
+                text:
+                  err.message ||
+                  "I couldn't reach Gastro AI right now. Please try again.",
+                time: formatTime(),
+              },
+            },
+          });
         }
       } finally {
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = null;
+        }
         setIsBotTyping(false);
       }
     },
-    [activeSessionId, dispatch, isBotTyping],
+    [activeSession?.messages, activeSessionId, dispatch, isBotTyping],
   );
 
   return {

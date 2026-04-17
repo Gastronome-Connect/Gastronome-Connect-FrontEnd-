@@ -138,10 +138,15 @@ export const router = createBrowserRouter([
       { path: "searchbar", Component: SearchBar },
       { path: "navigationbar", Component: NavigationBar },
 
-      {
-        path: "profile",
-        Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
-      },
+{
+  path: "profile",
+  Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
+},
+{
+  path: "profile/:userId",
+  Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
+},
+      
       {
         path: "history",
         Component: () => <ProtectedRoute Component={History} blockAdmin={true} />,

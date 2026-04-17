@@ -1,31 +1,55 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Flame } from "lucide-react";
 import PopularRecipeCard from "../Cards/PopularRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
+import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
-import Karekare  from "../Assets/Kare-kare.png";
-import Sisig     from "../Assets/Sisig.png";
-import Adobo     from "../Assets/Adobo.png";
-import Lechon    from "../Assets/Lechong Kawali.png";
-import Sinigang  from "../Assets/Sinigang.png";
-import Bicol     from "../Assets/Bicol Express.png";
-import Pancit    from "../Assets/Pancit Canton.png";
-import Laing     from "../Assets/Laing.png";
-import Binangkal from "../Assets/Binangkal.png";
+const getSourceLabel = (sourceUrl) => {
+  if (!sourceUrl) {
+    return "";
+  }
 
-const recipes = [
-  { id: "popular-kare-kare", name: "Kare-kare", author: "Lola Rosa", img: Karekare },
-  { id: "popular-sisig", name: "Sisig", author: "Aling Lucing", img: Sisig },
-  { id: "popular-adobo", name: "Adobo", author: "Chef Boy Logro", img: Adobo },
-  { id: "popular-lechong-kawali", name: "Lechong Kawali", author: "Mang Tomas", img: Lechon },
-  { id: "popular-sinigang", name: "Sinigang", author: "Nanay Maria", img: Sinigang },
-  { id: "popular-bicol-express", name: "Bicol Express", author: "Bicol's Finest", img: Bicol },
-  { id: "popular-pancit-canton", name: "Pancit Canton", author: "Lolo Pepe", img: Pancit },
-  { id: "popular-laing", name: "Laing", author: "Gata Master", img: Laing },
-  { id: "popular-binangkal", name: "Binangkal", author: "Cebu Sweets", img: Binangkal },
-  { id: "popular-lechon-manok", name: "Lechon Manok", author: "Andok's Style", img: Lechon },
-];
+  try {
+    return new URL(sourceUrl).hostname.replace(/^www\./i, "");
+  } catch {
+    return sourceUrl;
+  }
+};
+
+const mapWeeklyRecipe = (recipe) => {
+  const image = resolveUploadUrl(recipe?.recipeImg || recipe?.image || "");
+  const instructions = recipe?.instructions || recipe?.description || "";
+  const sourceLabel = getSourceLabel(recipe?.sourceUrl || "");
+
+  return {
+    id: recipe?.id || recipe?._id,
+    _id: recipe?._id || recipe?.id,
+    name: recipe?.recipeName || recipe?.title || "Recipe",
+    title: recipe?.recipeName || recipe?.title || "Recipe",
+    author: recipe?.sourceName || recipe?.author || "Spoonacular",
+    sourceLabel,
+    img: image,
+    image,
+    avatar: image,
+    caption: instructions,
+    description: instructions,
+    ingredients: Array.isArray(recipe?.ingredients) ? recipe.ingredients : [],
+    date: recipe?.weeklyTop?.syncedAt
+      ? new Date(recipe.weeklyTop.syncedAt).toLocaleDateString()
+      : "",
+    mediaItems: image
+      ? [
+          {
+            type: "image",
+            url: image,
+            title: recipe?.recipeName || recipe?.title || "Recipe",
+            caption: instructions,
+          },
+        ]
+      : [],
+  };
+};
 
 // Skeleton row that mirrors PopularRecipeCard's layout
 const SkeletonPopularRow = () => (
@@ -44,22 +68,56 @@ const SkeletonPopularRow = () => (
 
 export default function PopularRecipes() {
   const [isLoading, setIsLoading] = useState(true);
+  const [recipes, setRecipes] = useState([]);
   const { isSuppressedByArchive } = useUserLibrary();
 
-  // Simulate data fetch — replace with real API call if needed
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    const loadWeeklyRecipes = async () => {
+      setIsLoading(true);
+
+      try {
+        const response = await apiFetch("/api/recipes/weekly-top");
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message || "Failed to load weekly top recipes.",
+          );
+        }
+
+        if (!cancelled) {
+          setRecipes(
+            Array.isArray(data?.recipes)
+              ? data.recipes.map(mapWeeklyRecipe)
+              : [],
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecipes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadWeeklyRecipes();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const visibleRecipes = useMemo(
-    () => recipes.filter((recipe) => !isSuppressedByArchive(recipe)),
-    [isSuppressedByArchive]
+  const visibleRecipes = recipes.filter(
+    (recipe) => !isSuppressedByArchive(recipe),
   );
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 flex flex-col h-full min-h-0 shadow-[0_20px_40px_-15px_rgba(0,96,169,0.08)] relative overflow-hidden">
-
       <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#0060A9]/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#F57600]/5 rounded-full blur-[80px] pointer-events-none" />
 
@@ -81,19 +139,35 @@ export default function PopularRecipes() {
       {/* List */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 sm:pr-3 custom-scrollbar space-y-2 sm:space-y-3 relative z-10">
         {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => <SkeletonPopularRow key={i} />)
-          : visibleRecipes.map((recipe, index) => (
-              <PopularRecipeCard key={index} recipe={recipe} index={index} />
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonPopularRow key={i} />
             ))
-        }
+          : visibleRecipes.map((recipe, index) => (
+              <PopularRecipeCard
+                key={recipe.id || recipe._id || index}
+                recipe={recipe}
+                index={index}
+              />
+            ))}
       </div>
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 20px; }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #CBD5E1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #0060A9; }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #0060a9;
+        }
       `}</style>
     </div>
   );
