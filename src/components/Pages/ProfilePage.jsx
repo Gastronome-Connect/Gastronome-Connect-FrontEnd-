@@ -67,6 +67,11 @@ const dataUrlToFile = async (dataUrl) => {
 const areStringArraysEqual = (left = [], right = []) =>
   JSON.stringify(left) === JSON.stringify(right);
 
+const withPostsCount = (profile, posts) => ({
+  ...profile,
+  postsCount: Array.isArray(posts) ? posts.length : 0,
+});
+
 const GCProfile = () => {
   const [posts, setPosts] = useState([]);
   const [chatExpanded, setChatExpanded] = useState(false);
@@ -85,7 +90,13 @@ const GCProfile = () => {
   } = useUpload();
 
   const handleNewPost = (newPost) => {
-    startUpload(newPost, (posted) => setPosts((prev) => [posted, ...prev]));
+    startUpload(newPost, (posted) => {
+      setPosts((prev) => {
+        const nextPosts = [posted, ...prev];
+        setProfileData((current) => withPostsCount(current, nextPosts));
+        return nextPosts;
+      });
+    });
   };
 
   useEffect(() => {
@@ -114,7 +125,9 @@ const GCProfile = () => {
           buildApiUrl(`/api/posts?userId=${normalizedProfile.id}`),
         );
         const postsData = await postsResponse.json();
-        setPosts(Array.isArray(postsData) ? postsData : []);
+        const normalizedPosts = Array.isArray(postsData) ? postsData : [];
+        setPosts(normalizedPosts);
+        setProfileData((current) => withPostsCount(current, normalizedPosts));
       } catch (error) {
         console.error("Failed to fetch profile or posts:", error);
       } finally {
@@ -303,9 +316,32 @@ const GCProfile = () => {
                 key={post.id}
                 post={post}
                 isOwner
-                onDelete={(id) =>
-                  setPosts((prev) => prev.filter((item) => item.id !== id))
-                }
+                onDelete={async (id) => {
+                  try {
+                    const response = await apiFetch(`/api/posts/${id}`, {
+                      method: "DELETE",
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                      throw new Error(data.message || "Failed to delete post");
+                    }
+
+                    setPosts((prev) => {
+                      const nextPosts = prev.filter((item) => item.id !== id);
+                      setProfileData((current) => ({
+                        ...withPostsCount(current, nextPosts),
+                        postsCount:
+                          typeof data.postsCount === "number"
+                            ? data.postsCount
+                            : nextPosts.length,
+                      }));
+                      return nextPosts;
+                    });
+                  } catch (error) {
+                    console.error("Failed to delete post:", error);
+                  }
+                }}
                 onUpdate={(updated) =>
                   setPosts((prev) =>
                     prev.map((item) =>
