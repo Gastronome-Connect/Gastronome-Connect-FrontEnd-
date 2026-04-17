@@ -1,12 +1,34 @@
 import React, { forwardRef } from "react";
 import { motion } from "framer-motion";
-import { Trash2, CheckCircle, AlertTriangle, MessageSquare, CornerDownRight } from "lucide-react";
+import {
+  Trash2,
+  CheckCircle,
+  AlertTriangle,
+  MessageSquare,
+  CornerDownRight,
+} from "lucide-react";
 
 const REASON_STYLES = {
-  "Harassment":        { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-100" },
-  "Spam":              { bg: "bg-orange-50", text: "text-[#F57600]",  border: "border-orange-100" },
-  "Hate Speech":       { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-100" },
-  "False Information": { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-100" },
+  Harassment: {
+    bg: "bg-red-50",
+    text: "text-red-600",
+    border: "border-red-100",
+  },
+  Spam: {
+    bg: "bg-orange-50",
+    text: "text-[#F57600]",
+    border: "border-orange-100",
+  },
+  "Hate Speech": {
+    bg: "bg-red-50",
+    text: "text-red-600",
+    border: "border-red-100",
+  },
+  "False Information": {
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    border: "border-yellow-100",
+  },
 };
 
 /**
@@ -20,7 +42,11 @@ const ReportedCommentCard = forwardRef(function ReportedCommentCard(
   { item, onKeep, onRemove },
   ref,
 ) {
-  const s = REASON_STYLES[item.category] ?? { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-100" };
+  const s = REASON_STYLES[item.category] ?? {
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+    border: "border-gray-100",
+  };
   const isReply = item.type === "reply";
 
   return (
@@ -45,11 +71,19 @@ const ReportedCommentCard = forwardRef(function ReportedCommentCard(
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h4 className="text-sm font-black text-[#0060A9] truncate">{item.author}</h4>
+                <h4 className="text-sm font-black text-[#0060A9] truncate">
+                  {item.author}
+                </h4>
                 {/* Comment / Reply badge */}
-                <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5
-                  ${isReply ? "bg-blue-50 text-[#0060A9]" : "bg-gray-100 text-gray-500"}`}>
-                  {isReply ? <CornerDownRight size={9} /> : <MessageSquare size={9} />}
+                <span
+                  className={`shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5
+                  ${isReply ? "bg-blue-50 text-[#0060A9]" : "bg-gray-100 text-gray-500"}`}
+                >
+                  {isReply ? (
+                    <CornerDownRight size={9} />
+                  ) : (
+                    <MessageSquare size={9} />
+                  )}
                   {isReply ? "Reply" : "Comment"}
                 </span>
               </div>
@@ -64,21 +98,28 @@ const ReportedCommentCard = forwardRef(function ReportedCommentCard(
         </div>
 
         {/* Category badge */}
-        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider mb-2 ${s.bg} ${s.text} ${s.border}`}>
+        <div
+          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider mb-2 ${s.bg} ${s.text} ${s.border}`}
+        >
           <AlertTriangle size={10} />
           {item.category}
         </div>
 
         {/* Reported by */}
-{item.detail && (
-  <p className="text-[10px] text-gray-400 font-semibold mb-2">
-    Reason: <span className="text-gray-600 font-medium italic">{item.detail}</span>
-  </p>
-)}
+        {item.detail && (
+          <p className="text-[10px] text-gray-400 font-semibold mb-2">
+            Reason:{" "}
+            <span className="text-gray-600 font-medium italic">
+              {item.detail}
+            </span>
+          </p>
+        )}
 
         {/* Quoted text */}
         <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-          <p className="text-xs text-gray-700 leading-relaxed italic">"{item.text}"</p>
+          <p className="text-xs text-gray-700 leading-relaxed italic">
+            "{item.text}"
+          </p>
         </div>
 
         {/* Actions */}

@@ -76,7 +76,9 @@ export default function ChatbotPage() {
     cancelUpload,
     resetUpload,
   } = useUpload();
-  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+  });
 
   useEffect(() => {
     if (location.state?.prefill) {

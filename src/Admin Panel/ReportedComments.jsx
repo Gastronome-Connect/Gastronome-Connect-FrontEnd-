@@ -79,7 +79,10 @@ export default function ReportedComments() {
         notes: "Approved by admin.",
       });
       setItems((current) =>
-        current.filter((entry) => (entry.commentId || entry.id) !== (item.commentId || item.id)),
+        current.filter(
+          (entry) =>
+            (entry.commentId || entry.id) !== (item.commentId || item.id),
+        ),
       );
     } catch (err) {
       setError("Failed to approve flagged comment.");
@@ -96,7 +99,10 @@ export default function ReportedComments() {
         notes: "Rejected by admin.",
       });
       setItems((current) =>
-        current.filter((entry) => (entry.commentId || entry.id) !== (item.commentId || item.id)),
+        current.filter(
+          (entry) =>
+            (entry.commentId || entry.id) !== (item.commentId || item.id),
+        ),
       );
     } catch (err) {
       setError("Failed to reject flagged comment.");
@@ -219,35 +225,35 @@ export default function ReportedComments() {
           <SkeletonAdminCardList count={5} />
         ) : (
           <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <AnimatePresence mode="popLayout">
-              {filtered.map((item) => (
-                <ReportedCommentCard
-                  key={item.id}
-                  item={item}
-                  onKeep={() => handleKeep(item)}
-                  onRemove={() => handleRemove(item)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((item) => (
+                  <ReportedCommentCard
+                    key={item.id}
+                    item={item}
+                    onKeep={() => handleKeep(item)}
+                    onRemove={() => handleRemove(item)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
 
-          {filtered.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16"
-            >
-              <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                <MessageSquareWarning size={32} className="text-gray-400" />
-              </div>
-              <p className="text-gray-400 font-bold">
-                {items.length === 0
-                  ? "No reported comments yet — they'll appear here when users flag content."
-                  : "No reported comments match your search or filter."}
-              </p>
-            </motion.div>
-          )}
+            {filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquareWarning size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-400 font-bold">
+                  {items.length === 0
+                    ? "No reported comments yet — they'll appear here when users flag content."
+                    : "No reported comments match your search or filter."}
+                </p>
+              </motion.div>
+            )}
           </>
         )}
       </motion.div>

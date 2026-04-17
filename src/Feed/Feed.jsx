@@ -258,9 +258,7 @@ export default function GCFeed() {
         notifications={popupQueue}
         onDismiss={dismissPopup}
       />
-      <PostUnderReviewPopup
-        {...reviewPopupProps}
-      />
+      <PostUnderReviewPopup {...reviewPopupProps} />
       <UploadProgressToast
         uploadState={uploadState === "failed" ? "idle" : uploadState}
         progress={progress}

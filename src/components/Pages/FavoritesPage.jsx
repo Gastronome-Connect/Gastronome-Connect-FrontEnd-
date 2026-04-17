@@ -6,38 +6,47 @@ import { AnimatePresence } from "framer-motion";
 import GastroLogo from "../Assets/GastroLogo.png";
 import { HiChevronDown, HiChevronLeft, HiChevronRight } from "react-icons/hi";
 import UploadProgressToast from "../Toast/UploadProgressToast";
-import UploadFailedModal   from "../Modals/Create Post Components/UploadFailedModal";
-import useUpload           from "../../Hooks/UseUpload";
+import UploadFailedModal from "../Modals/Create Post Components/UploadFailedModal";
+import useUpload from "../../Hooks/UseUpload";
 import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
 import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
-import SkeletonRecipeGrid  from "../Skeletons/SkeletonRecipeGrid";
-import { useUserLibrary }  from "../../Context/UserLibraryContext";
+import SkeletonRecipeGrid from "../Skeletons/SkeletonRecipeGrid";
+import { useUserLibrary } from "../../Context/UserLibraryContext";
 
 const SORT_OPTIONS = [
   { value: "recent", label: "Most Recent" },
   { value: "oldest", label: "Oldest First" },
-  { value: "az",     label: "A → Z" },
-  { value: "za",     label: "Z → A" },
+  { value: "az", label: "A → Z" },
+  { value: "za", label: "Z → A" },
 ];
 
 const ITEMS_PER_PAGE = 10;
 
 const FavoritesPage = () => {
   const [isCollapsed, setIsCollapsed] = useState(
-    () => localStorage.getItem("sidebar-collapsed") === "true"
+    () => localStorage.getItem("sidebar-collapsed") === "true",
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy]           = useState("recent");
-  const [sortOpen, setSortOpen]       = useState(false);
+  const [sortBy, setSortBy] = useState("recent");
+  const [sortOpen, setSortOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   // Brief loading shimmer on first mount
-  const [isLoading, setIsLoading]     = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const sortRef = useRef(null);
 
   const { favorites, removeFromFavorites } = useUserLibrary();
 
-  const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
-  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
+  const {
+    uploadState,
+    progress,
+    startUpload,
+    retryUpload,
+    cancelUpload,
+    resetUpload,
+  } = useUpload();
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
@@ -45,14 +54,16 @@ const FavoritesPage = () => {
   }, []);
 
   useEffect(() => {
-    const handler = () => setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
+    const handler = () =>
+      setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
     window.addEventListener("sidebarStateChange", handler);
     return () => window.removeEventListener("sidebarStateChange", handler);
   }, []);
 
   useEffect(() => {
     const handler = (e) => {
-      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+      if (sortRef.current && !sortRef.current.contains(e.target))
+        setSortOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -63,36 +74,44 @@ const FavoritesPage = () => {
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-list = list.filter((r) => {
-  const ingredientMatch = Array.isArray(r.ingredients)
-    ? r.ingredients.some((ing) => {
-        const name = typeof ing === "string" ? ing : ing?.name ?? "";
-        return name.toLowerCase().includes(q);
-      })
-    : false;
+      list = list.filter((r) => {
+        const ingredientMatch = Array.isArray(r.ingredients)
+          ? r.ingredients.some((ing) => {
+              const name = typeof ing === "string" ? ing : (ing?.name ?? "");
+              return name.toLowerCase().includes(q);
+            })
+          : false;
 
-  return (
-    r.title?.toLowerCase().includes(q) ||
-    r.caption?.toLowerCase().includes(q) ||
-    r.description?.toLowerCase().includes(q) ||
-    r.author?.toLowerCase().includes(q) ||
-    ingredientMatch
-  );
-});
+        return (
+          r.title?.toLowerCase().includes(q) ||
+          r.caption?.toLowerCase().includes(q) ||
+          r.description?.toLowerCase().includes(q) ||
+          r.author?.toLowerCase().includes(q) ||
+          ingredientMatch
+        );
+      });
     }
     switch (sortBy) {
-      case "oldest": return list.sort((a, b) => a.savedAt - b.savedAt);
-      case "az":     return list.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
-      case "za":     return list.sort((a, b) => (b.title ?? "").localeCompare(a.title ?? ""));
-      default:       return list.sort((a, b) => b.savedAt - a.savedAt);
+      case "oldest":
+        return list.sort((a, b) => a.savedAt - b.savedAt);
+      case "az":
+        return list.sort((a, b) =>
+          (a.title ?? "").localeCompare(b.title ?? ""),
+        );
+      case "za":
+        return list.sort((a, b) =>
+          (b.title ?? "").localeCompare(a.title ?? ""),
+        );
+      default:
+        return list.sort((a, b) => b.savedAt - a.savedAt);
     }
   }, [favorites, sortBy, searchQuery]);
 
-  const isEmpty    = !isLoading && sortedRecipes.length === 0;
+  const isEmpty = !isLoading && sortedRecipes.length === 0;
   const totalPages = Math.ceil(sortedRecipes.length / ITEMS_PER_PAGE);
   const paginatedRecipes = sortedRecipes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   useEffect(() => {
@@ -101,18 +120,28 @@ list = list.filter((r) => {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] overflow-x-hidden">
-      <aside className={`fixed inset-y-0 left-0 z-40 hidden lg:block transition-all duration-300 ease-in-out bg-white shadow-xl ${isCollapsed ? "w-[80px]" : "w-[288px]"}`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden lg:block transition-all duration-300 ease-in-out bg-white shadow-xl ${isCollapsed ? "w-[80px]" : "w-[288px]"}`}
+      >
         <Sidebar onNewPost={handleNewPost} />
       </aside>
-      <div className="lg:hidden"><Sidebar onNewPost={handleNewPost} /></div>
+      <div className="lg:hidden">
+        <Sidebar onNewPost={handleNewPost} />
+      </div>
 
-      <main className={`flex-1 transition-all duration-300 ease-in-out p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 ${isCollapsed ? "lg:ml-[80px]" : "lg:ml-[288px]"}`}>
-        <div className="max-w-[1400px] mx-auto flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
-
+      <main
+        className={`flex-1 transition-all duration-300 ease-in-out p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 ${isCollapsed ? "lg:ml-[80px]" : "lg:ml-[288px]"}`}
+      >
+        <div
+          className="max-w-[1400px] mx-auto flex flex-col"
+          style={{ minHeight: "calc(100vh - 64px)" }}
+        >
           {/* Header */}
           <header className="mb-4 shrink-0">
             <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">Favorites</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">
+                Favorites
+              </h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
               {favorites.length > 0 && (
                 <span className="text-xs font-bold text-[#F57600] bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-full">
@@ -126,7 +155,10 @@ list = list.filter((r) => {
                 <SearchBar
                   placeholder="Search your favorites..."
                   value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
               <div className="relative self-end sm:self-auto" ref={sortRef}>
@@ -135,20 +167,32 @@ list = list.filter((r) => {
                   className={`flex items-center gap-2 bg-white border rounded-xl pl-3 sm:pl-4 pr-2 sm:pr-3 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-gray-700 shadow-sm transition-all w-36 sm:w-44 justify-between
                     ${sortOpen ? "border-[#F57600] ring-2 sm:ring-4 ring-orange-100 text-[#F57600]" : "border-gray-200 hover:border-orange-300"}`}
                 >
-                  <span>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort"}</span>
-                  <HiChevronDown size={14} className={`transition-transform duration-200 text-[#F57600] ${sortOpen ? "rotate-180" : ""}`} />
+                  <span>
+                    {SORT_OPTIONS.find((o) => o.value === sortBy)?.label ??
+                      "Sort"}
+                  </span>
+                  <HiChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 text-[#F57600] ${sortOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
                 {sortOpen && (
                   <div className="absolute right-0 mt-1.5 w-36 sm:w-44 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
                     {SORT_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}
-                        onClick={() => { setSortBy(opt.value); setSortOpen(false); setCurrentPage(1); }}
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setSortOpen(false);
+                          setCurrentPage(1);
+                        }}
                         className={`w-full flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition-colors
                           ${sortBy === opt.value ? "bg-orange-50 text-[#F57600]" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                       >
                         <span>{opt.label}</span>
-                        {sortBy === opt.value && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#F57600]" />}
+                        {sortBy === opt.value && (
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#F57600]" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -163,13 +207,20 @@ list = list.filter((r) => {
 
             {isEmpty && (
               <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
-                <img src={GastroLogo} alt="" aria-hidden="true" className="w-40 sm:w-56 lg:w-64 h-40 sm:h-56 lg:h-64 object-contain opacity-90" />
+                <img
+                  src={GastroLogo}
+                  alt=""
+                  aria-hidden="true"
+                  className="w-40 sm:w-56 lg:w-64 h-40 sm:h-56 lg:h-64 object-contain opacity-90"
+                />
                 <div className="text-center mt-2">
                   <p className="text-lg sm:text-xl font-black text-gray-700 tracking-tight">
                     {searchQuery ? "No results found" : "No Favorites Yet"}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-[200px] sm:max-w-[240px] mx-auto leading-relaxed">
-                    {searchQuery ? "Try a different search term." : "Browse recipes and save the ones you love here."}
+                    {searchQuery
+                      ? "Try a different search term."
+                      : "Browse recipes and save the ones you love here."}
                   </p>
                 </div>
               </div>
@@ -193,20 +244,36 @@ list = list.filter((r) => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <nav className="flex justify-center items-center mt-4 sm:mt-6 mb-2 gap-1 sm:gap-1.5 shrink-0" aria-label="Pagination">
-              <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
-                className="w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-[#F57600] hover:bg-orange-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+            <nav
+              className="flex justify-center items-center mt-4 sm:mt-6 mb-2 gap-1 sm:gap-1.5 shrink-0"
+              aria-label="Pagination"
+            >
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-[#F57600] hover:bg-orange-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
                 <HiChevronLeft size={18} />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <button key={num} onClick={() => setCurrentPage(num)}
-                  className={`w-8 sm:w-9 h-8 sm:h-9 rounded-full font-bold text-xs sm:text-sm transition-all
-                    ${num === currentPage ? "bg-gradient-to-br from-[#F57600] to-[#F0AE35] text-white shadow-md shadow-orange-200" : "text-gray-400 hover:bg-orange-50 hover:text-[#F57600]"}`}>
-                  {num}
-                </button>
-              ))}
-              <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                className="w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-[#F57600] hover:bg-orange-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (num) => (
+                  <button
+                    key={num}
+                    onClick={() => setCurrentPage(num)}
+                    className={`w-8 sm:w-9 h-8 sm:h-9 rounded-full font-bold text-xs sm:text-sm transition-all
+                    ${num === currentPage ? "bg-gradient-to-br from-[#F57600] to-[#F0AE35] text-white shadow-md shadow-orange-200" : "text-gray-400 hover:bg-orange-50 hover:text-[#F57600]"}`}
+                  >
+                    {num}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-[#F57600] hover:bg-orange-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
                 <HiChevronRight size={18} />
               </button>
             </nav>
@@ -215,8 +282,16 @@ list = list.filter((r) => {
       </main>
 
       <PostUnderReviewPopup {...reviewPopupProps} />
-      <UploadProgressToast uploadState={uploadState === "failed" ? "idle" : uploadState} progress={progress} onDone={resetUpload} />
-      <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
+      <UploadProgressToast
+        uploadState={uploadState === "failed" ? "idle" : uploadState}
+        progress={progress}
+        onDone={resetUpload}
+      />
+      <UploadFailedModal
+        isOpen={uploadState === "failed"}
+        onRetry={retryUpload}
+        onCancel={cancelUpload}
+      />
     </div>
   );
 };

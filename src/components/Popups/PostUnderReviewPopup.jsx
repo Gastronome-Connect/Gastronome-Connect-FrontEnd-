@@ -39,7 +39,9 @@ export default function PostUnderReviewPopup({
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-gray-900">{title}</p>
-                <p className="mt-1 text-xs leading-5 text-gray-600">{message}</p>
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  {message}
+                </p>
               </div>
 
               <button

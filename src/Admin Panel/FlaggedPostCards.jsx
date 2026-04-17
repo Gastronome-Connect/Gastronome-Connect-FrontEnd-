@@ -3,10 +3,26 @@ import { motion } from "framer-motion";
 import { Flag, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 
 const REASON_STYLES = {
-  "Spam":             { bg: "bg-orange-50", text: "text-[#F57600]",  border: "border-orange-100" },
-  "Hate Speech":      { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-100" },
-  "False Information":{ bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-100" },
-  "Harassment":       { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100" },
+  Spam: {
+    bg: "bg-orange-50",
+    text: "text-[#F57600]",
+    border: "border-orange-100",
+  },
+  "Hate Speech": {
+    bg: "bg-red-50",
+    text: "text-red-600",
+    border: "border-red-100",
+  },
+  "False Information": {
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    border: "border-yellow-100",
+  },
+  Harassment: {
+    bg: "bg-purple-50",
+    text: "text-purple-600",
+    border: "border-purple-100",
+  },
 };
 
 /**
@@ -21,7 +37,11 @@ const FlaggedPostCard = forwardRef(function FlaggedPostCard(
   ref,
 ) {
   const [expanded, setExpanded] = useState(false);
-  const s = REASON_STYLES[post.category] ?? { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-100" };
+  const s = REASON_STYLES[post.category] ?? {
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+    border: "border-gray-100",
+  };
 
   return (
     <motion.div
@@ -53,10 +73,13 @@ const FlaggedPostCard = forwardRef(function FlaggedPostCard(
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
               <div>
-                <h4 className="text-sm font-black text-[#0060A9]">{post.author}</h4>
-<p className="text-[10px] text-gray-400 font-medium">
-  {post.detail ? `"${post.detail}" · ` : ""}{post.reportedAt}
-</p>
+                <h4 className="text-sm font-black text-[#0060A9]">
+                  {post.author}
+                </h4>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  {post.detail ? `"${post.detail}" · ` : ""}
+                  {post.reportedAt}
+                </p>
               </div>
               <span className="shrink-0 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase tracking-wider">
                 {post.reportCount} reports
@@ -64,13 +87,17 @@ const FlaggedPostCard = forwardRef(function FlaggedPostCard(
             </div>
 
             {/* Category badge */}
-            <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider mb-2 ${s.bg} ${s.text} ${s.border}`}>
+            <div
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider mb-2 ${s.bg} ${s.text} ${s.border}`}
+            >
               <AlertTriangle size={10} />
               {post.category}
             </div>
 
             {/* Caption */}
-            <p className={`text-xs text-gray-600 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
+            <p
+              className={`text-xs text-gray-600 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
+            >
               {post.caption}
             </p>
             {post.caption.length > 100 && (

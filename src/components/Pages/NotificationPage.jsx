@@ -41,14 +41,17 @@ const LazyItem = ({ children, placeholderHeight = 96 }) => {
           observer.disconnect();
         }
       },
-      { rootMargin: "200px 0px" }
+      { rootMargin: "200px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div ref={ref} style={!show ? { minHeight: `${placeholderHeight}px` } : undefined}>
+    <div
+      ref={ref}
+      style={!show ? { minHeight: `${placeholderHeight}px` } : undefined}
+    >
       {show ? children : null}
     </div>
   );
@@ -56,7 +59,7 @@ const LazyItem = ({ children, placeholderHeight = 96 }) => {
 
 export default function NotificationsPage() {
   const [isCollapsed, setIsCollapsed] = useState(
-    () => localStorage.getItem("sidebar-collapsed") === "true"
+    () => localStorage.getItem("sidebar-collapsed") === "true",
   );
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -65,8 +68,17 @@ export default function NotificationsPage() {
 
   const sortRef = useRef(null);
 
-  const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
-  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({ startUpload });
+  const {
+    uploadState,
+    progress,
+    startUpload,
+    retryUpload,
+    cancelUpload,
+    resetUpload,
+  } = useUpload();
+  const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
+    startUpload,
+  });
 
   const {
     visibleNotifications,
@@ -81,14 +93,16 @@ export default function NotificationsPage() {
   } = useNotifications();
 
   useEffect(() => {
-    const handler = () => setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
+    const handler = () =>
+      setIsCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
     window.addEventListener("sidebarStateChange", handler);
     return () => window.removeEventListener("sidebarStateChange", handler);
   }, []);
 
   useEffect(() => {
     const handler = (e) => {
-      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+      if (sortRef.current && !sortRef.current.contains(e.target))
+        setSortOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -103,7 +117,9 @@ export default function NotificationsPage() {
   const baseList = useMemo(() => {
     if (activeFilter === "hidden") return hiddenNotifications;
     if (activeFilter === "all") return visibleNotifications;
-    return visibleNotifications.filter((notification) => notification.type === activeFilter);
+    return visibleNotifications.filter(
+      (notification) => notification.type === activeFilter,
+    );
   }, [activeFilter, hiddenNotifications, visibleNotifications]);
 
   const sorted = useMemo(() => {
@@ -123,10 +139,16 @@ export default function NotificationsPage() {
           isCollapsed ? "w-[80px]" : "w-[288px]"
         }`}
       >
-        <Sidebar onNewPost={handleNewPost} hasNotifications={hasNotifications} />
+        <Sidebar
+          onNewPost={handleNewPost}
+          hasNotifications={hasNotifications}
+        />
       </aside>
       <div className="lg:hidden">
-        <Sidebar onNewPost={handleNewPost} hasNotifications={hasNotifications} />
+        <Sidebar
+          onNewPost={handleNewPost}
+          hasNotifications={hasNotifications}
+        />
       </div>
 
       <main
@@ -137,18 +159,24 @@ export default function NotificationsPage() {
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-6">
           <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">Notifications</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tight">
+                Notifications
+              </h1>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-400/30 to-transparent rounded-full" />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-                <span className="font-semibold text-gray-700">{visibleNotifications.length}</span>
+                <span className="font-semibold text-gray-700">
+                  {visibleNotifications.length}
+                </span>
                 <span>visible notifications</span>
                 {unreadCount > 0 && (
                   <>
                     <span className="text-gray-300">•</span>
-                    <span className="font-semibold text-[#F57600]">{unreadCount} unread</span>
+                    <span className="font-semibold text-[#F57600]">
+                      {unreadCount} unread
+                    </span>
                   </>
                 )}
               </div>
@@ -201,7 +229,10 @@ export default function NotificationsPage() {
                     : "border-gray-200 hover:border-orange-300"
                 }`}
               >
-                <span>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort"}</span>
+                <span>
+                  {SORT_OPTIONS.find((o) => o.value === sortBy)?.label ??
+                    "Sort"}
+                </span>
                 <HiChevronDown
                   size={14}
                   className={`transition-transform duration-200 text-[#F57600] ${sortOpen ? "rotate-180" : ""}`}
@@ -223,7 +254,9 @@ export default function NotificationsPage() {
                       }`}
                     >
                       <span>{opt.label}</span>
-                      {sortBy === opt.value && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#F57600]" />}
+                      {sortBy === opt.value && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#F57600]" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -233,7 +266,8 @@ export default function NotificationsPage() {
 
           {activeFilter === "hidden" && hiddenCount > 0 && (
             <p className="text-xs text-gray-400 mb-3">
-              These notifications are hidden from your main feed. You can unhide them anytime.
+              These notifications are hidden from your main feed. You can unhide
+              them anytime.
             </p>
           )}
 
@@ -255,7 +289,10 @@ export default function NotificationsPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.3, delay: Math.min(index, 5) * 0.05 }}
+                      transition={{
+                        duration: 0.3,
+                        delay: Math.min(index, 5) * 0.05,
+                      }}
                     >
                       <NotificationCard
                         notification={notif}
@@ -284,7 +321,9 @@ export default function NotificationsPage() {
               </div>
               <div className="text-center">
                 <h2 className="text-lg sm:text-xl font-extrabold text-gray-800 mb-2">
-                  {activeFilter === "hidden" ? "No Hidden Notifications" : "No Notifications Yet"}
+                  {activeFilter === "hidden"
+                    ? "No Hidden Notifications"
+                    : "No Notifications Yet"}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-400 max-w-xs">
                   {activeFilter === "hidden"
@@ -303,7 +342,11 @@ export default function NotificationsPage() {
         onDone={resetUpload}
       />
       <PostUnderReviewPopup {...reviewPopupProps} />
-      <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
+      <UploadFailedModal
+        isOpen={uploadState === "failed"}
+        onRetry={retryUpload}
+        onCancel={cancelUpload}
+      />
     </div>
   );
 }
