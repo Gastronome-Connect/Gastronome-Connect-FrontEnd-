@@ -50,9 +50,9 @@ export default function FlaggedPostCard({ post, onKeep, onRemove }) {
             <div className="flex items-start justify-between gap-2 mb-1">
               <div>
                 <h4 className="text-sm font-black text-[#0060A9]">{post.author}</h4>
-                <p className="text-[10px] text-gray-400 font-medium">
-                  Reported by {post.reportedBy} · {post.reportedAt}
-                </p>
+<p className="text-[10px] text-gray-400 font-medium">
+  {post.detail ? `"${post.detail}" · ` : ""}{post.reportedAt}
+</p>
               </div>
               <span className="shrink-0 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase tracking-wider">
                 {post.reportCount} reports

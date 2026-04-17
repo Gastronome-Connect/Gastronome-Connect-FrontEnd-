@@ -66,9 +66,11 @@ export default function ReportedCommentCard({ item, onKeep, onRemove }) {
         </div>
 
         {/* Reported by */}
-        <p className="text-[10px] text-gray-400 font-semibold mb-2">
-          Reported by <span className="text-gray-600 font-black">{item.reportedBy}</span>
-        </p>
+{item.detail && (
+  <p className="text-[10px] text-gray-400 font-semibold mb-2">
+    Reason: <span className="text-gray-600 font-medium italic">{item.detail}</span>
+  </p>
+)}
 
         {/* Quoted text */}
         <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
