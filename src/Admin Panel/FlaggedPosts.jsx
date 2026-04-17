@@ -4,6 +4,12 @@ import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
 import { SkeletonAdminCardList } from "../components/Skeletons";
 import adminApi from "../utils/adminApi";
+import {
+  subscribe,
+  getSnapshot,
+  removePostReport,
+  syncReportedPosts,
+} from "../Store/ReportStore";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
@@ -18,12 +24,26 @@ const CATEGORIES = [
 ];
 
 export default function FlaggedPosts() {
-  const [posts, setPosts] = useState([]);
-  const [initialTotal, setInitialTotal] = useState(0);
+  const [posts, setPosts] = useState(() => getSnapshot().posts ?? []);
+  const [initialTotal, setInitialTotal] = useState(
+    () => (getSnapshot().posts ?? []).length,
+  );
   const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const unsub = subscribe(() => {
+      const snap = getSnapshot();
+      setPosts([...(snap.posts ?? [])]);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    setInitialTotal((prev) => Math.max(prev, posts.length));
+  }, [posts.length]);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,15 +60,32 @@ export default function FlaggedPosts() {
         }
 
         const nextPosts = Array.isArray(response.data) ? response.data : [];
-        setPosts(nextPosts);
-        setInitialTotal((prev) => Math.max(prev, nextPosts.length));
+        const localReportedPosts = getSnapshot().posts ?? [];
+        const mergedPosts =
+          nextPosts.length > 0
+            ? [
+                ...nextPosts,
+                ...localReportedPosts.filter(
+                  (localPost) =>
+                    !nextPosts.some(
+                      (serverPost) =>
+                        (serverPost.postId || serverPost.id) ===
+                        (localPost.postId || localPost.id),
+                    ),
+                ),
+              ]
+            : localReportedPosts;
+
+        syncReportedPosts(mergedPosts);
+        setPosts(mergedPosts);
+        setInitialTotal((prev) => Math.max(prev, mergedPosts.length));
         setError(null);
         setLoading(false);
       } catch (err) {
         if (!isMounted) {
           return;
         }
-        setError("Failed to fetch flagged posts.");
+        setError(null);
         setLoading(false);
       }
     };
@@ -77,10 +114,8 @@ export default function FlaggedPosts() {
         action: "approve",
         notes: "Approved by admin.",
       });
-      setPosts((current) => current.filter((post) => post.postId !== postId));
-    } catch (err) {
-      setError("Failed to approve flagged post.");
-    }
+    } catch (err) {}
+    removePostReport(postId);
   }, []);
 
   const handleRemove = useCallback(async (postId) => {
@@ -91,10 +126,8 @@ export default function FlaggedPosts() {
         action: "reject",
         notes: "Rejected by admin.",
       });
-      setPosts((current) => current.filter((post) => post.postId !== postId));
-    } catch (err) {
-      setError("Failed to reject flagged post.");
-    }
+    } catch (err) {}
+    removePostReport(postId);
   }, []);
 
   // ── Filtering ────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Feed from "../Feed/Feed";
 import { UserLibraryProvider } from "../Context/UserLibraryContext";
+import { NotificationProvider } from "../Context/NotificationContext";
 
 jest.mock("../Feed/SideBar", () => () => <div>Sidebar</div>);
 jest.mock("../Feed/Searchbar", () => () => <div>Searchbar</div>);
@@ -60,11 +61,13 @@ describe("feed integration", () => {
 
   test("loads posts from the API and renders them in the feed", async () => {
     render(
-      <UserLibraryProvider>
-        <MemoryRouter>
-          <Feed />
-        </MemoryRouter>
-      </UserLibraryProvider>,
+      <NotificationProvider>
+        <UserLibraryProvider>
+          <MemoryRouter>
+            <Feed />
+          </MemoryRouter>
+        </UserLibraryProvider>
+      </NotificationProvider>,
     );
 
     expect(
@@ -76,6 +79,15 @@ describe("feed integration", () => {
     expect(screen.getAllByTestId("post-card")).toHaveLength(2);
     expect(global.fetch).toHaveBeenCalledWith(
       "http://localhost:3000/api/posts?page=1&limit=10",
+      expect.objectContaining({
+        credentials: "include",
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:3000/api/user",
+      expect.objectContaining({
+        credentials: "include",
+      }),
     );
   });
 });

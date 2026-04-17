@@ -89,6 +89,7 @@ const CardExpandedView = ({
   onClose,
   onReport,
   hideFavoriteAndOptions = false,
+  hideOptionsMenu = false,
 }) => {
   const navigate = useNavigate();
   const { startNewSession } = useChat(); // ← new
@@ -106,7 +107,11 @@ const CardExpandedView = ({
   const menuRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speakIntervalRef = useRef(null);
+  const speechChunksRef = useRef([]);
+  const speechIndexRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const speechTimeoutRef = useRef(null);
+  const currentUtteranceRef = useRef(null);
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -137,6 +142,64 @@ const CardExpandedView = ({
     setMenuOpen(false);
   };
 
+  const stopSpeaking = React.useCallback(() => {
+    speechActiveRef.current = false;
+    speechChunksRef.current = [];
+    speechIndexRef.current = 0;
+    currentUtteranceRef.current = null;
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+  }, []);
+
+  const queueNextChunk = React.useCallback((nextIndex) => {
+    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+    speechTimeoutRef.current = setTimeout(() => {
+      speakChunk(nextIndex);
+    }, 75);
+  }, []);
+
+  const speakChunk = React.useCallback((index = 0) => {
+    const chunks = speechChunksRef.current;
+    if (!speechActiveRef.current || index >= chunks.length) {
+      currentUtteranceRef.current = null;
+      setIsSpeaking(false);
+      setIsPaused(false);
+      speechActiveRef.current = false;
+      return;
+    }
+
+    speechIndexRef.current = index;
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    currentUtteranceRef.current = utterance;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.lang = "en-US";
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      if (!speechActiveRef.current) return;
+      queueNextChunk(index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === "interrupted" || e.error === "canceled") return;
+      queueNextChunk(index + 1);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, [queueNextChunk]);
+
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
@@ -166,43 +229,21 @@ const CardExpandedView = ({
 
     const parts = [`Title: ${post.title}`];
     if (ingredientsText) parts.push(`Ingredients: ${ingredientsText}`);
-    if (post.caption)    parts.push(`Description: ${post.caption}`);
+    if (post.caption) parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
+    const chunks = textToSpeak
+      .split(/(?<=[.!?])\s+/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (chunks.length === 0) return;
+
     window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate   = 0.9;
-      utterance.pitch  = 1;
-      utterance.volume = 1;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-        speakIntervalRef.current = setInterval(() => {
-          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 10000);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      utterance.onerror = (e) => {
-        if (e.error === "interrupted") return;
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }, 100);
+    speechChunksRef.current = chunks;
+    speechIndexRef.current = 0;
+    speechActiveRef.current = true;
+    speakChunk(0);
   };
 
   // ← new: start a fresh session then navigate with prefill
@@ -230,7 +271,7 @@ const CardExpandedView = ({
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") { window.speechSynthesis.cancel(); onClose(); }
+      if (e.key === "Escape") { stopSpeaking(); onClose(); }
       if (e.key === "ArrowLeft"  && hasMultiple) setCurrent((p) => (p - 1 + media.length) % media.length);
       if (e.key === "ArrowRight" && hasMultiple) setCurrent((p) => (p + 1) % media.length);
     };
@@ -239,10 +280,9 @@ const CardExpandedView = ({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
-      window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current);
+      stopSpeaking();
     };
-  }, [onClose, hasMultiple, media.length]);
+  }, [onClose, hasMultiple, media.length, stopSpeaking]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -328,17 +368,31 @@ const CardExpandedView = ({
 
             <div className="flex items-center gap-1.5">
               {!hideFavoriteAndOptions && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleSave(); }}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
-                    ${saved
-                      ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
-                      : "border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400"
-                    }`}
-                  title={saved ? "Unsave" : "Save recipe"}
-                >
-                  <Heart size={15} fill={saved ? "currentColor" : "none"} strokeWidth={saved ? 0 : 2} />
-                </button>
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
+                      ${saved
+                        ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+                        : "border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400"
+                      }`}
+                    title={saved ? "Unsave" : "Save recipe"}
+                  >
+                    <Heart size={15} fill={saved ? "currentColor" : "none"} strokeWidth={saved ? 0 : 2} />
+                  </button>
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleArchive(); }}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
+                      ${archived
+                        ? "bg-orange-50 border-orange-200 text-[#F57600] hover:bg-orange-100"
+                        : "border-gray-200 text-gray-400 hover:bg-orange-50 hover:border-orange-200 hover:text-[#F57600]"
+                      }`}
+                    title={archived ? "Unarchive recipe" : "Archive recipe"}
+                  >
+                    <Archive size={15} fill={archived ? "currentColor" : "none"} strokeWidth={archived ? 0 : 2} />
+                  </button>
+                </>
               )}
 
               <button
@@ -362,7 +416,7 @@ const CardExpandedView = ({
                 <img src={AILogo} alt="AI Chatbot" className="w-4 h-4 object-contain" />
               </button>
 
-              {!hideFavoriteAndOptions && (
+              {!hideFavoriteAndOptions && !hideOptionsMenu && (
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen((o) => !o)}

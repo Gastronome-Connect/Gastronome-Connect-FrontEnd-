@@ -13,6 +13,7 @@ import {
   ReportModal,
 } from "../../components/Modals";
 import { apiFetch } from "../../utils/api";
+import { useUserLibrary } from "../../Context/UserLibraryContext";
 
 /**
  * @param {{ post, isOwner, onDelete, onUpdate, viewerProfile }} props
@@ -65,6 +66,7 @@ const PostCard = ({
   isOwner = false,
   onDelete,
   onUpdate,
+  onArchive,
   viewerProfile = null,
 }) => {
   const [post, setPost] = useState(() => normalizePost(initialPost));
@@ -76,6 +78,7 @@ const PostCard = ({
   const [showReportModal, setShowReportModal] = useState(false);
 
   const navigate = useNavigate();
+  const { addToArchives } = useUserLibrary();
 
   useEffect(() => {
     setPost(normalizePost(initialPost));
@@ -149,9 +152,31 @@ const PostCard = ({
     applyPostUpdate(updated);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     setShowDeleteConfirm(false);
+    setExpandedIndex(null);
+    setShowCommentModal(false);
     onDelete?.(post.id);
+
+    try {
+      const response = await apiFetch(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete post");
+      }
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      setPost((currentPost) => normalizePost(currentPost));
+    }
+  };
+
+  const handleConfirmArchive = () => {
+    addToArchives(post);
+    setShowArchiveConfirm(false);
+    onArchive?.(post);
   };
 
   const handleConfirmReport = (reasonId) => {
@@ -159,19 +184,12 @@ const PostCard = ({
     setShowReportModal(false);
   };
 
-  const ownerHandlers = isOwner
-    ? {
-        onEdit: () => setShowEditModal(true),
-        onDelete: () => setShowDeleteConfirm(true),
-        onArchive: () => setShowArchiveConfirm(true),
-        onReport: undefined,
-      }
-    : {
-        onEdit: undefined,
-        onDelete: undefined,
-        onArchive: undefined,
-        onReport: () => setShowReportModal(true),
-      };
+  const ownerHandlers = {
+    onEdit: isOwner ? () => setShowEditModal(true) : undefined,
+    onDelete: isOwner ? () => setShowDeleteConfirm(true) : undefined,
+    onArchive: () => setShowArchiveConfirm(true),
+    onReport: () => setShowReportModal(true),
+  };
 
   return (
     <>
@@ -265,9 +283,9 @@ const PostCard = ({
         />
       )}
 
-      {isOwner && showArchiveConfirm && (
+      {showArchiveConfirm && (
         <ArchiveConfirmModal
-          onConfirm={() => setShowArchiveConfirm(false)}
+          onConfirm={handleConfirmArchive}
           onCancel={() => setShowArchiveConfirm(false)}
         />
       )}
@@ -280,9 +298,9 @@ const PostCard = ({
         />
       )}
 
-      {!isOwner && showReportModal && (
+      {showReportModal && (
         <ReportModal
-          post={post} // ← ADD THIS
+          post={post}
           onConfirm={handleConfirmReport}
           onCancel={() => setShowReportModal(false)}
         />

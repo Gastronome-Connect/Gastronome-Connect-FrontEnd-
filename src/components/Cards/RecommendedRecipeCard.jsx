@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { User, ArrowUpRight } from "lucide-react";
 import CardExpandedView from "./CardViewer";
+import ReportModal from "../Modals/ReportModal";
 
 /**
  * RecommendationCard
@@ -13,6 +14,7 @@ import CardExpandedView from "./CardViewer";
  */
 const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
   const [expanded, setExpanded] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Normalize to the post shape CardExpandedView expects.
   const post = {
@@ -107,8 +109,19 @@ const RecommendationCard = ({ recipe, onArchive, onReport, onSave }) => {
           post={post}
           onClose={() => setExpanded(false)}
           onArchive={() => onArchive?.(recipe)}
-          onReport={() => onReport?.(recipe)}
+          onReport={() => {
+            onReport?.(recipe);
+            setShowReportModal(true);
+          }}
           onSave={(isSaved) => onSave?.(recipe, isSaved)}
+        />
+      )}
+
+      {showReportModal && (
+        <ReportModal
+          post={post}
+          onConfirm={() => setShowReportModal(false)}
+          onCancel={() => setShowReportModal(false)}
         />
       )}
     </>

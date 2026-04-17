@@ -16,6 +16,7 @@ import useModeratedPostCreation from "../Hooks/useModeratedPostCreation";
 import { SkeletonPostList } from "../components/Skeletons";
 import { apiFetch } from "../utils/api";
 import { useNotifications } from "../Context/NotificationContext";
+import { useUserLibrary } from "../Context/UserLibraryContext";
 
 const PAGE_SIZE = 10;
 
@@ -86,6 +87,7 @@ export default function GCFeed() {
   const [chatExpanded, setChatExpanded] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const mainRef = useRef(null);
+  const { isSuppressedByArchive } = useUserLibrary();
 
   const {
     uploadState,
@@ -201,31 +203,45 @@ export default function GCFeed() {
 
             {initialLoading && <SkeletonPostList count={3} />}
 
-            {!initialLoading && posts.length === 0 && (
-              <p className="text-center text-gray-400 py-16">
-                No posts yet. Share your first recipe!
-              </p>
-            )}
+            {!initialLoading &&
+              posts.filter((post) => !isSuppressedByArchive(post)).length ===
+                0 && (
+                <p className="text-center text-gray-400 py-16">
+                  No posts yet. Share your first recipe!
+                </p>
+              )}
 
             {!initialLoading &&
-              posts.map((post) => (
-                <LazyItem key={post.id} placeholderHeight={320}>
-                  <PostCard
-                    post={post}
-                    isOwner={String(post.userId) === String(currentUserId)}
-                    onDelete={(id) =>
-                      setPosts((prev) => prev.filter((p) => p.id !== id))
-                    }
-                    onUpdate={(updated) =>
-                      setPosts((prev) =>
-                        prev.map((p) => (p.id === updated.id ? updated : p)),
-                      )
-                    }
-                  />
-                </LazyItem>
-              ))}
+              posts
+                .filter((post) => !isSuppressedByArchive(post))
+                .map((post) => (
+                  <LazyItem key={post.id} placeholderHeight={320}>
+                    <PostCard
+                      post={post}
+                      isOwner={String(post.userId) === String(currentUserId)}
+                      onDelete={(id) =>
+                        setPosts((prev) => prev.filter((p) => p.id !== id))
+                      }
+                      onUpdate={(updated) =>
+                        setPosts((prev) =>
+                          prev.map((p) => (p.id === updated.id ? updated : p)),
+                        )
+                      }
+                      onArchive={(archivedPost) =>
+                        setPosts((prev) =>
+                          prev.filter((candidate) => {
+                            if (candidate.id === archivedPost.id) {
+                              return false;
+                            }
+                            return !isSuppressedByArchive(candidate);
+                          }),
+                        )
+                      }
+                    />
+                  </LazyItem>
+                ))}
 
-            {posts.length > 0 && (
+            {posts.filter((post) => !isSuppressedByArchive(post)).length > 0 && (
               <InfiniteScrollTrigger
                 onTrigger={handleLoadMore}
                 hasMore={hasMore}
@@ -233,7 +249,9 @@ export default function GCFeed() {
               />
             )}
 
-            {!hasMore && posts.length > 0 && (
+            {!hasMore &&
+              posts.filter((post) => !isSuppressedByArchive(post)).length >
+                0 && (
               <p className="text-center text-xs text-gray-300 py-4 select-none">
                 You've reached the end of your feed.
               </p>

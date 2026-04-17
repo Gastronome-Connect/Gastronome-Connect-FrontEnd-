@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ChevronRight, Trophy } from "lucide-react";
 import SparkleEffect from "./SparkleEffect";
 import CardExpandedView from "./CardViewer";
+import ReportModal from "../Modals/ReportModal";
 
 /**
  * getPodiumStyles - returns styling config for top 3 ranks, null for the rest
@@ -48,6 +49,7 @@ export const getPodiumStyles = (index) => {
  */
 const PopularRecipeCard = ({ recipe, index, onArchive, onReport, onSave }) => {
   const [expanded, setExpanded] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const podium = getPodiumStyles(index);
   const rank   = index + 1;
 
@@ -142,8 +144,19 @@ const post = {
           post={post}
           onClose={() => setExpanded(false)}
           onArchive={() => onArchive?.(recipe)}
-          onReport={() => onReport?.(recipe)}
+          onReport={() => {
+            onReport?.(recipe);
+            setShowReportModal(true);
+          }}
           onSave={(isSaved) => onSave?.(recipe, isSaved)}
+        />
+      )}
+
+      {showReportModal && (
+        <ReportModal
+          post={post}
+          onConfirm={() => setShowReportModal(false)}
+          onCancel={() => setShowReportModal(false)}
         />
       )}
     </>

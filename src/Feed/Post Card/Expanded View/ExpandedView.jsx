@@ -151,7 +151,11 @@ const ExpandedView = ({
   const pinnedTextareaRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speakIntervalRef = useRef(null);
+  const speechChunksRef = useRef([]);
+  const speechIndexRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const speechTimeoutRef = useRef(null);
+  const currentUtteranceRef = useRef(null);
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media = post.mediaItems ?? [];
@@ -186,6 +190,64 @@ const ExpandedView = ({
     setMenuOpen(false);
   };
 
+  const stopSpeaking = () => {
+    speechActiveRef.current = false;
+    speechChunksRef.current = [];
+    speechIndexRef.current = 0;
+    currentUtteranceRef.current = null;
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+  };
+
+  const queueNextChunk = (nextIndex) => {
+    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+    speechTimeoutRef.current = setTimeout(() => {
+      speakChunk(nextIndex);
+    }, 75);
+  };
+
+  const speakChunk = (index = 0) => {
+    const chunks = speechChunksRef.current;
+    if (!speechActiveRef.current || index >= chunks.length) {
+      currentUtteranceRef.current = null;
+      setIsSpeaking(false);
+      setIsPaused(false);
+      speechActiveRef.current = false;
+      return;
+    }
+
+    speechIndexRef.current = index;
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    currentUtteranceRef.current = utterance;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.lang = "en-US";
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      if (!speechActiveRef.current) return;
+      queueNextChunk(index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === "interrupted" || e.error === "canceled") return;
+      queueNextChunk(index + 1);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handleSpeak = () => {
     if (!window?.speechSynthesis) return;
 
@@ -218,43 +280,18 @@ const ExpandedView = ({
     if (post.caption) parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
+    const chunks = textToSpeak
+      .split(/(?<=[.!?])\s+/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (chunks.length === 0) return;
+
     window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-        speakIntervalRef.current = setInterval(() => {
-          if (
-            window.speechSynthesis.speaking &&
-            !window.speechSynthesis.paused
-          ) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 10000);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      utterance.onerror = (e) => {
-        if (e.error === "interrupted") return;
-        setIsSpeaking(false);
-        setIsPaused(false);
-        clearInterval(speakIntervalRef.current);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }, 100);
+    speechChunksRef.current = chunks;
+    speechIndexRef.current = 0;
+    speechActiveRef.current = true;
+    speakChunk(0);
   };
 
   useEffect(() => {
@@ -277,8 +314,7 @@ const ExpandedView = ({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "unset";
-      window.speechSynthesis.cancel();
-      clearInterval(speakIntervalRef.current);
+      stopSpeaking();
     };
   }, [onClose, hasMultiple, media.length]);
 

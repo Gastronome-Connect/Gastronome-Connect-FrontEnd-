@@ -66,12 +66,38 @@ const REASON_ALIASES = {
 };
 
 // ─── Internal state ──────────────────────────────────────────────────────────
-let _reportedPosts    = [];   // [ReportedPost]
-let _reportedComments = [];   // [ReportedComment]
-let _reportedProfiles = [];   // [ReportedProfile]
+const STORAGE_KEYS = {
+  posts: "gastro_reported_posts",
+  comments: "gastro_reported_comments",
+  profiles: "gastro_reported_profiles",
+};
+
+const readPersisted = (key) => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+let _reportedPosts    = readPersisted(STORAGE_KEYS.posts);      // [ReportedPost]
+let _reportedComments = readPersisted(STORAGE_KEYS.comments);   // [ReportedComment]
+let _reportedProfiles = readPersisted(STORAGE_KEYS.profiles);   // [ReportedProfile]
 let _listeners        = [];   // change subscribers
 
-const _notify = () => _listeners.forEach((fn) => fn());
+const persist = () => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.posts, JSON.stringify(_reportedPosts));
+    localStorage.setItem(STORAGE_KEYS.comments, JSON.stringify(_reportedComments));
+    localStorage.setItem(STORAGE_KEYS.profiles, JSON.stringify(_reportedProfiles));
+  } catch (error) {}
+};
+
+const _notify = () => {
+  persist();
+  _listeners.forEach((fn) => fn());
+};
 
 const normalizeReasonId = (reasonId) => {
   const normalized = String(reasonId ?? "").trim().toLowerCase();
@@ -118,7 +144,11 @@ const mergeReasonBreakdown = (existingBreakdown = [], reasonId) => {
 
 // ─── Subscriptions (lets React components re-render on change) ───────────────
 export const subscribe   = (fn) => { _listeners.push(fn); return () => { _listeners = _listeners.filter((l) => l !== fn); }; };
-export const getSnapshot = () => ({ posts: _reportedPosts, comments: _reportedComments, profiles: _reportedProfiles });
+export const getSnapshot = () => ({
+  posts: _reportedPosts,
+  comments: _reportedComments,
+  profiles: _reportedProfiles,
+});
 
 // ─── Post reports ────────────────────────────────────────────────────────────
 /**
@@ -135,15 +165,22 @@ export const addPostReport = (post, reasonId, detail = null, reportedBy = "You")
   if (existing) {
     // increment count & push reporter
     existing.reportCount += 1;
+    existing.reportedAt = new Date().toLocaleDateString();
     if (!existing.reportedBy.includes(reportedBy)) existing.reportedBy.push(reportedBy);
     existing.category = REASON_LABELS[normalizedReasonId] ?? "Others";
     existing.categoryId = normalizedReasonId;
+    existing.reasonBreakdown = mergeReasonBreakdown(existing.reasonBreakdown, normalizedReasonId);
+    existing.author = post.author ?? existing.author ?? "Unknown";
+    existing.avatar = post.avatar ?? existing.avatar ?? "";
+    existing.caption = post.caption ?? post.description ?? existing.caption ?? "";
+    existing.image = post.mediaItems?.[0]?.url ?? post.img ?? existing.image ?? "";
     if (detail) existing.detail = detail;
   } else {
     _reportedPosts = [
       ..._reportedPosts,
       {
         id:          post.id ?? post._id,
+        postId:      post.id ?? post._id,
         author:      post.author ?? "Unknown",
         avatar:      post.avatar ?? "",
         caption:     post.caption ?? post.description ?? "",
@@ -152,11 +189,17 @@ export const addPostReport = (post, reasonId, detail = null, reportedBy = "You")
         reportCount: 1,
         category:    REASON_LABELS[normalizedReasonId] ?? "Others",
         categoryId:  normalizedReasonId,
+        reasonBreakdown: createReasonBreakdown(normalizedReasonId),
         reportedBy:  [reportedBy],
         detail,
       },
     ];
   }
+  _notify();
+};
+
+export const syncReportedPosts = (posts = []) => {
+  _reportedPosts = Array.isArray(posts) ? [...posts] : [];
   _notify();
 };
 
