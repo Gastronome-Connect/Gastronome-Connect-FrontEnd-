@@ -27,21 +27,29 @@ const CommentSection = forwardRef(
     }, [initialComments]);
 
     const addComment = async (text) => {
-      if (!text?.trim()) return;
+      const trimmedText = text?.trim();
+      if (!trimmedText) return;
+
+      const optimisticComment = {
+        id: `temp-${Date.now()}`,
+        _id: `temp-${Date.now()}`,
+        text: trimmedText,
+        content: trimmedText,
+        author: "You",
+        pending: true,
+      };
+
+      setComments((current) => [...current, optimisticComment]);
+      onPostUpdate?.({
+        id: postId,
+        comments: [...comments, optimisticComment],
+        commentsCount: comments.length + 1,
+      });
 
       try {
-        // Get userId from localStorage (set during login)
-        const userId = localStorage.getItem("userId");
-        if (!userId) {
-          throw new Error("User not authenticated. Please login again.");
-        }
-
         const response = await apiFetch(`/api/posts/${postId}/comments`, {
           method: "POST",
-          body: JSON.stringify({ 
-            userId: userId,
-            text: text.trim() 
-          }),
+          body: JSON.stringify({ text: trimmedText }),
         });
         const data = await response.json();
 
@@ -57,9 +65,15 @@ const CommentSection = forwardRef(
           : [...comments, newComment].filter(Boolean);
 
         setComments(postComments);
-        
+
         if (updatedPost && (updatedPost.id || updatedPost._id)) {
           onPostUpdate?.(updatedPost);
+        } else {
+          onPostUpdate?.({
+            id: postId,
+            comments: postComments,
+            commentsCount: postComments.length,
+          });
         }
 
         const isCommentUnderReview =
@@ -76,6 +90,14 @@ const CommentSection = forwardRef(
         );
       } catch (error) {
         console.error("Failed to add comment:", error);
+        setComments((current) =>
+          current.filter((comment) => comment.id !== optimisticComment.id),
+        );
+        onPostUpdate?.({
+          id: postId,
+          comments,
+          commentsCount: comments.length,
+        });
       }
     };
 

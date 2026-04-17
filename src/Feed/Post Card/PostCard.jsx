@@ -31,16 +31,23 @@ import { useUserLibrary } from "../../Context/UserLibraryContext";
  */
 const normalizePost = (p = {}) => {
   const out = { ...p };
+  const viewerId =
+    localStorage.getItem("userId") ||
+    localStorage.getItem("currentUserId") ||
+    localStorage.getItem("id") ||
+    "";
+
   // id fallback
   out.id = out.id ?? out._id ?? out._id?._str ?? out._id?.$oid ?? out._id;
+
+  const likeEntries = Array.isArray(out.likes) ? out.likes : [];
+  const dislikeEntries = Array.isArray(out.dislikes) ? out.dislikes : [];
+  const repostEntries = Array.isArray(out.reposts) ? out.reposts : [];
+
   out.likesCount =
     typeof out.likesCount === "number"
       ? out.likesCount
-      : Array.isArray(out.likes)
-        ? out.likes.length
-        : typeof out.likes === "number"
-          ? out.likes
-          : 0;
+      : likeEntries.length;
   out.commentsCount =
     typeof out.commentsCount === "number"
       ? out.commentsCount
@@ -52,11 +59,44 @@ const normalizePost = (p = {}) => {
   out.repostsCount =
     typeof out.repostsCount === "number"
       ? out.repostsCount
-      : Array.isArray(out.reposts)
-        ? out.reposts.length
-        : typeof out.reposts === "number"
-          ? out.reposts
-          : 0;
+      : repostEntries.length;
+
+  out.likedByViewer =
+    typeof out.likedByViewer === "boolean"
+      ? out.likedByViewer
+      : likeEntries.some((entry) => {
+          const value =
+            entry?.userId ??
+            entry?._id ??
+            entry?.id ??
+            (typeof entry === "string" ? entry : null);
+          return String(value) === String(viewerId);
+        });
+
+  out.dislikedByViewer =
+    typeof out.dislikedByViewer === "boolean"
+      ? out.dislikedByViewer
+      : dislikeEntries.some((entry) => {
+          const value =
+            entry?.userId ??
+            entry?._id ??
+            entry?.id ??
+            (typeof entry === "string" ? entry : null);
+          return String(value) === String(viewerId);
+        });
+
+  out.repostedByViewer =
+    typeof out.repostedByViewer === "boolean"
+      ? out.repostedByViewer
+      : repostEntries.some((entry) => {
+          const value =
+            entry?.userId ??
+            entry?._id ??
+            entry?.id ??
+            (typeof entry === "string" ? entry : null);
+          return String(value) === String(viewerId);
+        });
+
   out.comments = Array.isArray(out.comments) ? out.comments : [];
   return out;
 };
@@ -113,8 +153,21 @@ const PostCard = ({
   };
 
   const handleLike = async () => {
+    const postId = post.id || post._id;
+    const optimisticPost = {
+      ...post,
+      likedByViewer: !post.likedByViewer,
+      dislikedByViewer: post.likedByViewer ? post.dislikedByViewer : false,
+      likesCount: Math.max(0, post.likesCount + (post.likedByViewer ? -1 : 1)),
+    };
+
+    if (!post.likedByViewer && post.dislikedByViewer) {
+      optimisticPost.dislikedByViewer = false;
+    }
+
+    applyPostUpdate(optimisticPost);
+
     try {
-      const postId = post.id || post._id;
       await runPostMutation(
         `/api/posts/${postId}/like`,
         { method: "POST" },
@@ -122,12 +175,26 @@ const PostCard = ({
       );
     } catch (error) {
       console.error("Failed to toggle like:", error);
+      applyPostUpdate(post);
     }
   };
 
   const handleDislike = async () => {
+    const postId = post.id || post._id;
+    const optimisticPost = {
+      ...post,
+      dislikedByViewer: !post.dislikedByViewer,
+      likedByViewer: post.dislikedByViewer ? post.likedByViewer : false,
+    };
+
+    if (!post.dislikedByViewer && post.likedByViewer) {
+      optimisticPost.likedByViewer = false;
+      optimisticPost.likesCount = Math.max(0, post.likesCount - 1);
+    }
+
+    applyPostUpdate(optimisticPost);
+
     try {
-      const postId = post.id || post._id;
       await runPostMutation(
         `/api/posts/${postId}/dislike`,
         { method: "POST" },
@@ -135,28 +202,32 @@ const PostCard = ({
       );
     } catch (error) {
       console.error("Failed to toggle dislike:", error);
+      applyPostUpdate(post);
     }
   };
 
   const handleRepost = async () => {
-    try {
-      const postId = post.id || post._id;
-      const userId = localStorage.getItem("userId");
-      
-      if (!userId) {
-        throw new Error("User not authenticated. Please login again.");
-      }
+    const postId = post.id || post._id;
+    const optimisticPost = {
+      ...post,
+      repostedByViewer: !post.repostedByViewer,
+      repostsCount: Math.max(
+        0,
+        post.repostsCount + (post.repostedByViewer ? -1 : 1),
+      ),
+    };
 
+    applyPostUpdate(optimisticPost);
+
+    try {
       await runPostMutation(
         `/api/posts/${postId}/repost`,
-        { 
-          method: "POST",
-          body: JSON.stringify({ userId: userId })
-        },
+        { method: "POST" },
         "Failed to update repost",
       );
     } catch (error) {
       console.error("Failed to toggle repost:", error);
+      applyPostUpdate(post);
     }
   };
 
