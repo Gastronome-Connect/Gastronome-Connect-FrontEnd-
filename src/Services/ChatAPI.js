@@ -1,38 +1,35 @@
-import { MOCK_RECIPES, TEXT_REPLIES, RECIPE_KEYWORDS } from "../Constants/Constants";
+import { apiFetch } from "../utils/api";
 
-function shouldShowRecipes(text) {
-  return RECIPE_KEYWORDS.some((kw) => text.toLowerCase().trim().includes(kw));
-}
+export async function sendMessageToBot(
+  userText,
+  formatTime,
+  history = [],
+  signal,
+) {
+  const response = await apiFetch("/api/chatbot/message", {
+    method: "POST",
+    signal,
+    body: JSON.stringify({
+      message: userText,
+      history,
+    }),
+  });
 
-function getRandomRecipes() {
-  const count = Math.floor(Math.random() * 10) + 1;
-  return [...MOCK_RECIPES].sort(() => Math.random() - 0.5).slice(0, count);
-}
+  const data = await response.json().catch(() => ({}));
 
-/**
- * Simulates an API call. Swap internals with real fetch() later.
- * Returns a bot message object.
- */
-export async function sendMessageToBot(userText, formatTime) {
-  const delay = 1400 + Math.random() * 600;
-  await new Promise((res) => setTimeout(res, delay));
-
-  if (shouldShowRecipes(userText)) {
-    return {
-      id: Date.now().toString(),
-      role: "bot",
-      type: "recipe",
-      text: "Here are some recipes you might enjoy! 🍳",
-      recipes: getRandomRecipes(),
-      time: formatTime(),
-    };
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to contact Gastro AI.");
   }
+
+  const recipes = Array.isArray(data?.recipes) ? data.recipes : [];
 
   return {
     id: Date.now().toString(),
     role: "bot",
-    type: "text",
-    text: TEXT_REPLIES[Math.floor(Math.random() * TEXT_REPLIES.length)],
+    type: recipes.length > 0 ? "recipe" : "text",
+    text:
+      data?.reply || "I can help with recipes, ingredients, and cooking tips.",
+    recipes,
     time: formatTime(),
   };
 }
