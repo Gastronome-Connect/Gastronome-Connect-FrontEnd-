@@ -66,20 +66,14 @@ const VerificationPage = () => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
-        const payload = { email };
-        
-        // Only include username and password for signup flow
-        if (sourceFlow === "signup") {
-          const signupDataStr = sessionStorage.getItem("tempSignupData");
-          const signupData = signupDataStr ? JSON.parse(signupDataStr) : {};
-          payload.username = signupData.username;
-          payload.password = signupData.password;
-        }
+        const signupDataStr = sessionStorage.getItem("tempSignupData");
+        const signupData = signupDataStr ? JSON.parse(signupDataStr) : {};
+        const { username, password } = signupData;
 
         const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ email, username, password }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Failed to send OTP");
@@ -90,7 +84,7 @@ const VerificationPage = () => {
       }
     };
     if (email) sendOTP();
-  }, [email, sourceFlow]);
+  }, [email]);
 
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
@@ -159,20 +153,14 @@ const VerificationPage = () => {
         return;
       }
       try {
-        const payload = { email };
-        
-        // Only include username and password for signup flow
-        if (sourceFlow === "signup") {
-          const signupDataStr = sessionStorage.getItem("tempSignupData");
-          const signupData = signupDataStr ? JSON.parse(signupDataStr) : {};
-          payload.username = signupData.username;
-          payload.password = signupData.password;
-        }
+        const signupDataStr = sessionStorage.getItem("tempSignupData");
+        const signupData = signupDataStr ? JSON.parse(signupDataStr) : {};
+        const { username, password } = signupData;
 
         const response = await fetch(buildApiUrl("/api/send-otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ email, username, password }),
         });
         const data = await response.json();
         if (!response.ok)
