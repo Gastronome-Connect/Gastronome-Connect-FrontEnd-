@@ -16,6 +16,8 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoutModal from "./AdminLogOutModal";
 
+const AUTH_STATE_EVENT = "auth-state-changed";
+
 export default function AdminSidebar({ onCollapse }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +47,7 @@ export default function AdminSidebar({ onCollapse }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
+    window.dispatchEvent(new Event(AUTH_STATE_EVENT));
     navigate("/login?mode=login", { replace: true });
   };
 

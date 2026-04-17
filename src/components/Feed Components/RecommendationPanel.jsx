@@ -1,31 +1,55 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import RecommendationCard from "../Cards/RecommendedRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
+import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
-import Karekare  from "../Assets/Kare-kare.png";
-import Sisig     from "../Assets/Sisig.png";
-import Adobo     from "../Assets/Adobo.png";
-import Lechon    from "../Assets/Lechong Kawali.png";
-import Sinigang  from "../Assets/Sinigang.png";
-import Bicol     from "../Assets/Bicol Express.png";
-import Pancit    from "../Assets/Pancit Canton.png";
-import Laing     from "../Assets/Laing.png";
-import Binangkal from "../Assets/Binangkal.png";
+const getSourceLabel = (sourceUrl) => {
+  if (!sourceUrl) {
+    return "";
+  }
 
-const recommendedRecipes = [
-  { id: "recommended-kare-kare", name: "Kare-kare", author: "Lola Rosa", img: Karekare },
-  { id: "recommended-sisig", author: "Aling Lucing", name: "Sisig", img: Sisig },
-  { id: "recommended-adobo", author: "Chef Boy Logro", name: "Adobo", img: Adobo },
-  { id: "recommended-lechong-kawali", name: "Lechong Kawali", author: "Mang Tomas", img: Lechon },
-  { id: "recommended-sinigang", name: "Sinigang", author: "Nanay Maria", img: Sinigang },
-  { id: "recommended-bicol-express", name: "Bicol Express", author: "Bicol's Finest", img: Bicol },
-  { id: "recommended-pancit-canton", name: "Pancit Canton", author: "Lolo Pepe", img: Pancit },
-  { id: "recommended-laing", name: "Laing", author: "Gata Master", img: Laing },
-  { id: "recommended-binangkal", name: "Binangkal", author: "Jomarrie", img: Binangkal },
-  { id: "recommended-pork-humba", name: "Pork Humba", author: "Lola Arnel", img: Adobo },
-];
+  try {
+    return new URL(sourceUrl).hostname.replace(/^www\./i, "");
+  } catch {
+    return sourceUrl;
+  }
+};
+
+const mapRecommendedRecipe = (recipe) => {
+  const image = resolveUploadUrl(recipe?.recipeImg || recipe?.image || "");
+  const instructions = recipe?.instructions || recipe?.description || "";
+
+  return {
+    id: recipe?.id || recipe?._id,
+    _id: recipe?._id || recipe?.id,
+    spoonacularId: recipe?.spoonacularId ?? null,
+    name: recipe?.recipeName || recipe?.title || "Recipe",
+    title: recipe?.recipeName || recipe?.title || "Recipe",
+    author: recipe?.sourceName || recipe?.author || "Spoonacular",
+    sourceLabel: getSourceLabel(recipe?.sourceUrl || ""),
+    img: image,
+    image,
+    avatar: image,
+    caption: instructions,
+    description: instructions,
+    ingredients: Array.isArray(recipe?.ingredients) ? recipe.ingredients : [],
+    date: recipe?.createdAt
+      ? new Date(recipe.createdAt).toLocaleDateString()
+      : "",
+    mediaItems: image
+      ? [
+          {
+            type: "image",
+            url: image,
+            title: recipe?.recipeName || recipe?.title || "Recipe",
+            caption: instructions,
+          },
+        ]
+      : [],
+  };
+};
 
 /**
  * SkeletonRecommendationCard
@@ -34,27 +58,25 @@ const recommendedRecipes = [
  */
 const SkeletonRecommendationCard = () => (
   <div
-    className="flex-shrink-0 min-w-[160px] sm:min-w-[200px] md:min-w-[220px] xl:min-w-[240px]
+    className="flex-shrink-0 min-w-[160px] sm:min-w-[200px] md:min-w-[220px] xl:min-w-[240px] h-[224px] sm:h-[258px] xl:h-[288px]
                rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden bg-white border border-gray-50 shadow-sm"
   >
     {/* Image block */}
-    <div className="h-24 sm:h-32 xl:h-40 w-full">
+    <div className="h-24 sm:h-28 xl:h-36 w-full">
       <SkeletonLoader width="100%" height="100%" borderRadius="0" />
     </div>
 
     {/* Content block */}
-    <div className="p-3 sm:p-4 xl:p-5 flex flex-col gap-2">
+    <div className="p-3 sm:p-4 flex flex-col h-[calc(100%-6rem)] sm:h-[calc(100%-7rem)] xl:h-[calc(100%-9rem)] gap-2">
       {/* Accent line */}
       <SkeletonLoader width="32px" height="4px" borderRadius="9999px" />
       {/* Title */}
       <SkeletonLoader width="80%" height="16px" borderRadius="6px" />
-      {/* Description — hidden on smallest, matches hidden sm:block */}
-      <div className="hidden sm:block">
-        <SkeletonLoader width="100%" height="11px" borderRadius="4px" />
-      </div>
+      <SkeletonLoader width="100%" height="11px" borderRadius="4px" />
+      <SkeletonLoader width="88%" height="11px" borderRadius="4px" />
       {/* Bottom row */}
-      <div className="mt-2 pt-2 border-t border-gray-50 flex justify-between items-center">
-        <SkeletonLoader width="50px" height="10px" borderRadius="4px" />
+      <div className="mt-auto pt-3 border-t border-gray-50 flex justify-between items-center">
+        <SkeletonLoader width="72px" height="12px" borderRadius="4px" />
         <div className="flex gap-1">
           <SkeletonLoader width="6px" height="6px" borderRadius="9999px" />
           <SkeletonLoader width="6px" height="6px" borderRadius="9999px" />
@@ -67,12 +89,46 @@ const SkeletonRecommendationCard = () => (
 export default function Recommendation() {
   const scrollRef               = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [recipes, setRecipes] = useState([]);
   const { isSuppressedByArchive } = useUserLibrary();
 
-  // Replace with your real API call
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    const loadDailyPicks = async () => {
+      setIsLoading(true);
+
+      try {
+        const response = await apiFetch("/api/recipes/daily-picks");
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data?.message || "Failed to load daily pick recipes.");
+        }
+
+        if (!cancelled) {
+          setRecipes(
+            Array.isArray(data?.recipes)
+              ? data.recipes.map(mapRecommendedRecipe)
+              : [],
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecipes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadDailyPicks();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const scroll = (direction) => {
@@ -86,9 +142,8 @@ export default function Recommendation() {
     });
   };
 
-  const visibleRecommendedRecipes = useMemo(
-    () => recommendedRecipes.filter((recipe) => !isSuppressedByArchive(recipe)),
-    [isSuppressedByArchive]
+  const visibleRecommendedRecipes = recipes.filter(
+    (recipe) => !isSuppressedByArchive(recipe),
   );
 
   return (
@@ -127,7 +182,7 @@ export default function Recommendation() {
                 <SkeletonRecommendationCard key={`skeleton-${i}`} />
               ))
             : visibleRecommendedRecipes.map((recipe, index) => (
-                <RecommendationCard key={`recipe-${recipe.name}-${index}`} recipe={recipe} />
+                <RecommendationCard key={recipe.id || `recipe-${recipe.name}-${index}`} recipe={recipe} />
               ))
           }
           <div className="min-w-[24px] sm:min-w-[40px] flex-shrink-0" />

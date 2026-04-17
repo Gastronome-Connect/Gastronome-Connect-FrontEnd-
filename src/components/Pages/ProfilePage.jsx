@@ -71,6 +71,8 @@ const dataUrlToFile = async (dataUrl) => {
 const areStringArraysEqual = (left = [], right = []) =>
   JSON.stringify(left) === JSON.stringify(right);
 
+const sameId = (left, right) => String(left || "") === String(right || "");
+
 const GCProfile = () => {
   // ── If a :userId param exists we're viewing someone else's profile ──
   const { userId: paramUserId } = useParams();
@@ -83,7 +85,7 @@ const GCProfile = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
 
   // isOwner is true only when viewing your own profile
-  const isOwner = !paramUserId || (currentUserId && currentUserId === profileData.id);
+  const isOwner = !paramUserId || sameId(currentUserId, profileData.id);
 
   const mainRef = useRef(null);
   const {
@@ -120,7 +122,7 @@ const GCProfile = () => {
 
         // If a userId param was provided and it differs from self, fetch that user
         const targetEndpoint =
-          paramUserId && paramUserId !== selfId
+          paramUserId && !sameId(paramUserId, selfId)
             ? `/api/user/${paramUserId}`
             : "/api/user";
 

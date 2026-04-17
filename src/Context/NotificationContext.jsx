@@ -11,6 +11,8 @@ import React, {
 const NotificationContext = createContext(null);
 
 const STORAGE_KEY = "gastro_notifications";
+const AUTH_STATE_EVENT = "auth-state-changed";
+const DEFAULT_STORAGE_OWNER = "guest";
 
 const DEFAULT_AVATAR =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80";
@@ -101,18 +103,40 @@ const SEED_NOTIFICATIONS = [
   },
 ];
 
-const loadNotifications = () => {
+const getStorageOwner = () => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_NOTIFICATIONS;
+    return localStorage.getItem("userId") || DEFAULT_STORAGE_OWNER;
+  } catch {
+    return DEFAULT_STORAGE_OWNER;
+  }
+};
+
+const getScopedStorageKey = (owner = getStorageOwner()) =>
+  `${STORAGE_KEY}:${owner}`;
+
+const loadNotifications = (owner = getStorageOwner()) => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getScopedStorageKey(owner)));
+    if (Array.isArray(parsed)) {
+      return parsed.length > 0 ? parsed : SEED_NOTIFICATIONS;
+    }
+
+    const legacyParsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
+      localStorage.setItem(getScopedStorageKey(owner), JSON.stringify(legacyParsed));
+      localStorage.removeItem(STORAGE_KEY);
+      return legacyParsed;
+    }
+
+    return SEED_NOTIFICATIONS;
   } catch {
     return SEED_NOTIFICATIONS;
   }
 };
 
-const persistNotifications = (notifications) => {
+const persistNotifications = (owner, notifications) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+    localStorage.setItem(getScopedStorageKey(owner), JSON.stringify(notifications));
   } catch {}
 };
 
@@ -167,16 +191,42 @@ const normalizeNotification = (notification) => {
 };
 
 export function NotificationProvider({ children }) {
+  const [storageOwner, setStorageOwner] = useState(() => getStorageOwner());
   const [notifications, setNotifications] = useState(() =>
     loadNotifications().map(normalizeNotification)
   );
   const [popupQueue, setPopupQueue] = useState([]);
   const hydratedRef = useRef(false);
 
+  const hydrateFromStorage = useCallback(() => {
+    const nextOwner = getStorageOwner();
+    setStorageOwner(nextOwner);
+    setNotifications(loadNotifications(nextOwner).map(normalizeNotification));
+    setPopupQueue([]);
+  }, []);
+
   useEffect(() => {
     const normalized = notifications.map(normalizeNotification);
-    persistNotifications(normalized);
-  }, [notifications]);
+    persistNotifications(storageOwner, normalized);
+  }, [notifications, storageOwner]);
+
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event?.key && event.key !== "userId" && !event.key.startsWith(STORAGE_KEY)) {
+        return;
+      }
+
+      hydrateFromStorage();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(AUTH_STATE_EVENT, hydrateFromStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(AUTH_STATE_EVENT, hydrateFromStorage);
+    };
+  }, [hydrateFromStorage]);
 
   useEffect(() => {
     if (!hydratedRef.current) {

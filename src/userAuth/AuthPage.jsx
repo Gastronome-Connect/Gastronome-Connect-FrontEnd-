@@ -9,6 +9,8 @@ import ResendPopup from "../components/Popups/ResendPopup";
 import Buffer from "../components/Loading Pages/buffer";
 import { apiFetch } from "../utils/api";
 
+const AUTH_STATE_EVENT = "auth-state-changed";
+
 const FloatingInput = ({
   type,
   id,
@@ -332,6 +334,7 @@ const AuthPage = () => {
           localStorage.setItem("adminAccessToken", data.accessToken);
           localStorage.removeItem("accessToken");
           localStorage.removeItem("userId");
+          window.dispatchEvent(new Event(AUTH_STATE_EVENT));
           navigate("/admin");
         } else {
           localStorage.setItem("accessToken", data.accessToken);
@@ -339,6 +342,7 @@ const AuthPage = () => {
           if (data?.user?._id) {
             localStorage.setItem("userId", data.user._id);
           }
+          window.dispatchEvent(new Event(AUTH_STATE_EVENT));
           navigate("/feed");
         }
         setLoginError("");

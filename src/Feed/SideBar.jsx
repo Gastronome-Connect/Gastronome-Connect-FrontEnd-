@@ -28,6 +28,8 @@ import CreatePostModal from "../components/Modals/CreatePostModal";
 import LogOutModal from "../components/Modals/LogOutModal";
 import PopularRecipes from "../components/Feed Components/PopularRecipePanel";
 
+const AUTH_STATE_EVENT = "auth-state-changed";
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function useUserInfo() {
   const [userName, setUserName] = useState("");
@@ -152,7 +154,8 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
-          navigate("/home", { replace: true });
+          window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+          navigate("/login?mode=login", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
@@ -638,7 +641,8 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
-          navigate("/home", { replace: true });
+          window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+          navigate("/login?mode=login", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />

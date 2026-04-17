@@ -5,6 +5,7 @@ const TITLE_MAX = 60;
 
 export default function ComposeStep({
   userName,
+  userAvatar,
   title,          setTitle,
   postText,       setPostText,
   mediaItems,
@@ -45,9 +46,17 @@ export default function ComposeStep({
 
         {/* Avatar + username */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-[#F57600] shrink-0 overflow-hidden">
-            {userName?.[0]?.toUpperCase() ?? "?"}
-          </div>
+          {userAvatar ? (
+            <img
+              src={userAvatar}
+              alt={userName || "User avatar"}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-orange-100 shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-[#F57600] shrink-0 overflow-hidden">
+              {userName?.[0]?.toUpperCase() ?? "?"}
+            </div>
+          )}
           <span className="font-bold text-sm sm:text-base text-gray-800">{userName}</span>
         </div>
 
