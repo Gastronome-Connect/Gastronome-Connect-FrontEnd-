@@ -311,10 +311,15 @@ const ExpandedView = ({
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <Avatar src={post.avatar} alt={post.author} size={9} />
-              <div>
-                <p className="text-sm font-bold text-gray-900 leading-tight">{post.author}</p>
-                <p className="text-xs text-gray-400">{post.date}</p>
-              </div>
+<div>
+  <div className="flex items-center gap-1.5">
+    <p className="text-sm font-bold text-gray-900 leading-tight">{post.author}</p>
+    {post.username && (
+      <p className="text-xs text-gray-400">@{post.username}</p>
+    )}
+  </div>
+  <p className="text-xs text-gray-400">{post.date}</p>
+</div>
             </div>
             <div className="flex items-center gap-1">
               <FavoriteButton post={post} />

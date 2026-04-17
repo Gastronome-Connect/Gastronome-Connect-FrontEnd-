@@ -17,7 +17,8 @@ import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
 const DEFAULT_PROFILE_DATA = {
   id: "",
   name: "Juan Dela Cruz",
-  bio: "",
+  username: "juandelacruz",
+  bio: "Hilu",
   avatarSrc: "",
   followersCount: 0,
   followingCount: 0,
@@ -30,8 +31,13 @@ const DEFAULT_PROFILE_DATA = {
 
 const normalizeProfileData = (user = {}) => ({
   id: user._id || user.id || "",
+<<<<<<< Updated upstream
   name:
     user.displayName || user.username || user.name || DEFAULT_PROFILE_DATA.name,
+=======
+  name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
+  username: user.username || "",
+>>>>>>> Stashed changes
   bio: user.bio || "",
   avatarSrc: resolveUploadUrl(user.avatar || ""),
   followersCount:
@@ -129,6 +135,7 @@ const GCProfile = () => {
   const handleProfileSave = async (updated) => {
     const nextProfile = { ...profileData };
 
+<<<<<<< Updated upstream
     if (typeof updated.name === "string" && updated.name.trim()) {
       const displayName = updated.name.trim();
 
@@ -163,6 +170,18 @@ const GCProfile = () => {
         );
       }
     }
+=======
+  // ← add this block
+  if (typeof updated.name === "string" && updated.name.trim() && updated.name !== profileData.name) {
+    const res = await apiFetch("/api/display-name", {
+      method: "PUT",
+      body: JSON.stringify({ displayName: updated.name.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to update display name");
+    nextProfile.name = data.displayName;
+  }
+>>>>>>> Stashed changes
 
     if (typeof updated.bio === "string" && updated.bio !== profileData.bio) {
       const bioResponse = await apiFetch("/api/bio", {
