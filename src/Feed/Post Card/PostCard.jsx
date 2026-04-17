@@ -103,8 +103,10 @@ const PostCard = ({
       throw new Error(data.message || fallbackMessage);
     }
 
-    if (data.post) {
-      applyPostUpdate(data.post);
+    // Handle different response formats from backend
+    const updatedPost = data.post || data.data || data;
+    if (updatedPost && updatedPost.id || updatedPost._id) {
+      applyPostUpdate(updatedPost);
     }
 
     return data;
@@ -112,8 +114,9 @@ const PostCard = ({
 
   const handleLike = async () => {
     try {
+      const postId = post.id || post._id;
       await runPostMutation(
-        `/api/posts/${post.id}/like`,
+        `/api/posts/${postId}/like`,
         { method: "POST" },
         "Failed to update like",
       );
@@ -124,8 +127,9 @@ const PostCard = ({
 
   const handleDislike = async () => {
     try {
+      const postId = post.id || post._id;
       await runPostMutation(
-        `/api/posts/${post.id}/dislike`,
+        `/api/posts/${postId}/dislike`,
         { method: "POST" },
         "Failed to update dislike",
       );
@@ -136,8 +140,9 @@ const PostCard = ({
 
   const handleRepost = async () => {
     try {
+      const postId = post.id || post._id;
       await runPostMutation(
-        `/api/posts/${post.id}/repost`,
+        `/api/posts/${postId}/repost`,
         { method: "POST" },
         "Failed to update repost",
       );

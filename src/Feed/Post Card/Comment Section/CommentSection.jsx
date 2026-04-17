@@ -40,16 +40,22 @@ const CommentSection = forwardRef(
           throw new Error(data.message || "Failed to add comment");
         }
 
+        // Handle different response formats
+        const updatedPost = data.post || data.data || {};
+        const newComment = data.comment || data.newComment || {};
+        const postComments = Array.isArray(updatedPost.comments)
+          ? updatedPost.comments
+          : [...comments, newComment].filter(Boolean);
+
+        setComments(postComments);
+        
+        if (updatedPost && (updatedPost.id || updatedPost._id)) {
+          onPostUpdate?.(updatedPost);
+        }
+
         const isCommentUnderReview =
           data.commentModeration?.status === "flagged" &&
           data.commentModeration?.classification === "not_food_related";
-
-        const nextComments = Array.isArray(data.post?.comments)
-          ? data.post.comments
-          : [...comments, data.comment].filter(Boolean);
-
-        setComments(nextComments);
-        onPostUpdate?.(data.post);
 
         if (isCommentUnderReview) {
           setShowCommentReviewPopup(true);
