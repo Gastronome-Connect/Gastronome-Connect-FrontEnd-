@@ -31,7 +31,7 @@ const AvatarLightbox = ({ src, alt, onClose }) =>
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-[9999] flex items-center justify-center p-6 sm:p-10"
-        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+        style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)" }}
         onClick={onClose}
       >
         <button
@@ -43,17 +43,31 @@ const AvatarLightbox = ({ src, alt, onClose }) =>
 
         <motion.div
           key="lightbox-image"
-          initial={{ opacity: 0, scale: 0.92, y: 16 }}
+          initial={{ opacity: 0, scale: 0.94, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 16 }}
+          exit={{ opacity: 0, scale: 0.94, y: 12 }}
           transition={{ type: "spring", stiffness: 380, damping: 30 }}
-          className="relative"
           onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "min(85vw, 720px)",
+            width: "100%",
+            borderRadius: "16px",         // ← rectangle frame, NOT circle
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(0,0,0,0.3)",
+          }}
         >
           <img
             src={src}
             alt={alt}
-            className="block max-w-[85vw] max-h-[80vh] w-auto h-auto rounded-3xl object-contain shadow-2xl border-4 border-white/10"
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              borderRadius: "0",          // ← explicitly no circle
+            }}
           />
         </motion.div>
       </motion.div>

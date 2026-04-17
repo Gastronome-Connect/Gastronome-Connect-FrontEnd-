@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState } from "react";
+import React, { useId, useMemo, useState, useRef, useEffect } from "react";
 import { X, Plus, Hash } from "lucide-react";
 
 const TagEditor = ({
@@ -12,7 +12,10 @@ const TagEditor = ({
 }) => {
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
-  const listId = useId();
+  const [open, setOpen] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const normalizedOptions = useMemo(
     () =>
@@ -22,42 +25,97 @@ const TagEditor = ({
     [availableOptions],
   );
 
-  const filteredOptions = normalizedOptions.filter(
-    (option) =>
-      !items.includes(option) &&
-      option.toLowerCase().includes(input.trim().toLowerCase()),
+  const filteredOptions = useMemo(
+    () =>
+      normalizedOptions.filter(
+        (option) =>
+          !items.includes(option) &&
+          option.toLowerCase().includes(input.trim().toLowerCase()),
+      ),
+    [normalizedOptions, items, input],
   );
 
-  const handleAdd = () => {
-    const val = input.trim();
-    if (!val) {
-      return;
-    }
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+        setHighlightedIdx(-1);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const commitValue = (val) => {
+    const trimmed = val.trim();
+    if (!trimmed) return;
 
     const matchedOption = normalizedOptions.find(
-      (option) => option.toLowerCase() === val.toLowerCase(),
+      (o) => o.toLowerCase() === trimmed.toLowerCase(),
     );
-
-    const nextValue = matchedOption || val;
+    const nextValue = matchedOption || trimmed;
 
     if (items.includes(nextValue)) {
       setInput("");
       setError("");
+      setOpen(false);
       return;
     }
 
     if (normalizedOptions.length > 0 && !matchedOption) {
-      setError(`Choose a valid ${label.toLowerCase()} from the database list.`);
+      setError(`Choose a valid ${label.toLowerCase()} from the list.`);
       return;
     }
 
     onAdd(nextValue);
     setInput("");
     setError("");
+    setOpen(false);
+    setHighlightedIdx(-1);
   };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    setOpen(true);
+    setHighlightedIdx(-1);
+    if (error) setError("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (!open || filteredOptions.length === 0) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitValue(input);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIdx((i) => (i + 1) % filteredOptions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIdx((i) =>
+        i <= 0 ? filteredOptions.length - 1 : i - 1,
+      );
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIdx >= 0) {
+        commitValue(filteredOptions[highlightedIdx]);
+      } else {
+        commitValue(input);
+      }
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setHighlightedIdx(-1);
+    }
+  };
+
+  const showDropdown = open && filteredOptions.length > 0 && input.trim().length > 0;
 
   return (
     <div className="animate-in fade-in duration-500">
+      {/* Label */}
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1 h-4 bg-[#F57600] rounded-full" />
         <p className="text-[11px] font-black text-gray-800 uppercase tracking-widest">
@@ -65,6 +123,7 @@ const TagEditor = ({
         </p>
       </div>
 
+      {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
         {items.map((item) => (
           <span
@@ -82,42 +141,54 @@ const TagEditor = ({
         ))}
       </div>
 
-      <div className="flex gap-2 relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#0060A9] transition-colors">
-          <Hash size={14} />
+      {/* Input + dropdown */}
+      <div ref={containerRef} className="relative">
+        <div className="flex gap-2 group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#0060A9] transition-colors z-10">
+            <Hash size={14} />
+          </div>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => input.trim() && setOpen(true)}
+            placeholder={placeholder}
+            className="flex-1 text-xs bg-gray-50 border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-[#0060A9] focus:bg-white transition-all font-medium"
+          />
+          <button
+            onClick={() => commitValue(input)}
+            className="p-3 bg-[#0060A9] text-white rounded-2xl hover:bg-[#F57600] transition-all shadow-md active:scale-90"
+          >
+            <Plus size={18} />
+          </button>
         </div>
-        <input
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            if (error) {
-              setError("");
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAdd();
-            }
-          }}
-          placeholder={placeholder}
-          list={normalizedOptions.length > 0 ? listId : undefined}
-          className="flex-1 text-xs bg-gray-50 border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-[#0060A9] focus:bg-white transition-all font-medium"
-        />
-        {normalizedOptions.length > 0 && (
-          <datalist id={listId}>
-            {filteredOptions.map((option) => (
-              <option key={option} value={option} />
+
+        {/* Custom suggestion dropdown */}
+        {showDropdown && (
+          <div className="absolute left-0 right-10 mt-1.5 z-50 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            {filteredOptions.map((option, idx) => (
+              <button
+                key={option}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // prevents input blur before we capture
+                  commitValue(option);
+                }}
+                onMouseEnter={() => setHighlightedIdx(idx)}
+                className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors ${
+                  idx === highlightedIdx
+                    ? "bg-[#0060A9]/10 text-[#0060A9]"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {option}
+              </button>
             ))}
-          </datalist>
+          </div>
         )}
-        <button
-          onClick={handleAdd}
-          className="p-3 bg-[#0060A9] text-white rounded-2xl hover:bg-[#F57600] transition-all shadow-md active:scale-90"
-        >
-          <Plus size={18} />
-        </button>
       </div>
+
+      {/* Helper text */}
       <div className="mt-2 min-h-[18px]">
         {error ? (
           <p className="text-[11px] font-medium text-red-500">{error}</p>
@@ -127,22 +198,10 @@ const TagEditor = ({
           </p>
         ) : normalizedOptions.length > 0 ? (
           <p className="text-[11px] font-medium text-gray-400">
-            Suggestions come from the saved database options.
+            Start typing to see suggestions.
           </p>
         ) : null}
       </div>
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 5px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e5e7eb;
-          border-radius: 20px;
-        }
-      `}</style>
     </div>
   );
 };
