@@ -176,6 +176,10 @@ const PostCommentModal = ({
   isOpen = true,
   isOwner = false,
   onClose,
+  onPostUpdate,
+  onLike,
+  onDislike,
+  onRepost,
   onEdit,
   onDelete,
   onArchive,
@@ -227,10 +231,10 @@ const PostCommentModal = ({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const submitComment = () => {
+  const submitComment = async () => {
     const text = pinnedInput.trim();
     if (!text) return;
-    commentSectionRef.current?.addComment(text);
+    await commentSectionRef.current?.addComment(text);
     setPinnedInput("");
     if (pinnedTextareaRef.current)
       pinnedTextareaRef.current.style.height = "auto";
@@ -360,6 +364,9 @@ const PostCommentModal = ({
                       post={post}
                       onComment={() => {}}
                       commentsOpen={true}
+                      onLike={onLike}
+                      onDislike={onDislike}
+                      onRepost={onRepost}
                     />
                   </div>
 
@@ -368,37 +375,8 @@ const PostCommentModal = ({
                     <CommentSection
                       ref={commentSectionRef}
                       postId={post.id}
-                      initialComments={
-                        post.commentsList ?? [
-                          {
-                            id: "s1",
-                            author: "FoodieChef",
-                            avatar: "https://i.pravatar.cc/100?img=5",
-                            text: "This looks absolutely delicious! 😍",
-                            time: "2h ago",
-                            likes: 4,
-                            replies: [],
-                          },
-                          {
-                            id: "s2",
-                            author: "RecipeLover",
-                            avatar: "https://i.pravatar.cc/100?img=9",
-                            text: "Can I substitute the butter with olive oil?",
-                            time: "1h ago",
-                            likes: 1,
-                            replies: [],
-                          },
-                          {
-                            id: "s3",
-                            author: "ChefMasters",
-                            avatar: "https://i.pravatar.cc/100?img=15",
-                            text: "Amazing recipe! Tried it last night 🔥",
-                            time: "45m ago",
-                            likes: 2,
-                            replies: [],
-                          },
-                        ]
-                      }
+                      initialComments={post.comments || []}
+                      onPostUpdate={onPostUpdate}
                       hideInput
                     />
                   </div>

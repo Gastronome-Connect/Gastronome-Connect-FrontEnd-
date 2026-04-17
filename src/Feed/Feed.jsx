@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 import Sidebar from "../Feed/SideBar";
 import Searchbar from "./Searchbar";
@@ -12,8 +12,7 @@ import UploadFailedModal from "../components/Modals/Create Post Components/Uploa
 import FeedNotificationPopupStack from "../components/Popups/FeedNotificationPopupStack";
 import useUpload from "../Hooks/UseUpload";
 import { SkeletonPostList } from "../components/Skeletons";
-import { buildApiUrl } from "../utils/api";
-import { useUserLibrary } from "../Context/UserLibraryContext";
+import { apiFetch } from "../utils/api";
 import { useNotifications } from "../Context/NotificationContext";
 
 const PAGE_SIZE = 10;
@@ -32,14 +31,17 @@ const LazyItem = ({ children, placeholderHeight = 320 }) => {
           observer.disconnect();
         }
       },
-      { rootMargin: "300px 0px" }
+      { rootMargin: "300px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div ref={ref} style={!show ? { minHeight: `${placeholderHeight}px` } : undefined}>
+    <div
+      ref={ref}
+      style={!show ? { minHeight: `${placeholderHeight}px` } : undefined}
+    >
       {show ? children : null}
     </div>
   );
@@ -55,7 +57,7 @@ const InfiniteScrollTrigger = ({ onTrigger, hasMore, isLoading }) => {
       ([entry]) => {
         if (entry.isIntersecting) onTrigger();
       },
-      { rootMargin: "400px 0px" }
+      { rootMargin: "400px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -80,10 +82,17 @@ export default function GCFeed() {
   const [isFetching, setIsFetching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
   const mainRef = useRef(null);
 
-  const { isSuppressedByArchive } = useUserLibrary();
-  const { uploadState, progress, startUpload, retryUpload, cancelUpload, resetUpload } = useUpload();
+  const {
+    uploadState,
+    progress,
+    startUpload,
+    retryUpload,
+    cancelUpload,
+    resetUpload,
+  } = useUpload();
   const {
     popupQueue,
     unreadCount,
@@ -98,7 +107,7 @@ export default function GCFeed() {
         setPosts((prev) => [posted, ...prev]);
       });
     },
-    [startUpload]
+    [startUpload],
   );
 
   const fetchPage = useCallback(
@@ -106,10 +115,14 @@ export default function GCFeed() {
       if (isFetching) return;
       setIsFetching(true);
       try {
-        const res = await fetch(buildApiUrl(`/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`));
+        const res = await apiFetch(
+          `/api/posts?page=${pageNum}&limit=${PAGE_SIZE}`,
+        );
         const data = await res.json();
-        const incoming = Array.isArray(data) ? data : data.posts ?? [];
-        const morePages = Array.isArray(data) ? incoming.length === PAGE_SIZE : data.hasMore ?? false;
+        const incoming = Array.isArray(data) ? data : (data.posts ?? []);
+        const morePages = Array.isArray(data)
+          ? incoming.length === PAGE_SIZE
+          : (data.hasMore ?? false);
         setPosts((prev) => {
           const existingIds = new Set(prev.map((p) => p.id));
           return [...prev, ...incoming.filter((p) => !existingIds.has(p.id))];
@@ -122,12 +135,31 @@ export default function GCFeed() {
         if (pageNum === 1) setInitialLoading(false);
       }
     },
-    [isFetching]
+    [isFetching],
   );
 
   useEffect(() => {
     fetchPage(1);
   }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await apiFetch("/api/user");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch viewer info");
+        }
+
+        setCurrentUserId(data.user?._id || data.user?.id || "");
+      } catch (error) {
+        console.error("Failed to fetch current user for feed:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isFetching) return;
@@ -136,16 +168,18 @@ export default function GCFeed() {
     fetchPage(next);
   }, [hasMore, isFetching, page, fetchPage]);
 
-  const visiblePosts = useMemo(
-    () => posts.filter((post) => !isSuppressedByArchive(post)),
-    [posts, isSuppressedByArchive]
-  );
-
   return (
     <div className="flex h-screen w-full bg-gray-50">
-      <Sidebar onNewPost={handleNewPost} hasNotifications={hasNotifications || unreadCount > 0} />
+      <Sidebar
+        onNewPost={handleNewPost}
+        hasNotifications={hasNotifications || unreadCount > 0}
+      />
 
-      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarGutter: "stable" }}>
+      <main
+        ref={mainRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ scrollbarGutter: "stable" }}
+      >
         <div className="p-4 sm:p-6 xl:pr-[432px] max-w-[1600px] mx-auto pb-24 lg:pb-6">
           <div className="flex flex-col gap-5 min-w-0">
             <div className="sticky top-0 z-10 py-2 hidden sm:block">
@@ -167,30 +201,42 @@ export default function GCFeed() {
 
             {initialLoading && <SkeletonPostList count={3} />}
 
-            {!initialLoading && visiblePosts.length === 0 && (
-              <p className="text-center text-gray-400 py-16">No posts yet. Share your first recipe!</p>
+            {!initialLoading && posts.length === 0 && (
+              <p className="text-center text-gray-400 py-16">
+                No posts yet. Share your first recipe!
+              </p>
             )}
 
             {!initialLoading &&
-              visiblePosts.map((post) => (
+              posts.map((post) => (
                 <LazyItem key={post.id} placeholderHeight={320}>
                   <PostCard
                     post={post}
-                    isOwner
-                    onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                    isOwner={String(post.userId) === String(currentUserId)}
+                    onDelete={(id) =>
+                      setPosts((prev) => prev.filter((p) => p.id !== id))
+                    }
                     onUpdate={(updated) =>
-                      setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+                      setPosts((prev) =>
+                        prev.map((p) => (p.id === updated.id ? updated : p)),
+                      )
                     }
                   />
                 </LazyItem>
               ))}
 
-            {visiblePosts.length > 0 && (
-              <InfiniteScrollTrigger onTrigger={handleLoadMore} hasMore={hasMore} isLoading={isFetching} />
+            {posts.length > 0 && (
+              <InfiniteScrollTrigger
+                onTrigger={handleLoadMore}
+                hasMore={hasMore}
+                isLoading={isFetching}
+              />
             )}
 
-            {!hasMore && visiblePosts.length > 0 && (
-              <p className="text-center text-xs text-gray-300 py-4 select-none">You've reached the end of your feed.</p>
+            {!hasMore && posts.length > 0 && (
+              <p className="text-center text-xs text-gray-300 py-4 select-none">
+                You've reached the end of your feed.
+              </p>
             )}
           </div>
         </div>
@@ -208,9 +254,20 @@ export default function GCFeed() {
         </div>
       </div>
 
-      <FeedNotificationPopupStack notifications={popupQueue} onDismiss={dismissPopup} />
-      <UploadProgressToast uploadState={uploadState === "failed" ? "idle" : uploadState} progress={progress} onDone={resetUpload} />
-      <UploadFailedModal isOpen={uploadState === "failed"} onRetry={retryUpload} onCancel={cancelUpload} />
+      <FeedNotificationPopupStack
+        notifications={popupQueue}
+        onDismiss={dismissPopup}
+      />
+      <UploadProgressToast
+        uploadState={uploadState === "failed" ? "idle" : uploadState}
+        progress={progress}
+        onDone={resetUpload}
+      />
+      <UploadFailedModal
+        isOpen={uploadState === "failed"}
+        onRetry={retryUpload}
+        onCancel={cancelUpload}
+      />
     </div>
   );
 }

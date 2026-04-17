@@ -12,6 +12,7 @@ import {
   EditPostModal,
   ReportModal,
 } from "../../components/Modals";
+import { apiFetch } from "../../utils/api";
 
 /**
  * @param {{ post, isOwner, onDelete, onUpdate, viewerProfile }} props
@@ -31,22 +32,31 @@ const normalizePost = (p = {}) => {
   const out = { ...p };
   // id fallback
   out.id = out.id ?? out._id ?? out._id?._str ?? out._id?.$oid ?? out._id;
-  // counts may be arrays (backend) or numbers (older shape)
-  out._likesCount = Array.isArray(out.likes)
-    ? out.likes.length
-    : typeof out.likes === "number"
-      ? out.likes
-      : 0;
-  out._commentsCount = Array.isArray(out.comments)
-    ? out.comments.length
-    : typeof out.comments === "number"
-      ? out.comments
-      : 0;
-  out._repostsCount = Array.isArray(out.reposts)
-    ? out.reposts.length
-    : typeof out.reposts === "number"
-      ? out.reposts
-      : 0;
+  out.likesCount =
+    typeof out.likesCount === "number"
+      ? out.likesCount
+      : Array.isArray(out.likes)
+        ? out.likes.length
+        : typeof out.likes === "number"
+          ? out.likes
+          : 0;
+  out.commentsCount =
+    typeof out.commentsCount === "number"
+      ? out.commentsCount
+      : Array.isArray(out.comments)
+        ? out.comments.length
+        : typeof out.comments === "number"
+          ? out.comments
+          : 0;
+  out.repostsCount =
+    typeof out.repostsCount === "number"
+      ? out.repostsCount
+      : Array.isArray(out.reposts)
+        ? out.reposts.length
+        : typeof out.reposts === "number"
+          ? out.reposts
+          : 0;
+  out.comments = Array.isArray(out.comments) ? out.comments : [];
   return out;
 };
 
@@ -71,11 +81,72 @@ const PostCard = ({
     setPost(normalizePost(initialPost));
   }, [initialPost]);
 
+  const applyPostUpdate = (nextPost) => {
+    if (!nextPost) {
+      return null;
+    }
+
+    const normalized = normalizePost(nextPost);
+    setPost(normalized);
+    onUpdate?.(normalized);
+    return normalized;
+  };
+
+  const runPostMutation = async (path, init, fallbackMessage) => {
+    const response = await apiFetch(path, init);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || fallbackMessage);
+    }
+
+    if (data.post) {
+      applyPostUpdate(data.post);
+    }
+
+    return data;
+  };
+
+  const handleLike = async () => {
+    try {
+      await runPostMutation(
+        `/api/posts/${post.id}/like`,
+        { method: "POST" },
+        "Failed to update like",
+      );
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
+  };
+
+  const handleDislike = async () => {
+    try {
+      await runPostMutation(
+        `/api/posts/${post.id}/dislike`,
+        { method: "POST" },
+        "Failed to update dislike",
+      );
+    } catch (error) {
+      console.error("Failed to toggle dislike:", error);
+    }
+  };
+
+  const handleRepost = async () => {
+    try {
+      await runPostMutation(
+        `/api/posts/${post.id}/repost`,
+        { method: "POST" },
+        "Failed to update repost",
+      );
+    } catch (error) {
+      console.error("Failed to toggle repost:", error);
+    }
+  };
+
   const handleVisitProfile = () => navigate(`/profile/${post.userId}`);
 
   const handleSaveEdit = (updated) => {
-    setPost(normalizePost(updated));
-    onUpdate?.(updated);
+    applyPostUpdate(updated);
   };
 
   const handleConfirmDelete = () => {
@@ -131,6 +202,9 @@ const PostCard = ({
           post={post}
           onComment={() => setShowCommentModal(true)}
           commentsOpen={showCommentModal}
+          onLike={handleLike}
+          onDislike={handleDislike}
+          onRepost={handleRepost}
         />
 
         <div className="pb-1" />
@@ -144,6 +218,10 @@ const PostCard = ({
           startIndex={expandedIndex}
           isOwner={isOwner}
           onClose={() => setExpandedIndex(null)}
+          onPostUpdate={applyPostUpdate}
+          onLike={handleLike}
+          onDislike={handleDislike}
+          onRepost={handleRepost}
           viewerProfile={viewerProfile}
           {...ownerHandlers}
         />
@@ -154,6 +232,10 @@ const PostCard = ({
           post={post}
           isOwner={isOwner}
           onClose={() => setShowCommentModal(false)}
+          onPostUpdate={applyPostUpdate}
+          onLike={handleLike}
+          onDislike={handleDislike}
+          onRepost={handleRepost}
           onVisitProfile={handleVisitProfile}
           onEdit={
             isOwner

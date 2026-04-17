@@ -1,12 +1,18 @@
 import { motion } from "framer-motion";
 import { FaRegThumbsUp, FaThumbsUp } from "react-icons/fa";
 
-const LikeButton = ({ liked = false, count = 0, onToggle }) => (
+const LikeButton = ({
+  liked = false,
+  count = 0,
+  onToggle,
+  disabled = false,
+}) => (
   <motion.button
     onClick={onToggle}
+    disabled={disabled}
     whileTap={{ scale: 0.8 }}
     transition={{ type: "spring", stiffness: 600, damping: 22 }}
-    className={`flex items-center gap-1.5 sm:gap-2 transition-colors ${
+    className={`flex items-center gap-1.5 sm:gap-2 transition-colors disabled:opacity-60 ${
       liked ? "text-orange-500" : "text-gray-500 hover:text-orange-500"
     }`}
     aria-label={liked ? "Unlike" : "Like"}
@@ -15,10 +21,17 @@ const LikeButton = ({ liked = false, count = 0, onToggle }) => (
       animate={{ scale: liked ? [1, 1.3, 1] : 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
-      {liked
-        ? <><FaThumbsUp size={15} className="sm:hidden" /><FaThumbsUp size={18} className="hidden sm:block" /></>
-        : <><FaRegThumbsUp size={15} className="sm:hidden" /><FaRegThumbsUp size={18} className="hidden sm:block" /></>
-      }
+      {liked ? (
+        <>
+          <FaThumbsUp size={15} className="sm:hidden" />
+          <FaThumbsUp size={18} className="hidden sm:block" />
+        </>
+      ) : (
+        <>
+          <FaRegThumbsUp size={15} className="sm:hidden" />
+          <FaRegThumbsUp size={18} className="hidden sm:block" />
+        </>
+      )}
     </motion.span>
     <motion.span
       key={count}

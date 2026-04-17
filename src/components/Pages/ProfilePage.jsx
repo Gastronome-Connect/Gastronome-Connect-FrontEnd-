@@ -12,7 +12,7 @@ import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
 import SkeletonAllergensPanel from "../Skeletons/SkeletonAllergensPanel";
-import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
 const DEFAULT_PROFILE_DATA = {
   id: "",
@@ -68,11 +68,6 @@ const dataUrlToFile = async (dataUrl) => {
 const areStringArraysEqual = (left = [], right = []) =>
   JSON.stringify(left) === JSON.stringify(right);
 
-const withPostsCount = (profile, posts) => ({
-  ...profile,
-  postsCount: Array.isArray(posts) ? posts.length : 0,
-});
-
 const GCProfile = () => {
   const [posts, setPosts] = useState([]);
   const [chatExpanded, setChatExpanded] = useState(false);
@@ -92,11 +87,11 @@ const GCProfile = () => {
 
   const handleNewPost = (newPost) => {
     startUpload(newPost, (posted) => {
-      setPosts((prev) => {
-        const nextPosts = [posted, ...prev];
-        setProfileData((current) => withPostsCount(current, nextPosts));
-        return nextPosts;
-      });
+      setPosts((prev) => [posted, ...prev]);
+      setProfileData((current) => ({
+        ...current,
+        postsCount: (current.postsCount || 0) + 1,
+      }));
     });
   };
 
@@ -122,13 +117,12 @@ const GCProfile = () => {
           return;
         }
 
-        const postsResponse = await fetch(
-          buildApiUrl(`/api/posts?userId=${normalizedProfile.id}`),
+        const postsResponse = await apiFetch(
+          `/api/posts?userId=${normalizedProfile.id}&includeReposts=true`,
         );
         const postsData = await postsResponse.json();
         const normalizedPosts = Array.isArray(postsData) ? postsData : [];
         setPosts(normalizedPosts);
-        setProfileData((current) => withPostsCount(current, normalizedPosts));
       } catch (error) {
         console.error("Failed to fetch profile or posts:", error);
       } finally {
@@ -334,27 +328,39 @@ const GCProfile = () => {
                       throw new Error(data.message || "Failed to delete post");
                     }
 
-                    setPosts((prev) => {
-                      const nextPosts = prev.filter((item) => item.id !== id);
-                      setProfileData((current) => ({
-                        ...withPostsCount(current, nextPosts),
-                        postsCount:
-                          typeof data.postsCount === "number"
-                            ? data.postsCount
-                            : nextPosts.length,
-                      }));
-                      return nextPosts;
-                    });
+                    setPosts((prev) => prev.filter((item) => item.id !== id));
+                    setProfileData((current) => ({
+                      ...current,
+                      postsCount:
+                        typeof data.postsCount === "number"
+                          ? data.postsCount
+                          : Math.max((current.postsCount || 1) - 1, 0),
+                    }));
                   } catch (error) {
                     console.error("Failed to delete post:", error);
                   }
                 }}
                 onUpdate={(updated) =>
-                  setPosts((prev) =>
-                    prev.map((item) =>
-                      item.id === updated.id ? updated : item,
-                    ),
-                  )
+                  setPosts((prev) => {
+                    if (
+                      !updated.repostedByViewer &&
+                      String(updated.userId) !== String(profileData.id)
+                    ) {
+                      return prev.filter((item) => item.id !== updated.id);
+                    }
+
+                    let didUpdate = false;
+                    const nextPosts = prev.map((item) => {
+                      if (item.id !== updated.id) {
+                        return item;
+                      }
+
+                      didUpdate = true;
+                      return updated;
+                    });
+
+                    return didUpdate ? nextPosts : [updated, ...prev];
+                  })
                 }
               />
             ))}
