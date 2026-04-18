@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import RecommendationCard from "../Cards/RecommendedRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
-import { useUserLibrary } from "../../Context/UserLibraryContext";
 import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
 const getSourceLabel = (sourceUrl) => {
@@ -90,7 +89,6 @@ export default function Recommendation() {
   const scrollRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
-  const { isSuppressedByArchive } = useUserLibrary();
 
   useEffect(() => {
     let cancelled = false;
@@ -145,10 +143,6 @@ export default function Recommendation() {
     });
   };
 
-  const visibleRecommendedRecipes = recipes.filter(
-    (recipe) => !isSuppressedByArchive(recipe),
-  );
-
   return (
     <section className="w-full relative">
       {/* Header */}
@@ -184,7 +178,7 @@ export default function Recommendation() {
             ? Array.from({ length: 5 }).map((_, i) => (
                 <SkeletonRecommendationCard key={`skeleton-${i}`} />
               ))
-            : visibleRecommendedRecipes.map((recipe, index) => (
+            : recipes.map((recipe, index) => (
                 <RecommendationCard
                   key={recipe.id || `recipe-${recipe.name}-${index}`}
                   recipe={recipe}

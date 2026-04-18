@@ -14,6 +14,7 @@ import { FaEllipsisH } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
 import { useChat } from "../../Hooks/UseChats"; // ← adjust path if needed
+import { apiFetch } from "../../utils/api";
 import AILogo from "../Assets/AILogo.png";
 
 /* ── Inline avatar ── */
@@ -201,15 +202,15 @@ const CardExpandedView = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoadingTts, setIsLoadingTts] = useState(false);
 
   const menuRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speechChunksRef = useRef([]);
-  const speechIndexRef = useRef(0);
-  const speechActiveRef = useRef(false);
-  const speechTimeoutRef = useRef(null);
-  const currentUtteranceRef = useRef(null);
+  const historyPostRef = useRef(post);
+  const audioRef = useRef(null);
+  const audioBlobUrlRef = useRef(null);
+  const ttsAbortRef = useRef(null);
 
   const media = post.mediaItems ?? [];
   const hasMultiple = media.length > 1;
@@ -217,17 +218,35 @@ const CardExpandedView = ({
   const postId = post.id ?? post._id;
   const saved = isFavorited(post);
   const archived = isArchived(postId);
+  const historyKey = postId ?? post.title ?? post.caption ?? "";
+
+  useEffect(() => {
+    historyPostRef.current = post;
+  }, [post]);
 
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
       if (!historyAddedRef.current) {
-        addToHistory(post);
+        const historyPost = historyPostRef.current;
+
+        addToHistory(historyPost);
         historyAddedRef.current = true;
+
+        // Also persist to backend history (logs)
+        const recipeId = historyPost.id ?? historyPost._id;
+        const recipeName = historyPost.title ?? historyPost.name ?? "";
+        if (recipeId && recipeName) {
+          apiFetch("/api/logs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipeId, recipeName }),
+          }).catch(() => {});
+        }
       }
     }, 5000);
     return () => clearTimeout(historyTimerRef.current);
-  }, [post, addToHistory]);
+  }, [historyKey, addToHistory]);
 
   const goPrev = (e) => {
     e.stopPropagation();
@@ -247,77 +266,48 @@ const CardExpandedView = ({
   };
 
   const stopSpeaking = React.useCallback(() => {
-    speechActiveRef.current = false;
-    speechChunksRef.current = [];
-    speechIndexRef.current = 0;
-    currentUtteranceRef.current = null;
-    if (speechTimeoutRef.current) {
-      clearTimeout(speechTimeoutRef.current);
-      speechTimeoutRef.current = null;
+    // Abort any in-flight TTS request
+    if (ttsAbortRef.current) {
+      ttsAbortRef.current.abort();
+      ttsAbortRef.current = null;
     }
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current);
+      audioBlobUrlRef.current = null;
+    }
     setIsSpeaking(false);
     setIsPaused(false);
+    setIsLoadingTts(false);
   }, []);
 
-  function queueNextChunk(nextIndex) {
-    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
-    speechTimeoutRef.current = setTimeout(() => {
-      speakChunk(nextIndex);
-    }, 75);
-  }
+  const handleSpeak = async () => {
+    // If loading, ignore extra clicks
+    if (isLoadingTts) return;
 
-  function speakChunk(index = 0) {
-    const chunks = speechChunksRef.current;
-    if (!speechActiveRef.current || index >= chunks.length) {
-      currentUtteranceRef.current = null;
-      setIsSpeaking(false);
-      setIsPaused(false);
-      speechActiveRef.current = false;
-      return;
-    }
-
-    speechIndexRef.current = index;
-    const utterance = new SpeechSynthesisUtterance(chunks[index]);
-    currentUtteranceRef.current = utterance;
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.lang = "en-US";
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setIsPaused(false);
-    };
-
-    utterance.onend = () => {
-      if (!speechActiveRef.current) return;
-      queueNextChunk(index + 1);
-    };
-
-    utterance.onerror = (e) => {
-      if (e.error === "interrupted" || e.error === "canceled") return;
-      queueNextChunk(index + 1);
-    };
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  }
-
-  const handleSpeak = () => {
-    if (!window?.speechSynthesis) return;
-
-    if (isSpeaking) {
+    // Toggle pause/resume if already playing
+    if (isSpeaking && audioRef.current) {
       if (isPaused) {
-        window.speechSynthesis.resume();
+        audioRef.current.play();
         setIsPaused(false);
       } else {
-        window.speechSynthesis.pause();
+        audioRef.current.pause();
         setIsPaused(true);
       }
       return;
     }
 
+    // If already speaking but audioRef is gone (shouldn't happen), reset
+    if (isSpeaking) {
+      stopSpeaking();
+      return;
+    }
+
+    // Build the text from all recipe information
     const ingredientsText =
       post.ingredients?.length > 0
         ? post.ingredients
@@ -331,23 +321,54 @@ const CardExpandedView = ({
             .join(", ")
         : "";
 
-    const parts = [`Title: ${post.title}`];
+    const parts = [];
+    if (post.title) parts.push(`Title: ${post.title}`);
+    if (post.author) parts.push(`By: ${post.author}`);
     if (ingredientsText) parts.push(`Ingredients: ${ingredientsText}`);
-    if (post.caption) parts.push(`Description: ${post.caption}`);
+    if (post.caption) parts.push(`Instructions: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    const chunks = textToSpeak
-      .split(/(?<=[.!?])\s+/)
-      .map((chunk) => chunk.trim())
-      .filter(Boolean);
+    if (!textToSpeak.trim()) return;
 
-    if (chunks.length === 0) return;
+    // Prevent duplicate requests
+    setIsLoadingTts(true);
+    setIsSpeaking(true);
+    setIsPaused(false);
 
-    window.speechSynthesis.cancel();
-    speechChunksRef.current = chunks;
-    speechIndexRef.current = 0;
-    speechActiveRef.current = true;
-    speakChunk(0);
+    const abortController = new AbortController();
+    ttsAbortRef.current = abortController;
+
+    try {
+      const res = await apiFetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textToSpeak }),
+        signal: abortController.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error("TTS request failed");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioBlobUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        stopSpeaking();
+      };
+      audio.onerror = () => {
+        stopSpeaking();
+      };
+
+      setIsLoadingTts(false);
+      await audio.play();
+    } catch {
+      stopSpeaking();
+    }
   };
 
   // ← new: start a fresh session then navigate with prefill
@@ -554,24 +575,33 @@ const CardExpandedView = ({
 
               <button
                 onClick={handleSpeak}
+                disabled={isLoadingTts}
                 className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-200
                   ${
-                    isSpeaking && !isPaused
-                      ? "bg-blue-50 border-blue-200 text-blue-500 hover:bg-blue-100"
-                      : "border-gray-200 text-gray-400 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-400"
+                    isLoadingTts
+                      ? "bg-blue-50 border-blue-200 text-blue-400 animate-pulse cursor-wait"
+                      : isSpeaking && !isPaused
+                        ? "bg-blue-50 border-blue-200 text-blue-500 hover:bg-blue-100"
+                        : "border-gray-200 text-gray-400 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-400"
                   }`}
                 title={
-                  !isSpeaking
-                    ? "Read recipe aloud"
-                    : isPaused
-                      ? "Resume reading"
-                      : "Pause reading"
+                  isLoadingTts
+                    ? "Generating audio..."
+                    : !isSpeaking
+                      ? "Read recipe aloud"
+                      : isPaused
+                        ? "Resume reading"
+                        : "Pause reading"
                 }
               >
                 <Volume2
                   size={15}
-                  fill={isSpeaking && !isPaused ? "currentColor" : "none"}
-                  strokeWidth={isSpeaking && !isPaused ? 0 : 2}
+                  fill={
+                    isSpeaking && !isPaused && !isLoadingTts
+                      ? "currentColor"
+                      : "none"
+                  }
+                  strokeWidth={isSpeaking && !isPaused && !isLoadingTts ? 0 : 2}
                 />
               </button>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,6 +20,7 @@ import CommentSection from "../Comment Section/CommentSection";
 import AILogo from "../../../components/Assets/AILogo.png";
 import { useUserLibrary } from "../../../Context/UserLibraryContext";
 import { useChat } from "../../../Hooks/UseChats"; // ← adjust path if needed
+import { apiFetch } from "../../../utils/api";
 
 /* ── Shared unit pluralizer ── */
 const pluralizeUnit = (unit, amount) => {
@@ -145,17 +146,17 @@ const ExpandedView = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoadingTts, setIsLoadingTts] = useState(false);
 
   const menuRef = useRef(null);
   const commentSectionRef = useRef(null);
   const pinnedTextareaRef = useRef(null);
   const historyTimerRef = useRef(null);
   const historyAddedRef = useRef(false);
-  const speechChunksRef = useRef([]);
-  const speechIndexRef = useRef(0);
-  const speechActiveRef = useRef(false);
-  const speechTimeoutRef = useRef(null);
-  const currentUtteranceRef = useRef(null);
+  const historyPostRef = useRef(post);
+  const audioRef = useRef(null);
+  const audioBlobUrlRef = useRef(null);
+  const ttsAbortRef = useRef(null);
   const [pinnedInput, setPinnedInput] = useState("");
 
   const media = post.mediaItems ?? [];
@@ -163,17 +164,22 @@ const ExpandedView = ({
   const item = media[current] ?? null;
   const postId = post.id ?? post._id;
   const archived = isArchived(postId);
+  const historyKey = postId ?? post.title ?? post.caption ?? "";
+
+  useEffect(() => {
+    historyPostRef.current = post;
+  }, [post]);
 
   useEffect(() => {
     historyAddedRef.current = false;
     historyTimerRef.current = setTimeout(() => {
       if (!historyAddedRef.current) {
-        addToHistory(post);
+        addToHistory(historyPostRef.current);
         historyAddedRef.current = true;
       }
     }, 5000);
     return () => clearTimeout(historyTimerRef.current);
-  }, [post, addToHistory]);
+  }, [historyKey, addToHistory]);
 
   const goPrev = (e) => {
     e.stopPropagation();
@@ -190,75 +196,41 @@ const ExpandedView = ({
     setMenuOpen(false);
   };
 
-  const stopSpeaking = () => {
-    speechActiveRef.current = false;
-    speechChunksRef.current = [];
-    speechIndexRef.current = 0;
-    currentUtteranceRef.current = null;
-    if (speechTimeoutRef.current) {
-      clearTimeout(speechTimeoutRef.current);
-      speechTimeoutRef.current = null;
+  const stopSpeaking = useCallback(() => {
+    if (ttsAbortRef.current) {
+      ttsAbortRef.current.abort();
+      ttsAbortRef.current = null;
     }
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current);
+      audioBlobUrlRef.current = null;
+    }
     setIsSpeaking(false);
     setIsPaused(false);
-  };
+    setIsLoadingTts(false);
+  }, []);
 
-  const queueNextChunk = (nextIndex) => {
-    if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
-    speechTimeoutRef.current = setTimeout(() => {
-      speakChunk(nextIndex);
-    }, 75);
-  };
+  const handleSpeak = async () => {
+    if (isLoadingTts) return;
 
-  const speakChunk = (index = 0) => {
-    const chunks = speechChunksRef.current;
-    if (!speechActiveRef.current || index >= chunks.length) {
-      currentUtteranceRef.current = null;
-      setIsSpeaking(false);
-      setIsPaused(false);
-      speechActiveRef.current = false;
+    if (isSpeaking && audioRef.current) {
+      if (isPaused) {
+        await audioRef.current.play();
+        setIsPaused(false);
+      } else {
+        audioRef.current.pause();
+        setIsPaused(true);
+      }
       return;
     }
 
-    speechIndexRef.current = index;
-    const utterance = new SpeechSynthesisUtterance(chunks[index]);
-    currentUtteranceRef.current = utterance;
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.lang = "en-US";
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setIsPaused(false);
-    };
-
-    utterance.onend = () => {
-      if (!speechActiveRef.current) return;
-      queueNextChunk(index + 1);
-    };
-
-    utterance.onerror = (e) => {
-      if (e.error === "interrupted" || e.error === "canceled") return;
-      queueNextChunk(index + 1);
-    };
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const handleSpeak = () => {
-    if (!window?.speechSynthesis) return;
-
     if (isSpeaking) {
-      if (isPaused) {
-        window.speechSynthesis.resume();
-        setIsPaused(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPaused(true);
-      }
+      stopSpeaking();
       return;
     }
 
@@ -280,18 +252,46 @@ const ExpandedView = ({
     if (post.caption) parts.push(`Description: ${post.caption}`);
     const textToSpeak = parts.join(". ");
 
-    const chunks = textToSpeak
-      .split(/(?<=[.!?])\s+/)
-      .map((chunk) => chunk.trim())
-      .filter(Boolean);
+    if (!textToSpeak.trim()) return;
 
-    if (chunks.length === 0) return;
+    setIsLoadingTts(true);
+    setIsSpeaking(true);
+    setIsPaused(false);
 
-    window.speechSynthesis.cancel();
-    speechChunksRef.current = chunks;
-    speechIndexRef.current = 0;
-    speechActiveRef.current = true;
-    speakChunk(0);
+    const abortController = new AbortController();
+    ttsAbortRef.current = abortController;
+
+    try {
+      const res = await apiFetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textToSpeak }),
+        signal: abortController.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error("TTS request failed");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioBlobUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        stopSpeaking();
+      };
+      audio.onerror = () => {
+        stopSpeaking();
+      };
+
+      setIsLoadingTts(false);
+      await audio.play();
+    } catch {
+      stopSpeaking();
+    }
   };
 
   useEffect(() => {
@@ -316,7 +316,7 @@ const ExpandedView = ({
       document.body.style.overflow = "unset";
       stopSpeaking();
     };
-  }, [onClose, hasMultiple, media.length]);
+  }, [onClose, hasMultiple, media.length, stopSpeaking]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -530,15 +530,24 @@ const ExpandedView = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSpeak}
+                  disabled={isLoadingTts}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shrink-0 ${
-                    isSpeaking && !isPaused
-                      ? "bg-[#F57600] text-white shadow"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    isLoadingTts
+                      ? "bg-orange-100 text-[#F57600] shadow cursor-wait animate-pulse"
+                      : isSpeaking && !isPaused
+                        ? "bg-[#F57600] text-white shadow"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <Volume2 size={13} />
                   <span className="hidden xs:inline">
-                    {!isSpeaking ? "Speak" : isPaused ? "Resume" : "Pause"}
+                    {isLoadingTts
+                      ? "Loading"
+                      : !isSpeaking
+                        ? "Speak"
+                        : isPaused
+                          ? "Resume"
+                          : "Pause"}
                   </span>
                 </button>
                 {/* ── Updated Chatbot button ── */}
