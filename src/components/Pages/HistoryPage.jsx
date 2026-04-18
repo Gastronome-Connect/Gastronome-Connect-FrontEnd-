@@ -21,6 +21,7 @@ import useModeratedPostCreation from "../../Hooks/useModeratedPostCreation";
 import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import SkeletonRecipeGrid from "../Skeletons/SkeletonRecipeGrid";
 import { useUserLibrary } from "../../Context/UserLibraryContext";
+import { apiFetch } from "../../utils/api";
 
 const SORT_OPTIONS = [
   { value: "recent", label: "Most Recent" },
@@ -67,6 +68,53 @@ const HistoryPage = () => {
     setToast({ visible: false, message: "" });
     requestAnimationFrame(() => setToast({ visible: true, message }));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchBackendHistory = async () => {
+      try {
+        const res = await apiFetch("/api/logs");
+        if (!res.ok) return;
+        const data = await res.json();
+        const logs = Array.isArray(data?.logs) ? data.logs : [];
+        if (cancelled || logs.length === 0) return;
+
+        // Merge backend logs into local history (backend entries take priority for persistence)
+        const backendEntries = logs.map((log) => ({
+          id: log.recipeId || log._id,
+          title: log.recipeName || "",
+          caption: "",
+          author: "",
+          avatar: "",
+          image: "",
+          date: log.createdAt
+            ? new Date(log.createdAt).toLocaleDateString()
+            : new Date().toLocaleDateString(),
+          ingredients: [],
+          mediaItems: [],
+          savedAt: log.createdAt
+            ? new Date(log.createdAt).getTime()
+            : Date.now(),
+          _backendLogId: log._id,
+        }));
+
+        // Merge: keep local entries that aren't in backend, then add backend entries
+        const localIds = new Set(history.map((h) => String(h.id)));
+        const newEntries = backendEntries.filter(
+          (be) => !localIds.has(String(be.id)),
+        );
+        if (newEntries.length > 0) {
+          restoreHistory([...history, ...newEntries]);
+        }
+      } catch {}
+    };
+
+    fetchBackendHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
@@ -142,6 +190,13 @@ const HistoryPage = () => {
       const snapshot = [...history];
       removeFromHistory(id);
       showUndo("Item removed from history", snapshot);
+
+      // Also delete from backend
+      const entry = history.find((h) => String(h.id) === String(id));
+      const backendLogId = entry?._backendLogId || id;
+      apiFetch(`/api/logs/${backendLogId}`, { method: "DELETE" }).catch(
+        () => {},
+      );
     },
     [history, removeFromHistory, showUndo],
   );
@@ -152,6 +207,9 @@ const HistoryPage = () => {
     setShowClearPopup(false);
     setCurrentPage(1);
     showUndo("History cleared", snapshot);
+
+    // Also clear all backend logs
+    apiFetch("/api/logs", { method: "DELETE" }).catch(() => {});
   }, [history, clearHistory, showUndo]);
 
   const handleUndo = useCallback(() => {

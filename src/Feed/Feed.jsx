@@ -84,7 +84,7 @@ export default function GCFeed() {
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [chatExpanded, setChatExpanded] = useState(false);
+  const [, setChatExpanded] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const mainRef = useRef(null);
   const { isSuppressedByArchive } = useUserLibrary();
@@ -189,13 +189,13 @@ export default function GCFeed() {
             </div>
 
             <div className="flex items-center justify-end">
-              <button
+              {/* <button
                 type="button"
                 onClick={seedDemoNotification}
                 className="rounded-full border border-[#0060A9]/15 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#0060A9]/80 shadow-sm transition hover:border-[#0060A9]/30 hover:bg-white hover:text-[#0060A9]"
               >
                 Trigger demo alert
-              </button>
+              </button> */}
             </div>
 
             <HeroBanner />
@@ -241,7 +241,8 @@ export default function GCFeed() {
                   </LazyItem>
                 ))}
 
-            {posts.filter((post) => !isSuppressedByArchive(post)).length > 0 && (
+            {posts.filter((post) => !isSuppressedByArchive(post)).length >
+              0 && (
               <InfiniteScrollTrigger
                 onTrigger={handleLoadMore}
                 hasMore={hasMore}
@@ -252,10 +253,10 @@ export default function GCFeed() {
             {!hasMore &&
               posts.filter((post) => !isSuppressedByArchive(post)).length >
                 0 && (
-              <p className="text-center text-xs text-gray-300 py-4 select-none">
-                You've reached the end of your feed.
-              </p>
-            )}
+                <p className="text-center text-xs text-gray-300 py-4 select-none">
+                  You've reached the end of your feed.
+                </p>
+              )}
           </div>
         </div>
       </main>
@@ -265,7 +266,7 @@ export default function GCFeed() {
         style={{ height: "calc(100vh - 3rem)" }}
       >
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <PopularRecipes collapsed={chatExpanded} />
+          <PopularRecipes />
         </div>
         <div className="flex-shrink-0">
           <AIChatbotWidget onExpandChange={setChatExpanded} />

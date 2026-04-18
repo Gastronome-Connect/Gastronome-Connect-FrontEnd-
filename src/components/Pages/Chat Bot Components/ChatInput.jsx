@@ -42,8 +42,18 @@ export default function ChatInput({
           className="flex-shrink-0 mb-0.5 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           aria-label="Attach"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
         </button>
 
@@ -64,7 +74,7 @@ export default function ChatInput({
         {/* Mic + Send */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 mb-0.5">
           {/* Mic — always visible */}
-          <button
+          {/* <button
             type="button"
             tabIndex={-1}
             aria-label="Voice input"
@@ -74,7 +84,7 @@ export default function ChatInput({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a4 4 0 014 4v6a4 4 0 01-8 0V5a4 4 0 014-4z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18v4m-3 0h6" />
             </svg>
-          </button>
+          </button> */}
 
           <button
             type="button"
@@ -82,12 +92,24 @@ export default function ChatInput({
             disabled={!value.trim() || disabled}
             aria-label="Send"
             className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-150
-                       ${value.trim() && !disabled
-                         ? "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-                         : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                       ${
+                         value.trim() && !disabled
+                           ? "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                       }`}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 12h14M13 6l6 6-6 6"
+              />
             </svg>
           </button>
         </div>

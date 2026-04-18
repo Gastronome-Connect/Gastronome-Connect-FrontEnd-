@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Flame } from "lucide-react";
 import PopularRecipeCard from "../Cards/PopularRecipeCard";
 import { SkeletonLoader } from "../Skeletons";
-import { useUserLibrary } from "../../Context/UserLibraryContext";
 import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
 const getSourceLabel = (sourceUrl) => {
@@ -69,7 +68,6 @@ const SkeletonPopularRow = () => (
 export default function PopularRecipes() {
   const [isLoading, setIsLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
-  const { isSuppressedByArchive } = useUserLibrary();
 
   useEffect(() => {
     let cancelled = false;
@@ -112,10 +110,6 @@ export default function PopularRecipes() {
     };
   }, []);
 
-  const visibleRecipes = recipes.filter(
-    (recipe) => !isSuppressedByArchive(recipe),
-  );
-
   return (
     <div className="bg-white p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 flex flex-col h-full min-h-0 shadow-[0_20px_40px_-15px_rgba(0,96,169,0.08)] relative overflow-hidden">
       <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#0060A9]/5 rounded-full blur-[80px] pointer-events-none" />
@@ -142,7 +136,7 @@ export default function PopularRecipes() {
           ? Array.from({ length: 6 }).map((_, i) => (
               <SkeletonPopularRow key={i} />
             ))
-          : visibleRecipes.map((recipe, index) => (
+          : recipes.map((recipe, index) => (
               <PopularRecipeCard
                 key={recipe.id || recipe._id || index}
                 recipe={recipe}

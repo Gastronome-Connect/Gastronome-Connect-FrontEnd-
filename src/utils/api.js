@@ -81,7 +81,25 @@ async function apiFetch(input, init = {}) {
   if (token) opts.headers["Authorization"] = `Bearer ${token}`;
 
   let res = await fetch(url, opts);
-  if (res.status !== 401) return res;
+  const shouldAttemptRefresh = await (async () => {
+    if (res.status === 401) {
+      return true;
+    }
+
+    if (res.status !== 403) {
+      return false;
+    }
+
+    try {
+      const data = await res.clone().json();
+      const message = String(data?.message || "").toLowerCase();
+      return message.includes("invalid or expired token");
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!shouldAttemptRefresh) return res;
 
   // Try refresh once
   try {

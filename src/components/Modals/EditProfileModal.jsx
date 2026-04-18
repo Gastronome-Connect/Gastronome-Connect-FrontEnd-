@@ -12,6 +12,8 @@ import DeleteAccountPopup from "../Popups/DelPopup";
 import AvatarEditorModal from "../Modals/Edit Profile Modal Components/AvatarEditorModal";
 import { apiFetch, logout } from "../../utils/api";
 
+const AUTH_STATE_EVENT = "auth-state-changed";
+
 const EXISTING_NAMES = ["Juan Dela Cruz", "Gastronome01", "Tester_01"];
 
 const DEFAULT_OPTION_DATA = {
@@ -272,6 +274,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
       await logout();
       localStorage.removeItem("userId");
       localStorage.removeItem("adminAccessToken");
+      window.dispatchEvent(new Event(AUTH_STATE_EVENT));
 
       setDeleteLoading(false);
       setShowDeletePopup(false);

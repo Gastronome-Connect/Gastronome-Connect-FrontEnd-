@@ -16,6 +16,8 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoutModal from "./AdminLogOutModal";
 
+const AUTH_STATE_EVENT = "auth-state-changed";
+
 export default function AdminSidebar({ onCollapse }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,13 +32,48 @@ export default function AdminSidebar({ onCollapse }) {
   };
 
   const menuItems = [
-    { id: "dashboard",  label: "Dashboard",         icon: LayoutDashboard,      path: "/admin" },
-    { id: "timeout",    label: "Timeout Users",     icon: Clock,                path: "/admin/timeout" },
-    { id: "restore",    label: "Restore Account",   icon: RefreshCw,            path: "/admin/restore" },
-    { id: "flagged",    label: "Flagged Posts",     icon: Flag,                 path: "/admin/flagged" },
-    { id: "reported",   label: "Reported Comments", icon: MessageSquareWarning, path: "/admin/reported" },
-    { id: "profiles",   label: "Reported Profiles", icon: UsersRound,           path: "/admin/reported-profiles" },
-    { id: "statistics", label: "Statistics",        icon: BarChart3,            path: "/admin/statistics" },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/admin",
+    },
+    {
+      id: "timeout",
+      label: "Timeout Users",
+      icon: Clock,
+      path: "/admin/timeout",
+    },
+    {
+      id: "restore",
+      label: "Restore Account",
+      icon: RefreshCw,
+      path: "/admin/restore",
+    },
+    {
+      id: "flagged",
+      label: "Flagged Posts",
+      icon: Flag,
+      path: "/admin/flagged",
+    },
+    {
+      id: "reported",
+      label: "Reported Comments",
+      icon: MessageSquareWarning,
+      path: "/admin/reported",
+    },
+    {
+      id: "profiles",
+      label: "Reported Profiles",
+      icon: UsersRound,
+      path: "/admin/reported-profiles",
+    },
+    {
+      id: "statistics",
+      label: "Statistics",
+      icon: BarChart3,
+      path: "/admin/statistics",
+    },
   ];
 
   const handleLogout = () => {
@@ -45,14 +82,17 @@ export default function AdminSidebar({ onCollapse }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
+    window.dispatchEvent(new Event(AUTH_STATE_EVENT));
     navigate("/login?mode=login", { replace: true });
   };
 
   return (
     <>
       {/* Outer wrapper just reserves the layout width */}
-      <div className="relative shrink-0" style={{ width: collapsed ? 72 : 240, transition: "width 0.25s ease" }}>
-
+      <div
+        className="relative shrink-0"
+        style={{ width: collapsed ? 72 : 240, transition: "width 0.25s ease" }}
+      >
         <motion.aside
           animate={{ width: collapsed ? 72 : 240 }}
           transition={{ duration: 0.25, ease: "easeInOut" }}
@@ -71,7 +111,11 @@ export default function AdminSidebar({ onCollapse }) {
           <div className="h-[64px] border-b-2 border-gray-100 flex items-center px-3 shrink-0 overflow-hidden">
             <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0060A9] to-[#00B4FA] flex items-center justify-center shadow-md shrink-0">
-                <ShieldCheck size={18} className="text-white" strokeWidth={2.5} />
+                <ShieldCheck
+                  size={18}
+                  className="text-white"
+                  strokeWidth={2.5}
+                />
               </div>
               <AnimatePresence initial={false}>
                 {!collapsed && (
@@ -83,8 +127,12 @@ export default function AdminSidebar({ onCollapse }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    <p className="text-[11px] font-black text-[#0060A9] uppercase tracking-tight leading-tight">Admin Panel</p>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Gastronome</p>
+                    <p className="text-[11px] font-black text-[#0060A9] uppercase tracking-tight leading-tight">
+                      Admin Panel
+                    </p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                      Gastronome
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -105,9 +153,11 @@ export default function AdminSidebar({ onCollapse }) {
                   title={collapsed ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all
                     ${collapsed ? "justify-center" : ""}
-                    ${isActive
-                      ? "bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white shadow-md shadow-blue-900/20"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
+                    ${
+                      isActive
+                        ? "bg-gradient-to-r from-[#0060A9] to-[#00B4FA] text-white shadow-md shadow-blue-900/20"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                    }`}
                 >
                   <Icon size={17} strokeWidth={2.5} className="shrink-0" />
                   <AnimatePresence initial={false}>
@@ -151,8 +201,12 @@ export default function AdminSidebar({ onCollapse }) {
                     A
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-black text-gray-900 truncate">Admin User</p>
-                    <p className="text-[9px] text-gray-400 font-bold">Super Admin</p>
+                    <p className="text-xs font-black text-gray-900 truncate">
+                      Admin User
+                    </p>
+                    <p className="text-[9px] text-gray-400 font-bold">
+                      Super Admin
+                    </p>
                   </div>
                 </motion.div>
               )}
@@ -186,7 +240,10 @@ export default function AdminSidebar({ onCollapse }) {
 
       <AnimatePresence>
         {showLogout && (
-          <LogoutModal onConfirm={handleLogout} onCancel={() => setShowLogout(false)} />
+          <LogoutModal
+            onConfirm={handleLogout}
+            onCancel={() => setShowLogout(false)}
+          />
         )}
       </AnimatePresence>
     </>

@@ -8,7 +8,7 @@ import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
 import useDraft from "../Modals/Draft";
-import { apiFetch, buildApiUrl } from "../../utils/api";
+import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
 
 const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
@@ -23,6 +23,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [showIngredientPrompt, setShowIngredientPrompt] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
   const fileInputRef = useRef(null);
 
   const { saveDraft, loadDraft, clearDraft } = useDraft();
@@ -39,6 +40,8 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const isPostEmpty = !postText.trim() && mediaItems.length === 0;
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const fetchCurrentUser = async () => {
       try {
         const response = await apiFetch("/api/user");
@@ -49,6 +52,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
         }
 
         setUserName(data.user?.displayName || data.user?.username || "");
+        setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
       } catch {
         try {
           const token = localStorage.getItem("accessToken");
@@ -58,7 +62,22 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
     };
 
     fetchCurrentUser();
-  }, []);
+
+    const handleProfileUpdated = (event) => {
+      const detail = event.detail || {};
+      if (detail.name) {
+        setUserName(detail.name);
+      }
+      if (detail.avatarSrc) {
+        setUserAvatar(detail.avatarSrc);
+      }
+    };
+
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    return () => {
+      window.removeEventListener("profile-updated", handleProfileUpdated);
+    };
+  }, [isOpen]);
 
   const hardClose = useCallback(() => {
     setStep(STEP_COMPOSE);
@@ -235,6 +254,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
           <ComposeStep
             {...sharedProps}
             userName={userName}
+            userAvatar={userAvatar}
             title={title}
             setTitle={setTitle}
             postText={postText}
