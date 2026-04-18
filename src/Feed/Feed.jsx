@@ -189,13 +189,13 @@ export default function GCFeed() {
             </div>
 
             <div className="flex items-center justify-end">
-              <button
+              {/* <button
                 type="button"
                 onClick={seedDemoNotification}
                 className="rounded-full border border-[#0060A9]/15 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#0060A9]/80 shadow-sm transition hover:border-[#0060A9]/30 hover:bg-white hover:text-[#0060A9]"
               >
                 Trigger demo alert
-              </button>
+              </button> */}
             </div>
 
             <HeroBanner />
