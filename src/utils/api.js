@@ -1,3 +1,5 @@
+import DefaultAvatar from "../components/Assets/Silhouette ni ano.png";
+
 // Centralized fetch wrapper that attaches access token and handles refresh.
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3000";
 const AUTH_STATE_EVENT = "auth-state-changed";
@@ -11,12 +13,22 @@ function resolveUploadUrl(value) {
   if (value.startsWith("data:")) {
     return value;
   }
+  if (value.startsWith("blob:")) {
+    return value;
+  }
   if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
+  }
+  if (value.startsWith("/")) {
+    return buildApiUrl(value);
   }
 
   const filename = value.split("/").filter(Boolean).pop();
   return filename ? buildApiUrl(`/uploads/${filename}`) : "";
+}
+
+function resolveAvatarUrl(value) {
+  return resolveUploadUrl(value) || DefaultAvatar;
 }
 
 function getAccessToken() {
@@ -154,6 +166,7 @@ export {
   getAdminAccessToken,
   hasAdminSession,
   hasUserSession,
+  resolveAvatarUrl,
   setAccessToken,
   resolveUploadUrl,
   clearAuth,

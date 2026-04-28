@@ -15,7 +15,7 @@ import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
 import SkeletonAllergensPanel from "../Skeletons/SkeletonAllergensPanel";
-import { apiFetch, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveAvatarUrl, resolveUploadUrl } from "../../utils/api";
 
 const DEFAULT_PROFILE_DATA = {
   id: "",
@@ -37,7 +37,7 @@ const normalizeProfileData = (user = {}) => ({
   name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
   username: user.accountUsername || user.username || "",
   bio: user.bio || "",
-  avatarSrc: resolveUploadUrl(user.avatar || ""),
+  avatarSrc: resolveAvatarUrl(user.avatar || ""),
   followersCount:
     typeof user.followersCount === "number"
       ? user.followersCount

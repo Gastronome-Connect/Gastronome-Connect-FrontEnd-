@@ -8,7 +8,7 @@ import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
 import useDraft from "../Modals/Draft";
-import { apiFetch, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveAvatarUrl } from "../../utils/api";
 
 const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
@@ -52,7 +52,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
         }
 
         setUserName(data.user?.displayName || data.user?.username || "");
-        setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
+        setUserAvatar(resolveAvatarUrl(data.user?.avatar || ""));
       } catch {
         try {
           const token = localStorage.getItem("accessToken");

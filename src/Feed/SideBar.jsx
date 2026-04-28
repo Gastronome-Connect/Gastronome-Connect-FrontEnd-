@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useChatContext } from "../Context/ChatContext";
 import { Trash2 } from "lucide-react";
-import { apiFetch, resolveUploadUrl } from "../utils/api";
+import { apiFetch, resolveAvatarUrl } from "../utils/api";
 
 import LogoImage from "../components/Assets/Gastro.png";
 import AILogo from "../components/Assets/AILogo.png";
@@ -45,9 +45,7 @@ function useUserInfo() {
       if (profile.username) {
         setUserUsername(profile.username);
       }
-      setUserAvatar(
-        profile.avatarSrc ? resolveUploadUrl(profile.avatarSrc) : null,
-      );
+      setUserAvatar(resolveAvatarUrl(profile.avatarSrc || ""));
     };
 
     const fetchUser = async () => {
@@ -59,7 +57,7 @@ function useUserInfo() {
 
         setUserName(data.user?.displayName || data.user?.username || "");
         setUserUsername(data.user?.username || "");
-        setUserAvatar(resolveUploadUrl(data.user?.avatar || ""));
+        setUserAvatar(resolveAvatarUrl(data.user?.avatar || ""));
       } catch (error) {
         console.error("Failed to fetch sidebar user:", error);
       }
