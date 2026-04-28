@@ -60,6 +60,7 @@ import ReportedProfiles from "./Admin Panel/ReportedProfiles";
 
 // Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
+import SessionManager from "./components/SessionManager";
 
 import { UserLibraryProvider } from "./Context/UserLibraryContext";
 
@@ -69,6 +70,7 @@ const RootLayout = () => (
       <CarouselProvider>
         <UserLibraryProvider>
           <NotificationProvider>
+            <SessionManager />
             <Outlet />
           </NotificationProvider>
         </UserLibraryProvider>
@@ -130,42 +132,61 @@ export const router = createBrowserRouter([
       },
       {
         path: "profchangepass",
-        Component: () => <ProtectedRoute Component={ProfChangePassword} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={ProfChangePassword} blockAdmin={true} />
+        ),
       },
 
-      { path: "feed", Component: () => <ProtectedRoute Component={Feed} blockAdmin={true} /> },
+      {
+        path: "feed",
+        Component: () => <ProtectedRoute Component={Feed} blockAdmin={true} />,
+      },
       { path: "sidebar", Component: SideBar },
       { path: "searchbar", Component: SearchBar },
       { path: "navigationbar", Component: NavigationBar },
 
-{
-  path: "profile",
-  Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
-},
-{
-  path: "profile/:userId",
-  Component: () => <ProtectedRoute Component={GCProfile} blockAdmin={true} />,
-},
-      
+      {
+        path: "profile",
+        Component: () => (
+          <ProtectedRoute Component={GCProfile} blockAdmin={true} />
+        ),
+      },
+      {
+        path: "profile/:userId",
+        Component: () => (
+          <ProtectedRoute Component={GCProfile} blockAdmin={true} />
+        ),
+      },
+
       {
         path: "history",
-        Component: () => <ProtectedRoute Component={History} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={History} blockAdmin={true} />
+        ),
       },
       {
         path: "favorites",
-        Component: () => <ProtectedRoute Component={Favorites} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={Favorites} blockAdmin={true} />
+        ),
       },
       {
         path: "archives",
-        Component: () => <ProtectedRoute Component={Archives} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={Archives} blockAdmin={true} />
+        ),
       },
       {
         path: "chatbot",
-        Component: () => <ProtectedRoute Component={ChatbotPage} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={ChatbotPage} blockAdmin={true} />
+        ),
       },
       {
         path: "notifications",
-        Component: () => <ProtectedRoute Component={NotificationsPage} blockAdmin={true} />,
+        Component: () => (
+          <ProtectedRoute Component={NotificationsPage} blockAdmin={true} />
+        ),
       },
 
       { path: "buffer", Component: Buffer },

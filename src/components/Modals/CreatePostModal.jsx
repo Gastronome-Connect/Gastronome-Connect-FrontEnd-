@@ -8,7 +8,7 @@ import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
 import useDraft from "../Modals/Draft";
-import { apiFetch, buildApiUrl, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveUploadUrl } from "../../utils/api";
 
 const STEP_COMPOSE = "compose";
 const STEP_CAPTIONS = "captions";
@@ -179,9 +179,8 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
       if (item.file) formData.append("media", item.file);
     });
 
-    const response = await fetch(buildApiUrl("/api/posts"), {
+    const response = await apiFetch("/api/posts", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
 

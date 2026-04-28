@@ -7,7 +7,7 @@ import logo from "../components/Assets/FoodAI.png";
 import RecipeCard from "../recipe/RecipeArchive";
 import Loading from "../components/Loading Pages/buffer";
 import Error from "../components/Loading Pages/error";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 
 const Archives = () => {
   const [recipes, setRecipes] = useState([]);
@@ -24,10 +24,7 @@ const Archives = () => {
       setFetchError(false);
 
       try {
-        const token = localStorage.getItem("accessToken");
-        const logsRes = await fetch(buildApiUrl("/api/logs"), {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const logsRes = await apiFetch("/api/logs");
 
         const logsData = await logsRes.json();
         const archivedLogs = Array.isArray(logsData.logs)
@@ -37,7 +34,9 @@ const Archives = () => {
         const recipesData = await Promise.all(
           archivedLogs.map(async (log) => {
             try {
-              const recipeRes = await fetch(buildApiUrl(`/api/recipes/${log.recipeId}`));
+              const recipeRes = await fetch(
+                buildApiUrl(`/api/recipes/${log.recipeId}`),
+              );
               const recipeData = await recipeRes.json();
               const recipe = recipeData.recipe || {};
 
@@ -47,7 +46,8 @@ const Archives = () => {
                 title: recipe.title || recipe.recipeName || log.recipeName,
                 author: recipe.author || "RecipAI",
                 dateCreated: log.viewedAt,
-                description: recipe.summary || recipe.instructions || "Archived recipe",
+                description:
+                  recipe.summary || recipe.instructions || "Archived recipe",
                 image: recipe.image || recipe.recipeImg || "/FoodAI.png",
               };
             } catch (err) {
@@ -97,13 +97,8 @@ const Archives = () => {
       message: `Are you sure you want to remove ${recipe.title}?`,
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem("accessToken");
-          await fetch(buildApiUrl(`/api/logs/${recipe.logId}`), {
+          await apiFetch(`/api/logs/${recipe.logId}`, {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
             body: JSON.stringify({ archived: false }),
           });
 

@@ -3,11 +3,11 @@ import NavigationBar from "../Landing/NavigationBar";
 import { FaSearch } from "react-icons/fa";
 import HAFPopup from "../components/Popups/HAFPopup";
 import ChangePopup from "../components/Popups/SavePopup";
-import logo from "../components/Assets/FoodAI.png"; 
-import RecipeCard from "../recipe/RecipeFavorites"; 
+import logo from "../components/Assets/FoodAI.png";
+import RecipeCard from "../recipe/RecipeFavorites";
 import Loading from "../components/Loading Pages/buffer";
 import Error from "../components/Loading Pages/error";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 
 const Favorites = () => {
   const [recipes, setRecipes] = useState([]);
@@ -24,10 +24,7 @@ const Favorites = () => {
       setFetchError(false);
 
       try {
-        const token = localStorage.getItem("accessToken");
-        const logsRes = await fetch(buildApiUrl("/api/logs"), {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const logsRes = await apiFetch("/api/logs");
 
         const logsData = await logsRes.json();
         const favoriteLogs = Array.isArray(logsData.logs)
@@ -37,7 +34,9 @@ const Favorites = () => {
         const recipesData = await Promise.all(
           favoriteLogs.map(async (log) => {
             try {
-              const recipeRes = await fetch(buildApiUrl(`/api/recipes/${log.recipeId}`));
+              const recipeRes = await fetch(
+                buildApiUrl(`/api/recipes/${log.recipeId}`),
+              );
               const recipeData = await recipeRes.json();
               const recipe = recipeData.recipe || {};
 
@@ -47,7 +46,8 @@ const Favorites = () => {
                 title: recipe.title || recipe.recipeName || log.recipeName,
                 author: recipe.author || "RecipAI",
                 dateCreated: log.viewedAt,
-                description: recipe.summary || recipe.instructions || "Saved to favorites",
+                description:
+                  recipe.summary || recipe.instructions || "Saved to favorites",
                 image: recipe.image || recipe.recipeImg || "/FoodAI.png",
               };
             } catch (err) {
@@ -80,14 +80,15 @@ const Favorites = () => {
   const filteredRecipes = recipes.filter(
     (recipe) =>
       recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (recipe.author && recipe.author.toLowerCase().includes(searchQuery.toLowerCase()))
+      (recipe.author &&
+        recipe.author.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
   const indexOfLastRecipe = currentPage * recipesPerPage;
   const indexOfFirstRecipe = indexOfLastRecipe - recipesPerPage;
   const currentRecipes = filteredRecipes.slice(
     indexOfFirstRecipe,
-    indexOfLastRecipe
+    indexOfLastRecipe,
   );
   const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
 
@@ -96,17 +97,14 @@ const Favorites = () => {
       message: `Are you sure you want to remove ${recipe.title}?`,
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem("accessToken");
-          await fetch(buildApiUrl(`/api/logs/${recipe.logId}`), {
+          await apiFetch(`/api/logs/${recipe.logId}`, {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
             body: JSON.stringify({ favorite: false }),
           });
 
-          setRecipes((prevRecipes) => prevRecipes.filter((r) => r.logId !== recipe.logId));
+          setRecipes((prevRecipes) =>
+            prevRecipes.filter((r) => r.logId !== recipe.logId),
+          );
           setChangePopup(true);
         } catch (err) {
           console.error("Error removing recipe from favorites:", err);
@@ -156,7 +154,7 @@ const Favorites = () => {
               />
             ))}
           </div>
-         ) : (
+        ) : (
           <div className="flex flex-col items-center justify-center min-h-[50vh]">
             <img
               src={logo}
@@ -192,7 +190,7 @@ const Favorites = () => {
                 >
                   {pageNumber}
                 </button>
-              )
+              ),
             )}
           </div>
         </div>

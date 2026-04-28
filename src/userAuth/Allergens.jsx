@@ -6,7 +6,7 @@ import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
 import PrefPopup from "../components/Popups/PrefPopup";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 import {
   clearSignupStep,
   setSignupStep,
@@ -259,12 +259,8 @@ const Allergens = () => {
       return;
     }
     try {
-      await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+      await apiFetch(`/api/user/preferences/${userId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ dislikes, allergies: allergens }),
       });
     } catch (error) {

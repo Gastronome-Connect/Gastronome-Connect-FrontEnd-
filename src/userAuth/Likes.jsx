@@ -5,6 +5,7 @@ import { FaChevronDown, FaChevronUp, FaTimes } from "react-icons/fa";
 import LogoImage from "../components/Assets/Gastro.png";
 import Flavor from "../components/Assets/Flavor.png";
 import CookingStyle from "../components/Assets/Cooking Style.png";
+import { apiFetch, buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -22,7 +23,13 @@ const isMobile = () => window.innerWidth < 640;
 
 // ── Dropdown ──────────────────────────────────────────────────────────────────
 const Dropdown = ({
-  label, options = [], selected, setSelected, isOpen, setIsOpen, closeOthers,
+  label,
+  options = [],
+  selected,
+  setSelected,
+  isOpen,
+  setIsOpen,
+  closeOthers,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const inputRef = useRef(null);
@@ -31,11 +38,15 @@ const Dropdown = ({
   const filteredOptions = options
     .slice()
     .sort((a, b) => a.localeCompare(b))
-    .filter((option) => option.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter((option) =>
+      option.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
 
   const toggleSelection = (value) => {
     setSelected((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value],
     );
     setSearchTerm("");
   };
@@ -61,7 +72,9 @@ const Dropdown = ({
       >
         <label
           className={`absolute left-3 px-1 transition-all duration-200 pointer-events-none bg-white z-10 ${
-            isActive ? "-top-2.5 text-[11px] text-[#0060A9] font-medium" : "top-[11px] text-sm text-gray-400"
+            isActive
+              ? "-top-2.5 text-[11px] text-[#0060A9] font-medium"
+              : "top-[11px] text-sm text-gray-400"
           }`}
         >
           {isActive ? label : `Select ${label}...`}
@@ -69,9 +82,15 @@ const Dropdown = ({
 
         <div className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[32px] max-h-24 overflow-y-auto scrollbar-none">
           {selected.map((item) => (
-            <div key={item} className="flex items-center bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded shadow-sm text-xs font-medium">
+            <div
+              key={item}
+              className="flex items-center bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded shadow-sm text-xs font-medium"
+            >
               <span className="truncate max-w-[120px]">{item}</span>
-              <button onClick={(e) => removeSelection(item, e)} className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors">
+              <button
+                onClick={(e) => removeSelection(item, e)}
+                className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
+              >
                 <FaTimes className="h-2.5 w-2.5" />
               </button>
             </div>
@@ -89,10 +108,17 @@ const Dropdown = ({
         <div className="flex items-center ml-1 border-l pl-2 border-gray-100">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
             className="text-gray-400 hover:text-gray-600"
           >
-            {isOpen ? <FaChevronUp className="h-3.5 w-3.5" /> : <FaChevronDown className="h-3.5 w-3.5" />}
+            {isOpen ? (
+              <FaChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <FaChevronDown className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
@@ -106,7 +132,9 @@ const Dropdown = ({
                   key={option}
                   onClick={() => toggleSelection(option)}
                   className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
-                    selected.includes(option) ? "bg-blue-50 text-[#0060A9] font-medium" : "text-gray-700 hover:bg-gray-50"
+                    selected.includes(option)
+                      ? "bg-blue-50 text-[#0060A9] font-medium"
+                      : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   {option}
@@ -130,7 +158,10 @@ const Likes = () => {
   const [flavors, setFlavors] = useState([]);
   const [cookingStyles, setCookingStyles] = useState([]);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [optionsData, setOptionsData] = useState({ flavors: [], cookingStyles: [] });
+  const [optionsData, setOptionsData] = useState({
+    flavors: [],
+    cookingStyles: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
 
@@ -144,14 +175,18 @@ const Likes = () => {
     const token = localStorage.getItem("accessToken");
     const userId = localStorage.getItem("userId");
     if (!token || !userId) {
-      localStorage.setItem("tempPreferences", JSON.stringify({ flavors, cookingStyles }));
+      localStorage.setItem(
+        "tempPreferences",
+        JSON.stringify({ flavors, cookingStyles }),
+      );
       return;
     }
     try {
-      const response = await fetch(`http://localhost:3000/api/user/preferences/${userId}`, {
+      const response = await apiFetch(`/api/user/preferences/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ preferences: { flavors, techniques: cookingStyles } }),
+        body: JSON.stringify({
+          preferences: { flavors, techniques: cookingStyles },
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -164,11 +199,14 @@ const Likes = () => {
 
   const fetchOptions = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/options");
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetch(buildApiUrl("/api/options"));
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       const result = { flavors: [], cookingStyles: [] };
-      data.forEach((option) => { if (result[option.type]) result[option.type] = option.values; });
+      data.forEach((option) => {
+        if (result[option.type]) result[option.type] = option.values;
+      });
       setOptionsData(result);
     } catch (error) {
       console.error("Error fetching options:", error.message);
@@ -177,7 +215,9 @@ const Likes = () => {
     }
   };
 
-  useEffect(() => { fetchOptions(); }, []);
+  useEffect(() => {
+    fetchOptions();
+  }, []);
 
   useEffect(() => {
     const syncDataAfterAuth = async () => {
@@ -189,28 +229,38 @@ const Likes = () => {
       if (tempPreferences) {
         try {
           const { flavors, cookingStyles } = JSON.parse(tempPreferences);
-          const response = await fetch(`http://localhost:3000/api/user/preferences/${userId}`, {
+          const response = await apiFetch(`/api/user/preferences/${userId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ preferences: { flavors, techniques: cookingStyles } }),
+            body: JSON.stringify({
+              preferences: { flavors, techniques: cookingStyles },
+            }),
           });
-          if (!response.ok) { const e = await response.json(); throw new Error(e.message || "Failed to sync preferences."); }
+          if (!response.ok) {
+            const e = await response.json();
+            throw new Error(e.message || "Failed to sync preferences.");
+          }
           localStorage.removeItem("tempPreferences");
-        } catch (error) { console.error("Error syncing preferences to backend:", error.message); }
+        } catch (error) {
+          console.error("Error syncing preferences to backend:", error.message);
+        }
       }
 
       const tempDislikes = localStorage.getItem("tempDislikes");
       if (tempDislikes) {
         try {
           const { dislikes, allergens } = JSON.parse(tempDislikes);
-          const response = await fetch(`http://localhost:3000/api/user/preferences/${userId}`, {
+          const response = await apiFetch(`/api/user/preferences/${userId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ dislikes, allergies: allergens }),
           });
-          if (!response.ok) { const e = await response.json(); throw new Error(e.message || "Failed to sync dislikes."); }
+          if (!response.ok) {
+            const e = await response.json();
+            throw new Error(e.message || "Failed to sync dislikes.");
+          }
           localStorage.removeItem("tempDislikes");
-        } catch (error) { console.error("Error syncing dislikes to backend:", error.message); }
+        } catch (error) {
+          console.error("Error syncing dislikes to backend:", error.message);
+        }
       }
     };
     syncDataAfterAuth();
@@ -224,35 +274,69 @@ const Likes = () => {
   })();
 
   const panelStyle = mobile
-    ? { width: "calc(100vw - 32px)", maxWidth: "480px", height: "auto", minHeight: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
-    : { width: "min(480px, calc(100vw - 48px))", height: "calc(100vh - 48px)", marginLeft: "0px", transform: `translateX(${desktopX}px)` };
+    ? {
+        width: "calc(100vw - 32px)",
+        maxWidth: "480px",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
+        maxHeight: "calc(100vh - 32px)",
+      }
+    : {
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+        marginLeft: "0px",
+        transform: `translateX(${desktopX}px)`,
+      };
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden">
       <style>{STYLES}</style>
       <BackgroundCarousel />
 
-      <div className={mobile ? "absolute inset-0 flex items-center justify-center pointer-events-none" : "absolute inset-0 flex items-center pointer-events-none"}>
+      <div
+        className={
+          mobile
+            ? "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center pointer-events-none"
+        }
+      >
         <div
           className="pointer-events-auto bg-white rounded-3xl shadow-2xl overflow-hidden"
           style={panelStyle}
         >
           <div className="overflow-y-auto h-full">
-            <div className="content-in h-full" style={{ willChange: "opacity, transform" }}>
+            <div
+              className="content-in h-full"
+              style={{ willChange: "opacity, transform" }}
+            >
               <div
                 className="relative flex flex-col justify-center px-6 sm:px-8 py-8"
-                style={{ minHeight: mobile ? "calc(100vh - 32px)" : "calc(100vh - 48px)" }}
+                style={{
+                  minHeight: mobile
+                    ? "calc(100vh - 32px)"
+                    : "calc(100vh - 48px)",
+                }}
               >
                 <div className="flex justify-center mb-2">
-                  <img src={LogoImage} alt="Gastronome Connect Logo" className="h-16 sm:h-20 w-auto object-contain" />
+                  <img
+                    src={LogoImage}
+                    alt="Gastronome Connect Logo"
+                    className="h-16 sm:h-20 w-auto object-contain"
+                  />
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-sfpro font-bold text-center text-black mb-6">
-                  PREFEREN<span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">C</span>ES
+                  PREFEREN
+                  <span className="bg-gradient-to-b from-[#F57600] to-[#F0AE35] bg-clip-text text-transparent">
+                    C
+                  </span>
+                  ES
                 </h1>
 
                 {isLoading ? (
-                  <div className="text-center text-gray-400 text-sm py-8">Loading options...</div>
+                  <div className="text-center text-gray-400 text-sm py-8">
+                    Loading options...
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     <Dropdown
@@ -262,7 +346,9 @@ const Likes = () => {
                       selected={flavors}
                       setSelected={setFlavors}
                       isOpen={openDropdown === "flavors"}
-                      setIsOpen={(state) => setOpenDropdown(state ? "flavors" : null)}
+                      setIsOpen={(state) =>
+                        setOpenDropdown(state ? "flavors" : null)
+                      }
                       closeOthers={() => setOpenDropdown("flavors")}
                     />
                     <Dropdown
@@ -272,17 +358,24 @@ const Likes = () => {
                       selected={cookingStyles}
                       setSelected={setCookingStyles}
                       isOpen={openDropdown === "cookingStyles"}
-                      setIsOpen={(state) => setOpenDropdown(state ? "cookingStyles" : null)}
+                      setIsOpen={(state) =>
+                        setOpenDropdown(state ? "cookingStyles" : null)
+                      }
                       closeOthers={() => setOpenDropdown("cookingStyles")}
                     />
                   </div>
                 )}
 
                 <button
-                  onClick={async () => { await savePreferences(); navigate("/dislikes"); }}
+                  onClick={async () => {
+                    await savePreferences();
+                    navigate("/dislikes");
+                  }}
                   disabled={isNextDisabled}
                   className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
-                    isNextDisabled ? "cursor-not-allowed opacity-50" : "hover:brightness-110 active:scale-[0.98]"
+                    isNextDisabled
+                      ? "cursor-not-allowed opacity-50"
+                      : "hover:brightness-110 active:scale-[0.98]"
                   }`}
                 >
                   Next
