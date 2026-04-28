@@ -110,7 +110,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -127,6 +127,8 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
 
   // ── Delete / popups ──
   const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [showPasswordRedirectPrompt, setShowPasswordRedirectPrompt] =
+    useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [showDiscard, setShowDiscard] = useState(false);
@@ -216,6 +218,41 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
     setActiveTab(nextTabId);
   };
 
+  const hasPasswordChanges =
+    oldPassword !== "" || newPassword !== "" || confirmPassword !== "";
+
+  const validatePasswordChange = () => {
+    if (!hasPasswordChanges) {
+      setPasswordError("");
+      return true;
+    }
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required.");
+      setActiveTab("password");
+      return false;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      setActiveTab("password");
+      return false;
+    }
+
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setPasswordError(
+        "New password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.",
+      );
+      setActiveTab("password");
+      return false;
+    }
+
+    setPasswordError("");
+    return true;
+  };
+
   const handleAttemptClose = () => {
     if (hasAnyChanges()) setShowDiscard(true);
     else onClose();
@@ -223,6 +260,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
 
   const handleSave = async () => {
     if (nameError) return;
+    if (!validatePasswordChange()) return;
 
     const changed = hasAnyChanges();
 
@@ -244,13 +282,55 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
         allergens,
         dislikes,
       });
+
+      if (hasPasswordChanges) {
+        const passwordResponse = await apiFetch("/api/update-password", {
+          method: "PATCH",
+          body: JSON.stringify({
+            oldPassword,
+            newPassword,
+          }),
+        });
+        const passwordData = await passwordResponse.json().catch(() => null);
+
+        if (!passwordResponse.ok) {
+          throw new Error(
+            passwordData?.message || "Failed to update password.",
+          );
+        }
+
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setPasswordError("");
+        setShowPasswordRedirectPrompt(true);
+        return;
+      }
+
       setAvatarChanged(false);
       setSaveToastVisible(true);
     } catch (error) {
+      setPasswordError("");
       setSaveError(error.message || "Failed to save profile changes.");
     } finally {
       setSaveLoading(false);
     }
+  };
+
+  const handlePasswordRedirect = async () => {
+    setShowPasswordRedirectPrompt(false);
+    await logout();
+    localStorage.removeItem("userId");
+    localStorage.removeItem("adminAccessToken");
+    window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+    onClose();
+    navigate("/login?mode=login", {
+      replace: true,
+      state: {
+        successMessage:
+          "Password changed successfully. Please log in with your new password.",
+      },
+    });
   };
 
   const handleDeleteConfirm = async (password) => {
@@ -465,6 +545,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
             setOldPassword("");
             setNewPassword("");
             setConfirmPassword("");
+            setPasswordError("");
             setFlavors(initialData.flavors ?? []);
             setCookingStyles(initialData.cookingStyles ?? []);
             setAllergens(initialData.allergens ?? []);
@@ -518,6 +599,29 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
           onClose();
         }}
       />
+
+      {showPasswordRedirectPrompt && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900">
+              Password Updated
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              Your password has been changed successfully. You will now be
+              redirected to the login page so you can sign in with your new
+              password.
+            </p>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handlePasswordRedirect}
+                className="rounded-2xl bg-[#0060A9] px-5 py-2.5 text-xs font-black uppercase text-white transition-all hover:bg-[#00B4FA]"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>,
     document.body,
   );
