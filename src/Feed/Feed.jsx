@@ -97,13 +97,8 @@ export default function GCFeed() {
     cancelUpload,
     resetUpload,
   } = useUpload();
-  const {
-    popupQueue,
-    unreadCount,
-    hasNotifications,
-    seedDemoNotification,
-    dismissPopup,
-  } = useNotifications();
+  const { popupQueue, unreadCount, hasNotifications, dismissPopup } =
+    useNotifications();
 
   const { handleNewPost, reviewPopupProps } = useModeratedPostCreation({
     startUpload,

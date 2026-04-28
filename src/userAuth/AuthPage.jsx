@@ -196,7 +196,7 @@ const AuthPage = () => {
   }, [isLogin]);
 
   // ── Login state ──────────────────────────────────────────────
-  const [loginEmail, setLoginEmail] = useState("");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginEmailError, setLoginEmailError] = useState("");
   const [loginPasswordError, setLoginPasswordError] = useState("");
@@ -280,7 +280,7 @@ const AuthPage = () => {
 
   // ── Login validation ─────────────────────────────────────────
   const validateLoginIdentifier = () => {
-    const value = loginEmail.trim();
+    const value = loginIdentifier.trim();
     if (!value) {
       setLoginEmailError("This field can't be empty");
       return false;
@@ -316,19 +316,28 @@ const AuthPage = () => {
     const isPasswordValid = validateLoginPassword();
     if (isEmailValid && isPasswordValid) {
       try {
-        const isAdminLogin = !loginEmail.trim().includes("@");
-        const response = await apiFetch(
-          isAdminLogin ? "/api/admin/login" : "/api/login",
-          {
+        const identifier = loginIdentifier.trim();
+        const isEmailLogin = identifier.includes("@");
+
+        let response = await apiFetch("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ identifier, password: loginPassword }),
+        });
+        let data = await response.json();
+        let isAdminLogin = false;
+
+        if (!response.ok && !isEmailLogin) {
+          response = await apiFetch("/api/admin/login", {
             method: "POST",
-            body: JSON.stringify(
-              isAdminLogin
-                ? { username: loginEmail.trim(), password: loginPassword }
-                : { email: loginEmail.trim(), password: loginPassword },
-            ),
-          },
-        );
-        const data = await response.json();
+            body: JSON.stringify({
+              username: identifier,
+              password: loginPassword,
+            }),
+          });
+          data = await response.json();
+          isAdminLogin = response.ok;
+        }
+
         if (!response.ok) throw new Error(data.message || "");
         if (isAdminLogin) {
           localStorage.setItem("adminAccessToken", data.accessToken);
@@ -605,11 +614,12 @@ const AuthPage = () => {
                         <FloatingInput
                           type="text"
                           id="login-email"
-                          value={loginEmail}
-                          onChange={(e) => setLoginEmail(e.target.value)}
+                          value={loginIdentifier}
+                          onChange={(e) => setLoginIdentifier(e.target.value)}
                           onBlur={validateLoginIdentifier}
                           error={loginEmailError}
-                          label="Email address"
+                          label="Username/Email address"
+                          autoComplete="username"
                         />
                         {loginEmailError && (
                           <p className="text-red-500 text-xs mt-1">
