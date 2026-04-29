@@ -24,9 +24,11 @@ import { apiFetch, resolveAvatarUrl } from "../utils/api";
 import LogoImage from "../components/Assets/Gastro.png";
 import AILogo from "../components/Assets/AILogo.png";
 import SearchBar from "../Feed/SideBarSearchBar";
+import AccountSearchResults from "../components/Search/AccountSearchResults";
 import CreatePostModal from "../components/Modals/CreatePostModal";
 import LogOutModal from "../components/Modals/LogOutModal";
 import PopularRecipes from "../components/Feed Components/PopularRecipePanel";
+import useAccountSearch from "../Hooks/useAccountSearch";
 
 const AUTH_STATE_EVENT = "auth-state-changed";
 
@@ -222,7 +224,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                       className="absolute inset-0 flex items-center"
                     >
                       <div className="w-44">
-                        <SearchBar />
+                        <SearchBar searchAccounts />
                       </div>
                     </motion.div>
                   )}
@@ -573,8 +575,20 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    sections: searchSections,
+    interactiveItems: searchItems,
+    isLoading: isSearchLoading,
+    hasSearched,
+    minimumQueryLength,
+    clearSearch,
+    clearRecentSearches,
+    recordRecentSearch,
+  } = useAccountSearch();
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const initials = userName ? userName.slice(0, 2).toUpperCase() : "GC";
 
@@ -591,6 +605,52 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
     setSearchOpen(false);
     onMobileSearch?.("");
     navigate(path);
+  };
+
+  const handleSelectUser = (user) => {
+    recordRecentSearch(user);
+    setSearchOpen(false);
+    onMobileSearch?.("");
+    clearSearch();
+    setActiveIndex(-1);
+    if (user.type === "recipe" && user.sourceUrl) {
+      window.open(user.sourceUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    navigate(`/profile/${user.id || user._id}`);
+  };
+
+  const handleMobileSearchKeyDown = (event) => {
+    if (event.key === "Escape") {
+      setSearchOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (searchItems.length > 0) {
+        setActiveIndex((current) =>
+          current < searchItems.length - 1 ? current + 1 : 0,
+        );
+      }
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (searchItems.length > 0) {
+        setActiveIndex((current) =>
+          current > 0 ? current - 1 : searchItems.length - 1,
+        );
+      }
+      return;
+    }
+
+    if (event.key === "Enter" && activeIndex >= 0 && searchItems[activeIndex]) {
+      event.preventDefault();
+      handleSelectUser(searchItems[activeIndex]);
+    }
   };
 
   // Screen-level swipe RIGHT from left edge to open panel
@@ -656,7 +716,7 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
               exit={{ opacity: 0 }}
               onClick={() => {
                 setSearchOpen(false);
-                setSearchQuery("");
+                clearSearch();
               }}
               className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm lg:hidden"
             />
@@ -682,15 +742,18 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                   value={searchQuery}
                   placeholder="Search..."
                   className="flex-1 text-sm font-medium outline-none text-gray-700 placeholder-gray-400 bg-transparent"
+                  onKeyDown={handleMobileSearchKeyDown}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
+                    setActiveIndex(-1);
                     onMobileSearch?.(e.target.value);
                   }}
                 />
                 {searchQuery ? (
                   <button
                     onClick={() => {
-                      setSearchQuery("");
+                      clearSearch();
+                      setActiveIndex(-1);
                       onMobileSearch?.("");
                     }}
                     className="text-gray-400 hover:text-red-400 transition-colors"
@@ -701,7 +764,8 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                   <button
                     onClick={() => {
                       setSearchOpen(false);
-                      setSearchQuery("");
+                      clearSearch();
+                      setActiveIndex(-1);
                       onMobileSearch?.("");
                     }}
                     className="text-gray-400 hover:text-red-400 transition-colors"
@@ -713,7 +777,7 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
 
               {/* Popular Recipes — shown when query is empty, slides away when typing */}
               <AnimatePresence>
-                {searchQuery.trim() === "" && (
+                {searchQuery.trim() === "" ? (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -729,6 +793,29 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
                     >
                       <PopularRecipes />
                     </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="mt-2 overflow-hidden"
+                    style={{ flex: "1 1 0", minHeight: 0 }}
+                  >
+                    <AccountSearchResults
+                      query={searchQuery}
+                      sections={searchSections}
+                      interactiveItems={searchItems}
+                      isLoading={isSearchLoading}
+                      hasSearched={hasSearched}
+                      minimumQueryLength={minimumQueryLength}
+                      activeIndex={activeIndex}
+                      onActiveIndexChange={setActiveIndex}
+                      onSelect={handleSelectUser}
+                      onClearRecent={clearRecentSearches}
+                      className="h-full overflow-y-auto"
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
