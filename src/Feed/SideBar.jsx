@@ -137,6 +137,11 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
   const textTransitionClass = `transition-all duration-400 ease-[0.4,0,0.2,1] overflow-hidden whitespace-nowrap ${
     collapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[200px] opacity-100 ml-3"
   }`;
+  const headerSearchTransitionClass = `transition-all duration-400 ease-[0.4,0,0.2,1] whitespace-nowrap ${
+    collapsed
+      ? "max-w-0 opacity-0 ml-0 overflow-hidden pointer-events-none"
+      : "max-w-[200px] opacity-100 ml-3 overflow-visible"
+  }`;
   const initials = userName ? userName.slice(0, 2).toUpperCase() : "GC";
 
   return (
@@ -192,7 +197,9 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                   className="w-10 h-10 object-contain"
                 />
               </div>
-              <div className={`${textTransitionClass} flex-1 relative h-12`}>
+              <div
+                className={`${headerSearchTransitionClass} flex-1 relative h-12 z-[260]`}
+              >
                 <AnimatePresence mode="wait">
                   {isHome ? (
                     <motion.div
