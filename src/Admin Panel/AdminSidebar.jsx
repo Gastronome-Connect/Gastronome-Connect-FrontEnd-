@@ -10,11 +10,13 @@ import {
   Flag,
   MessageSquareWarning,
   UsersRound,
+  Bell,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoutModal from "./AdminLogOutModal";
+import { useNotifications } from "../Context/NotificationContext";
 
 const AUTH_STATE_EVENT = "auth-state-changed";
 
@@ -23,6 +25,7 @@ export default function AdminSidebar({ onCollapse }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const { unreadCount, isAdminSession } = useNotifications();
 
   const toggle = () => {
     setCollapsed((c) => {
@@ -67,6 +70,13 @@ export default function AdminSidebar({ onCollapse }) {
       label: "Reported Profiles",
       icon: UsersRound,
       path: "/admin/reported-profiles",
+    },
+    {
+      id: "notifications",
+      label: "Notifications",
+      icon: Bell,
+      path: "/admin/notifications",
+      badgeCount: isAdminSession ? unreadCount : 0,
     },
     {
       id: "statistics",
@@ -174,6 +184,11 @@ export default function AdminSidebar({ onCollapse }) {
                       </motion.span>
                     )}
                   </AnimatePresence>
+                  {!collapsed && Number(item.badgeCount || 0) > 0 && (
+                    <span className="ml-auto min-w-[20px] rounded-full bg-[#F57600] px-1.5 py-0.5 text-center text-[10px] font-black text-white">
+                      {item.badgeCount}
+                    </span>
+                  )}
                   {!collapsed && isActive && (
                     <motion.div
                       layoutId="activeTab"

@@ -64,8 +64,62 @@ const CommentSection = forwardRef(
       }
     };
 
+    const addReply = async ({ commentId, text, parentReplyId = null }) => {
+      if (!commentId || !text?.trim()) return;
+
+      try {
+        const response = await apiFetch(
+          `/api/posts/${postId}/comments/${commentId}/replies`,
+          {
+            method: "POST",
+            body: JSON.stringify({ text: text.trim(), parentReplyId }),
+          },
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to add reply");
+        }
+
+        const nextComments = Array.isArray(data.post?.comments)
+          ? data.post.comments
+          : comments;
+
+        setComments(nextComments);
+        onPostUpdate?.(data.post);
+      } catch (error) {
+        console.error("Failed to add reply:", error);
+      }
+    };
+
+    const reactToComment = async (commentId, type) => {
+      if (!commentId || !type) return;
+
+      try {
+        const response = await apiFetch(
+          `/api/comments/${commentId}/reactions`,
+          {
+            method: "POST",
+            body: JSON.stringify({ type }),
+          },
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to update reaction");
+        }
+
+        if (Array.isArray(data.post?.comments)) {
+          setComments(data.post.comments);
+          onPostUpdate?.(data.post);
+        }
+      } catch (error) {
+        console.error("Failed to update comment reaction:", error);
+      }
+    };
+
     // expose addComment so ExpandedView's pinned input can call it
-    useImperativeHandle(ref, () => ({ addComment }));
+    useImperativeHandle(ref, () => ({ addComment, addReply, reactToComment }));
 
     return (
       <div className="flex flex-col">
@@ -75,7 +129,13 @@ const CommentSection = forwardRef(
           message="Your comment is under review because it does not appear to be food related."
           onDismiss={() => setShowCommentReviewPopup(false)}
         />
-        <CommentList comments={comments} scrollable={!hideInput} />
+        <CommentList
+          comments={comments}
+          scrollable={!hideInput}
+          postId={postId}
+          onReply={addReply}
+          onReact={reactToComment}
+        />
         <div ref={bottomRef} />
         {!hideInput && <CommentInput onSubmit={addComment} />}
       </div>

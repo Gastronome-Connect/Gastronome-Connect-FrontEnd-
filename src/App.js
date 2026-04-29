@@ -57,6 +57,7 @@ import Statistics from "./Admin Panel/Statistic";
 import FlaggedPosts from "./Admin Panel/FlaggedPosts";
 import ReportedComments from "./Admin Panel/ReportedComments";
 import ReportedProfiles from "./Admin Panel/ReportedProfiles";
+import AdminNotificationsPage from "./Admin Panel/AdminNotificationsPage";
 
 // Error boundary
 import ErrorBoundary from "./components/Error Pages/ErrorBoundary";
@@ -202,6 +203,7 @@ export const router = createBrowserRouter([
           { path: "flagged", Component: FlaggedPosts },
           { path: "reported", Component: ReportedComments },
           { path: "reported-profiles", Component: ReportedProfiles },
+          { path: "notifications", Component: AdminNotificationsPage },
           { path: "statistics", Component: Statistics },
         ],
       },

@@ -7,393 +7,361 @@ import React, {
   useRef,
   useState,
 } from "react";
+import {
+  API_BASE,
+  AUTH_STATE_EVENT,
+  apiFetch,
+  getAdminAccessToken,
+  hasAdminSession,
+  hasUserSession,
+  resolveAvatarUrl,
+  resolveUploadUrl,
+} from "../utils/api";
 
 const NotificationContext = createContext(null);
-
-const STORAGE_KEY = "gastro_notifications";
-const AUTH_STATE_EVENT = "auth-state-changed";
-const DEFAULT_STORAGE_OWNER = "guest";
 
 const DEFAULT_AVATAR =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80";
 
-const FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80";
-
-const SEED_NOTIFICATIONS = [
-  {
-    id: "notif-1",
-    type: "like",
-    actorName: "Ariana Cruz",
-    actorAvatar:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80",
-    actorUsername: "@arianacruz",
-    content: 'liked your recipe "Creamy Garlic Pasta".',
-    caption: "Your post is getting attention from pasta lovers.",
-    timestamp: Date.now() - 1000 * 60 * 8,
-    read: false,
-    hidden: false,
-    targetRoute: "/feed",
-    images: [
-      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=600&q=80",
-    ],
-  },
-  {
-    id: "notif-2",
-    type: "comment",
-    actorName: "Marco Villanueva",
-    actorAvatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
-    actorUsername: "@marcov",
-    content: 'commented on your post: "This looks restaurant-worthy!"',
-    caption: "Tap to view the conversation on your feed.",
-    timestamp: Date.now() - 1000 * 60 * 32,
-    read: false,
-    hidden: false,
-    targetRoute: "/feed",
-    images: [
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=600&q=80",
-    ],
-  },
-  {
-    id: "notif-3",
-    type: "reply",
-    actorName: "Jamie Flores",
-    actorAvatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
-    actorUsername: "@jamief",
-    content:
-      'replied to your comment: "I used coconut cream and it worked great!"',
-    caption: "Your discussion keeps growing.",
-    timestamp: Date.now() - 1000 * 60 * 58,
-    read: true,
-    hidden: false,
-    targetRoute: "/feed",
-    images: [],
-  },
-  {
-    id: "notif-4",
-    type: "follow",
-    actorName: "Sofia Dela Peña",
-    actorAvatar:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80",
-    actorUsername: "@sofiacooks",
-    content: "started following you.",
-    caption: "You have a new foodie follower.",
-    timestamp: Date.now() - 1000 * 60 * 60 * 4,
-    read: true,
-    hidden: false,
-    targetRoute: "/profile",
-    images: [],
-  },
-  {
-    id: "notif-5",
-    type: "repost",
-    actorName: "Nico Tan",
-    actorAvatar:
-      "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=120&q=80",
-    actorUsername: "@nicotan",
-    content: 'shared your post "Ultimate Chicken Adobo".',
-    caption: "More people can now discover your recipe.",
-    timestamp: Date.now() - 1000 * 60 * 60 * 26,
-    read: true,
-    hidden: false,
-    targetRoute: "/feed",
-    images: [
-      "https://images.unsplash.com/photo-1604908176997-4318406d8598?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1518492104633-130d0cc84637?auto=format&fit=crop&w=600&q=80",
-    ],
-  },
-];
-
-const getStorageOwner = () => {
-  try {
-    return localStorage.getItem("userId") || DEFAULT_STORAGE_OWNER;
-  } catch {
-    return DEFAULT_STORAGE_OWNER;
-  }
-};
-
-const getScopedStorageKey = (owner = getStorageOwner()) =>
-  `${STORAGE_KEY}:${owner}`;
-
-const loadNotifications = (owner = getStorageOwner()) => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(getScopedStorageKey(owner)));
-    if (Array.isArray(parsed)) {
-      return parsed.length > 0 ? parsed : SEED_NOTIFICATIONS;
-    }
-
-    const legacyParsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
-      localStorage.setItem(
-        getScopedStorageKey(owner),
-        JSON.stringify(legacyParsed),
-      );
-      localStorage.removeItem(STORAGE_KEY);
-      return legacyParsed;
-    }
-
-    return SEED_NOTIFICATIONS;
-  } catch {
-    return SEED_NOTIFICATIONS;
-  }
-};
-
-const persistNotifications = (owner, notifications) => {
-  try {
-    localStorage.setItem(
-      getScopedStorageKey(owner),
-      JSON.stringify(notifications),
-    );
-  } catch {}
-};
-
-const timeAgoFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-const getTimeAgo = (timestamp) => {
-  const deltaSeconds = Math.round((timestamp - Date.now()) / 1000);
-  const units = [
-    { unit: "day", seconds: 86400 },
-    { unit: "hour", seconds: 3600 },
-    { unit: "minute", seconds: 60 },
-  ];
-
-  for (const { unit, seconds } of units) {
-    if (Math.abs(deltaSeconds) >= seconds || unit === "minute") {
-      return timeAgoFormatter.format(Math.round(deltaSeconds / seconds), unit);
-    }
+const getSessionType = () => {
+  if (hasAdminSession()) {
+    return "admin";
   }
 
-  return "just now";
+  if (hasUserSession()) {
+    return "user";
+  }
+
+  return "guest";
 };
+
+const getEndpointBase = (sessionType) =>
+  sessionType === "admin" ? "/api/admin/notifications" : "/api/notifications";
 
 const normalizeNotification = (notification) => {
-  const timestamp = Number(notification.timestamp) || Date.now();
+  const timestamp = Number(notification?.timestamp) || Date.now();
+  const images = Array.isArray(notification?.images)
+    ? notification.images
+        .map((value) => resolveUploadUrl(value))
+        .filter(Boolean)
+    : [];
+  const image = resolveUploadUrl(notification?.image) || images[0] || "";
 
   return {
     id:
-      notification.id ||
+      notification?.id ||
       `notif-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
-    type: notification.type || "like",
-    actorName: notification.actorName || notification.author || "Someone",
+    type: notification?.type || "like",
+    actorName: notification?.actorName || notification?.author || "Someone",
     actorAvatar:
-      notification.actorAvatar || notification.avatar || DEFAULT_AVATAR,
-    actorUsername: notification.actorUsername || "",
+      resolveAvatarUrl(notification?.actorAvatar || notification?.avatar) ||
+      DEFAULT_AVATAR,
+    actorUsername: notification?.actorUsername || "",
     content:
-      notification.content ||
-      notification.caption ||
-      "interacted with your post.",
+      notification?.content ||
+      notification?.caption ||
+      "interacted with your account.",
     caption:
-      notification.caption ||
-      notification.content ||
+      notification?.caption ||
+      notification?.content ||
       "There is new activity on your account.",
     timestamp,
-    timeAgo: notification.timeAgo || getTimeAgo(timestamp),
-    read: Boolean(notification.read),
-    hidden: Boolean(notification.hidden),
-    targetRoute: notification.targetRoute || "/feed",
-    images:
-      Array.isArray(notification.images) && notification.images.length > 0
-        ? notification.images
-        : notification.image
-          ? [notification.image]
-          : notification.mediaItems?.map((item) => item?.url).filter(Boolean) ||
-            [],
-    image: notification.image || notification.images?.[0] || FALLBACK_IMAGE,
-    metadata: notification.metadata || null,
+    read: Boolean(notification?.read),
+    hidden: Boolean(notification?.hidden),
+    targetRoute: notification?.targetRoute || "/feed",
+    images,
+    image,
+    metadata: notification?.metadata || null,
   };
 };
 
 export function NotificationProvider({ children }) {
-  const [storageOwner, setStorageOwner] = useState(() => getStorageOwner());
-  const [notifications, setNotifications] = useState(() =>
-    loadNotifications().map(normalizeNotification),
-  );
+  const [sessionType, setSessionType] = useState(() => getSessionType());
+  const [notifications, setNotifications] = useState([]);
   const [popupQueue, setPopupQueue] = useState([]);
-  const hydratedRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const knownNotificationIdsRef = useRef(new Set());
+  const hasCompletedInitialLoadRef = useRef(false);
 
-  const hydrateFromStorage = useCallback(() => {
-    const nextOwner = getStorageOwner();
-    setStorageOwner(nextOwner);
-    setNotifications(loadNotifications(nextOwner).map(normalizeNotification));
-    setPopupQueue([]);
-  }, []);
+  const notificationRequest = useCallback(async (path = "", init = {}) => {
+    const nextSessionType = getSessionType();
+    if (nextSessionType === "guest") {
+      return null;
+    }
 
-  useEffect(() => {
-    const normalized = notifications.map(normalizeNotification);
-    persistNotifications(storageOwner, normalized);
-  }, [notifications, storageOwner]);
+    const endpoint = `${getEndpointBase(nextSessionType)}${path}`;
+    if (nextSessionType === "admin") {
+      const token = getAdminAccessToken();
+      const headers = { ...(init.headers || {}) };
 
-  useEffect(() => {
-    const handleStorage = (event) => {
-      if (
-        event?.key &&
-        event.key !== "userId" &&
-        !event.key.startsWith(STORAGE_KEY)
-      ) {
-        return;
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
       }
 
-      hydrateFromStorage();
-    };
+      if (init.body && !(init.body instanceof FormData)) {
+        headers["Content-Type"] = headers["Content-Type"] || "application/json";
+      }
 
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener(AUTH_STATE_EVENT, hydrateFromStorage);
+      return fetch(`${API_BASE}${endpoint}`, {
+        credentials: "include",
+        ...init,
+        headers,
+      });
+    }
 
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener(AUTH_STATE_EVENT, hydrateFromStorage);
-    };
-  }, [hydrateFromStorage]);
+    return apiFetch(endpoint, init);
+  }, []);
 
-  useEffect(() => {
-    if (!hydratedRef.current) {
-      hydratedRef.current = true;
+  const applyFetchedNotifications = useCallback((entries) => {
+    const normalized = Array.isArray(entries)
+      ? entries.map(normalizeNotification)
+      : [];
+    const nextIds = new Set(normalized.map((entry) => entry.id));
+
+    setNotifications(normalized);
+
+    if (!hasCompletedInitialLoadRef.current) {
+      knownNotificationIdsRef.current = nextIds;
+      hasCompletedInitialLoadRef.current = true;
+      setPopupQueue([]);
       return;
     }
 
-    const unreadVisible = notifications
-      .filter((notification) => !notification.read && !notification.hidden)
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 3);
+    const newUnread = normalized
+      .filter(
+        (entry) =>
+          !entry.read &&
+          !entry.hidden &&
+          !knownNotificationIdsRef.current.has(entry.id),
+      )
+      .slice(0, 4);
 
-    setPopupQueue((prev) => {
-      const existingIds = new Set(prev.map((item) => item.id));
-      const additions = unreadVisible.filter(
-        (item) => !existingIds.has(item.id),
-      );
-      return additions.length > 0 ? [...additions, ...prev].slice(0, 4) : prev;
-    });
-  }, [notifications]);
+    knownNotificationIdsRef.current = nextIds;
+
+    if (newUnread.length > 0) {
+      setPopupQueue((prev) => {
+        const existingIds = new Set(prev.map((entry) => entry.id));
+        return [
+          ...newUnread.filter((entry) => !existingIds.has(entry.id)),
+          ...prev,
+        ].slice(0, 4);
+      });
+    }
+  }, []);
+
+  const refreshNotifications = useCallback(
+    async ({ silent = false } = {}) => {
+      const nextSessionType = getSessionType();
+      setSessionType(nextSessionType);
+
+      if (nextSessionType === "guest") {
+        knownNotificationIdsRef.current = new Set();
+        hasCompletedInitialLoadRef.current = false;
+        setNotifications([]);
+        setPopupQueue([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!silent) {
+        setIsLoading(true);
+      }
+
+      try {
+        const response = await notificationRequest("?limit=100", {
+          method: "GET",
+        });
+        if (!response?.ok) {
+          throw new Error("Failed to load notifications.");
+        }
+
+        const data = await response.json();
+        applyFetchedNotifications(data);
+      } catch (error) {
+        console.error("Failed to load notifications:", error);
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [applyFetchedNotifications, notificationRequest],
+  );
+
+  useEffect(() => {
+    refreshNotifications();
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      refreshNotifications();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshNotifications({ silent: true });
+      }
+    };
+
+    window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    if (sessionType === "guest") {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      refreshNotifications({ silent: true });
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshNotifications, sessionType]);
+
+  const mutateNotification = useCallback(
+    async ({ path, method, optimisticUpdate }) => {
+      if (typeof optimisticUpdate === "function") {
+        optimisticUpdate();
+      }
+
+      try {
+        const response = await notificationRequest(path, { method });
+        if (!response?.ok) {
+          throw new Error("Notification update failed.");
+        }
+      } catch (error) {
+        console.error("Notification mutation error:", error);
+        await refreshNotifications({ silent: true });
+      }
+    },
+    [notificationRequest, refreshNotifications],
+  );
 
   const createNotification = useCallback((notificationInput) => {
     const entry = normalizeNotification({
       ...notificationInput,
       read: false,
       hidden: false,
-      timestamp: notificationInput.timestamp || Date.now(),
+      timestamp: notificationInput?.timestamp || Date.now(),
     });
 
     setNotifications((prev) => [entry, ...prev]);
     setPopupQueue((prev) =>
       [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, 4),
     );
-
+    knownNotificationIdsRef.current = new Set([
+      entry.id,
+      ...Array.from(knownNotificationIdsRef.current),
+    ]);
     return entry;
   }, []);
 
-  const markAsRead = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification,
-      ),
-    );
-  }, []);
+  const markAsRead = useCallback(
+    async (id) => {
+      await mutateNotification({
+        path: `/${id}/read`,
+        method: "PATCH",
+        optimisticUpdate: () => {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === id
+                ? { ...notification, read: true }
+                : notification,
+            ),
+          );
+        },
+      });
+    },
+    [mutateNotification],
+  );
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true })),
-    );
-    setPopupQueue([]);
-  }, []);
-
-  const hideNotification = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id
-          ? { ...notification, hidden: true, read: true }
-          : notification,
-      ),
-    );
-    setPopupQueue((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
-  }, []);
-
-  const unhideNotification = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id
-          ? { ...notification, hidden: false }
-          : notification,
-      ),
-    );
-  }, []);
-
-  const deleteNotification = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
-    setPopupQueue((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
-  }, []);
-
-  const dismissPopup = useCallback((id) => {
-    setPopupQueue((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification,
-      ),
-    );
-  }, []);
-
-  const seedDemoNotification = useCallback(() => {
-    const scenarios = [
-      {
-        type: "like",
-        actorName: "Ella Reyes",
-        actorAvatar:
-          "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=120&q=80",
-        actorUsername: "@ellareyes",
-        content: 'liked your recipe "Spicy Tuna Pasta".',
-        caption: "Your recipe just got another heart.",
-        targetRoute: "/feed",
-        images: [
-          "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=600&q=80",
-        ],
+  const markAllAsRead = useCallback(async () => {
+    await mutateNotification({
+      path: "/read-all",
+      method: "PATCH",
+      optimisticUpdate: () => {
+        setNotifications((prev) =>
+          prev.map((notification) => ({ ...notification, read: true })),
+        );
+        setPopupQueue([]);
       },
-      {
-        type: "comment",
-        actorName: "Paolo Santos",
-        actorAvatar:
-          "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=120&q=80",
-        actorUsername: "@paolos",
-        content: 'commented: "Can you share the full ingredient list?"',
-        caption: "Someone wants to cook your recipe too.",
-        targetRoute: "/feed",
-      },
-      {
-        type: "reply",
-        actorName: "Kim Alvarez",
-        actorAvatar:
-          "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=120&q=80",
-        actorUsername: "@kimalvarez",
-        content: "replied to your thread about adobo.",
-        caption: "Your conversation has a new reply.",
-        targetRoute: "/feed",
-      },
-      {
-        type: "follow",
-        actorName: "David Ong",
-        actorAvatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
-        actorUsername: "@davidong",
-        content: "started following you.",
-        caption: "A new foodie joined your community.",
-        targetRoute: "/profile",
-      },
-    ];
+    });
+  }, [mutateNotification]);
 
-    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
-    return createNotification(scenario);
-  }, [createNotification]);
+  const hideNotification = useCallback(
+    async (id) => {
+      await mutateNotification({
+        path: `/${id}/hide`,
+        method: "PATCH",
+        optimisticUpdate: () => {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === id
+                ? { ...notification, hidden: true, read: true }
+                : notification,
+            ),
+          );
+          setPopupQueue((prev) =>
+            prev.filter((notification) => notification.id !== id),
+          );
+        },
+      });
+    },
+    [mutateNotification],
+  );
+
+  const unhideNotification = useCallback(
+    async (id) => {
+      await mutateNotification({
+        path: `/${id}/unhide`,
+        method: "PATCH",
+        optimisticUpdate: () => {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === id
+                ? { ...notification, hidden: false }
+                : notification,
+            ),
+          );
+        },
+      });
+    },
+    [mutateNotification],
+  );
+
+  const deleteNotification = useCallback(
+    async (id) => {
+      await mutateNotification({
+        path: `/${id}`,
+        method: "DELETE",
+        optimisticUpdate: () => {
+          setNotifications((prev) =>
+            prev.filter((notification) => notification.id !== id),
+          );
+          setPopupQueue((prev) =>
+            prev.filter((notification) => notification.id !== id),
+          );
+        },
+      });
+    },
+    [mutateNotification],
+  );
+
+  const dismissPopup = useCallback(
+    async (id) => {
+      setPopupQueue((prev) =>
+        prev.filter((notification) => notification.id !== id),
+      );
+      await markAsRead(id);
+    },
+    [markAsRead],
+  );
 
   const visibleNotifications = useMemo(
     () => notifications.filter((notification) => !notification.hidden),
@@ -413,6 +381,9 @@ export function NotificationProvider({ children }) {
 
   const value = useMemo(
     () => ({
+      sessionType,
+      isAdminSession: sessionType === "admin",
+      isLoading,
       notifications,
       visibleNotifications,
       hiddenNotifications,
@@ -420,28 +391,30 @@ export function NotificationProvider({ children }) {
       unreadCount,
       hasNotifications: unreadCount > 0,
       createNotification,
-      seedDemoNotification,
       markAsRead,
       markAllAsRead,
       hideNotification,
       unhideNotification,
       deleteNotification,
       dismissPopup,
+      refreshNotifications,
     }),
     [
+      sessionType,
+      isLoading,
       notifications,
       visibleNotifications,
       hiddenNotifications,
       popupQueue,
       unreadCount,
       createNotification,
-      seedDemoNotification,
       markAsRead,
       markAllAsRead,
       hideNotification,
       unhideNotification,
       deleteNotification,
       dismissPopup,
+      refreshNotifications,
     ],
   );
 

@@ -1,22 +1,61 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, Trash2, EyeOff, Eye, Heart, MessageCircle, MessageSquareReply, UserPlus, Repeat2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  EyeOff,
+  Eye,
+  Heart,
+  MessageCircle,
+  MessageSquareReply,
+  UserPlus,
+  Repeat2,
+  HeartCrack,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 
 const ROUTE_MAP = {
   like: "/feed",
+  dislike: "/feed",
   comment: "/feed",
   reply: "/feed",
   follow: "/profile",
   repost: "/feed",
+  report_status: "/notifications",
+  report_submitted: "/admin/notifications",
 };
 
 const TYPE_CONFIG = {
   like: { color: "#F57600", label: "liked your recipe", Icon: Heart },
-  comment: { color: "#0060A9", label: "commented on your post", Icon: MessageCircle },
-  reply: { color: "#00B4FA", label: "replied to your comment", Icon: MessageSquareReply },
+  dislike: {
+    color: "#DC2626",
+    label: "disliked your content",
+    Icon: HeartCrack,
+  },
+  comment: {
+    color: "#0060A9",
+    label: "commented on your post",
+    Icon: MessageCircle,
+  },
+  reply: {
+    color: "#00B4FA",
+    label: "replied to your comment",
+    Icon: MessageSquareReply,
+  },
   follow: { color: "#22C55E", label: "started following you", Icon: UserPlus },
   repost: { color: "#F0AE35", label: "shared your post", Icon: Repeat2 },
+  report_status: {
+    color: "#2563EB",
+    label: "updated your report",
+    Icon: ShieldCheck,
+  },
+  report_submitted: {
+    color: "#7C3AED",
+    label: "submitted a report",
+    Icon: ShieldAlert,
+  },
 };
 
 const DeleteModal = ({ onConfirm, onCancel }) => (
@@ -41,11 +80,14 @@ const DeleteModal = ({ onConfirm, onCancel }) => (
           <Trash2 size={24} className="text-white sm:hidden" />
           <Trash2 size={28} className="text-white hidden sm:block" />
         </motion.div>
-        <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">Delete Notification</h2>
+        <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">
+          Delete Notification
+        </h2>
       </div>
       <div className="p-6 sm:p-10 text-center">
         <p className="text-gray-500 text-sm leading-relaxed mb-6 sm:mb-8">
-          Are you sure you want to permanently delete this notification? This action cannot be undone.
+          Are you sure you want to permanently delete this notification? This
+          action cannot be undone.
         </p>
         <div className="flex flex-col gap-3">
           <motion.button
@@ -99,17 +141,15 @@ export default function NotificationCard({
   } = notification || {};
 
   const normalizedImages =
-    Array.isArray(images) && images.length > 0
-      ? images
-      : image
-        ? [image]
-        : [];
+    Array.isArray(images) && images.length > 0 ? images : image ? [image] : [];
 
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.like;
   const visibleImages = normalizedImages.slice(0, 3);
-  const hiddenCount = normalizedImages.length > 3 ? normalizedImages.length - 3 : 0;
+  const hiddenCount =
+    normalizedImages.length > 3 ? normalizedImages.length - 3 : 0;
   const destination = targetRoute || ROUTE_MAP[type] || "/feed";
-  const displayTime = timeAgo || (timestamp ? new Date(timestamp).toLocaleString() : "just now");
+  const displayTime =
+    timeAgo || (timestamp ? new Date(timestamp).toLocaleString() : "just now");
   const Icon = config.Icon;
 
   const handleCardClick = (e) => {
@@ -123,7 +163,10 @@ export default function NotificationCard({
     e.stopPropagation();
     if (!menuOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      setDropdownPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
     }
     setMenuOpen((o) => !o);
   };
@@ -165,11 +208,17 @@ export default function NotificationCard({
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-gray-500 truncate">{actorName}</p>
-            <p className="text-xs text-gray-600 truncate mt-0.5">{content || caption}</p>
+            <p className="text-sm font-black text-gray-500 truncate">
+              {actorName}
+            </p>
+            <p className="text-xs text-gray-600 truncate mt-0.5">
+              {content || caption}
+            </p>
             <div className="flex items-center gap-1 mt-0.5">
               <EyeOff size={9} className="text-gray-300" />
-              <span className="text-[10px] text-gray-400 font-semibold">Hidden · {displayTime}</span>
+              <span className="text-[10px] text-gray-400 font-semibold">
+                Hidden · {displayTime}
+              </span>
             </div>
           </div>
 
@@ -195,7 +244,11 @@ export default function NotificationCard({
               exit={{ opacity: 0, scale: 0.92, y: -4 }}
               transition={{ duration: 0.15 }}
               className="fixed w-44 sm:w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 py-1"
-              style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 99999 }}
+              style={{
+                top: dropdownPos.top,
+                right: dropdownPos.right,
+                zIndex: 99999,
+              }}
             >
               <button
                 onClick={() => {
@@ -209,7 +262,9 @@ export default function NotificationCard({
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-gray-700">Unhide</p>
-                  <p className="text-[10px] text-gray-400 font-normal">Move back to main feed</p>
+                  <p className="text-[10px] text-gray-400 font-normal">
+                    Move back to main feed
+                  </p>
                 </div>
               </button>
               <div className="mx-3 h-px bg-gray-100" />
@@ -225,7 +280,9 @@ export default function NotificationCard({
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-red-500">Delete</p>
-                  <p className="text-[10px] text-red-300 font-normal">Permanently remove</p>
+                  <p className="text-[10px] text-red-300 font-normal">
+                    Permanently remove
+                  </p>
                 </div>
               </button>
             </motion.div>
@@ -252,12 +309,20 @@ export default function NotificationCard({
       <motion.div
         layout
         onClick={handleCardClick}
-        whileHover={{ y: -4, boxShadow: "0 12px 24px -10px rgba(0, 96, 169, 0.15)" }}
+        whileHover={{
+          y: -4,
+          boxShadow: "0 12px 24px -10px rgba(0, 96, 169, 0.15)",
+        }}
         whileTap={{ scale: 0.99 }}
         className={`group relative flex w-full rounded-2xl border transition-all duration-300 cursor-pointer select-none ${
-          read ? "border-gray-100 bg-white" : "border-orange-200 bg-gradient-to-r from-orange-50/60 via-white to-white"
+          read
+            ? "border-gray-100 bg-white"
+            : "border-orange-200 bg-gradient-to-r from-orange-50/60 via-white to-white"
         }`}
-        style={{ boxShadow: "0 2px 12px rgba(0,96,169,0.07), 0 1px 3px rgba(0,0,0,0.05)" }}
+        style={{
+          boxShadow:
+            "0 2px 12px rgba(0,96,169,0.07), 0 1px 3px rgba(0,0,0,0.05)",
+        }}
       >
         <div
           className="absolute left-0 top-0 h-full w-1 sm:w-1.5 rounded-l-2xl transition-all group-hover:w-1.5 sm:group-hover:w-2"
@@ -295,19 +360,41 @@ export default function NotificationCard({
               />
             ) : visibleImages.length === 2 ? (
               <div className="flex h-full gap-0.5">
-                <img src={visibleImages[0]} alt="" className="h-full w-1/2 object-cover" />
-                <img src={visibleImages[1]} alt="" className="h-full w-1/2 object-cover" />
+                <img
+                  src={visibleImages[0]}
+                  alt=""
+                  className="h-full w-1/2 object-cover"
+                />
+                <img
+                  src={visibleImages[1]}
+                  alt=""
+                  className="h-full w-1/2 object-cover"
+                />
               </div>
             ) : (
               <div className="flex h-full gap-0.5">
-                <img src={visibleImages[0]} alt="" className="h-full w-[60%] object-cover" />
+                <img
+                  src={visibleImages[0]}
+                  alt=""
+                  className="h-full w-[60%] object-cover"
+                />
                 <div className="flex w-[40%] flex-col gap-0.5">
-                  <img src={visibleImages[1]} alt="" className="h-1/2 w-full object-cover" />
+                  <img
+                    src={visibleImages[1]}
+                    alt=""
+                    className="h-1/2 w-full object-cover"
+                  />
                   <div className="relative h-1/2 w-full">
-                    <img src={visibleImages[2]} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={visibleImages[2]}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                     {hiddenCount > 0 && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#0060A9]/60 backdrop-blur-[2px]">
-                        <span className="text-xs font-bold text-white">+{hiddenCount}</span>
+                        <span className="text-xs font-bold text-white">
+                          +{hiddenCount}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -339,7 +426,9 @@ export default function NotificationCard({
                 </div>
                 <div className="truncate min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`text-xs sm:text-sm font-black truncate ${read ? "text-[#0060A9]" : "text-gray-900"}`}>
+                    <span
+                      className={`text-xs sm:text-sm font-black truncate ${read ? "text-[#0060A9]" : "text-gray-900"}`}
+                    >
                       {actorName}
                     </span>
                     {actorUsername && (
@@ -365,11 +454,16 @@ export default function NotificationCard({
           <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2">
             <span
               className="rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: `${config.color}15`, color: config.color }}
+              style={{
+                backgroundColor: `${config.color}15`,
+                color: config.color,
+              }}
             >
               {type}
             </span>
-            <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest ${read ? "text-gray-400" : "text-[#F57600]"}`}>
+            <span
+              className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest ${read ? "text-gray-400" : "text-[#F57600]"}`}
+            >
               {displayTime}
             </span>
           </div>
@@ -385,7 +479,11 @@ export default function NotificationCard({
             exit={{ opacity: 0, scale: 0.92, y: -4 }}
             transition={{ duration: 0.15 }}
             className="fixed w-44 sm:w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 py-1"
-            style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 99999 }}
+            style={{
+              top: dropdownPos.top,
+              right: dropdownPos.right,
+              zIndex: 99999,
+            }}
           >
             <button
               onClick={() => {
@@ -395,10 +493,16 @@ export default function NotificationCard({
               className="w-full flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
             >
               <div className="w-6 sm:w-7 h-6 sm:h-7 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                {isHidden ? <Eye size={13} className="text-[#0060A9]" /> : <EyeOff size={13} className="text-[#0060A9]" />}
+                {isHidden ? (
+                  <Eye size={13} className="text-[#0060A9]" />
+                ) : (
+                  <EyeOff size={13} className="text-[#0060A9]" />
+                )}
               </div>
               <div className="text-left">
-                <p className="text-xs sm:text-sm font-bold text-gray-700">{isHidden ? "Unhide" : "Hide"}</p>
+                <p className="text-xs sm:text-sm font-bold text-gray-700">
+                  {isHidden ? "Unhide" : "Hide"}
+                </p>
                 <p className="text-[9px] sm:text-[10px] text-gray-400 font-normal">
                   {isHidden ? "Move back to main feed" : "Move to Hidden tab"}
                 </p>
@@ -418,8 +522,12 @@ export default function NotificationCard({
                 <Trash2 size={13} className="text-red-500" />
               </div>
               <div className="text-left">
-                <p className="text-xs sm:text-sm font-bold text-red-500">Delete</p>
-                <p className="text-[9px] sm:text-[10px] text-red-300 font-normal">Permanently remove</p>
+                <p className="text-xs sm:text-sm font-bold text-red-500">
+                  Delete
+                </p>
+                <p className="text-[9px] sm:text-[10px] text-red-300 font-normal">
+                  Permanently remove
+                </p>
               </div>
             </button>
           </motion.div>
