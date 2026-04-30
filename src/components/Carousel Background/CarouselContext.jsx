@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-const INTERVAL = 5500;
+const INTERVAL = 20000;
 const IMAGE_COUNT = 3;
 
 const CarouselContext = createContext(null);

@@ -237,15 +237,12 @@ const Dislikes = () => {
     ? {
         width: "calc(100vw - 32px)",
         maxWidth: "480px",
-        height: "auto",
-        minHeight: "calc(100vh - 32px)",
+        height: "calc(100vw - 32px)",
         maxHeight: "calc(100vh - 32px)",
       }
     : {
-        width: "min(480px, calc(100vw - 48px))",
-        height: "calc(100vh - 48px)",
-        marginLeft: "0px",
-        transform: `translateX(${desktopX}px)`,
+        width: "500px",
+        height: "500px",
       };
 
   return (
@@ -257,7 +254,7 @@ const Dislikes = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-center pointer-events-none"
         }
       >
         <div

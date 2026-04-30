@@ -86,9 +86,6 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
         }
 
         setSubmitted(true);
-        setTimeout(() => {
-          onConfirm?.(selected);
-        }, 1500);
       })
       .catch((error) => {
         console.error("Failed to submit post report:", error);
@@ -134,6 +131,12 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
               Thanks for letting us know. We'll review this post and take action
               if it violates our guidelines.
             </p>
+            <button
+              onClick={onCancel}
+              className="mt-4 px-6 py-2 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold transition-colors"
+            >
+              Close
+            </button>
           </div>
         ) : (
           <>

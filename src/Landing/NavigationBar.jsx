@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { X, Menu } from "lucide-react";
-import LogoIcon from "../components/Assets/GC Navbar Logo.png";
+import LogoIcon from "../components/Assets/GC Logo.png";
 
 const menuItems = [
   { name: "Home", id: "home-section", path: "/home" },
@@ -15,6 +15,10 @@ export default function Navbar() {
   const [lastY, setLastY] = useState(0);
   const [activeTab, setActiveTab] = useState("Home");
   const [menuOpen, setMenuOpen] = useState(false);
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,60 +88,63 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 w-full z-50 transition-transform duration-500 ${
-          visible ? "translate-y-0" : "-translate-y-full"
-        }`}
+        className={`fixed top-0 left-0 w-full z-50 ${
+          prefersReducedMotion ? "" : "transition-transform duration-500"
+        } ${visible ? "translate-y-0" : "-translate-y-full"}`}
       >
-        {/* ── DESKTOP (md+) ─────────────────────────────────────────────── */}
-        <div className="hidden md:flex items-center justify-between px-10 py-5">
-          {/* Logo */}
-          <div
-            className="flex-1 flex items-center gap-3 cursor-pointer"
-            onClick={handleLogoClick}
-          >
-            <img
-              src={LogoIcon}
-              alt="Logo"
-              className="w-80 h-14 object-contain"
-            />
-          </div>
+       {/* ── DESKTOP (md+) ─────────────────────────────────────────────── */}
+<div className="hidden md:flex items-center justify-between px-6 py-5">
+  
+  {/* Logo — fixed width, left-anchored */}
+  <div
+    className="flex items-center cursor-pointer w-48 shrink-0"
+    onClick={handleLogoClick}
+  >
+    <img
+      src={LogoIcon}
+      alt="Logo"
+      className="h-10 w-auto object-contain"
+    />
+  </div>
 
-          {/* Nav pill */}
-          <ul className="flex gap-32 bg-white/50 backdrop-blur-md px-8 py-2 rounded-full border border-black/5 shadow-sm">
-            {menuItems.map((item) => (
-              <li
-                key={item.name}
-                onClick={() => handleClick(item)}
-                className={`cursor-pointer transition-colors duration-300 font-medium ${
-                  activeTab === item.name
-                    ? "text-[#0060A9]"
-                    : "text-black hover:text-[#0060A9]/70"
-                }`}
-              >
-                {item.name}
-              </li>
-            ))}
-          </ul>
+  {/* Nav pill — truly centered via flex-1 + flex justify-center */}
+  <div className="flex-1 flex justify-center">
+    <ul className="flex gap-32 bg-white/50 backdrop-blur-md px-16 py-2 rounded-full border border-black/5 shadow-sm">
+      {menuItems.map((item) => (
+        <li
+          key={item.name}
+          onClick={() => handleClick(item)}
+          className={`cursor-pointer transition-colors duration-300 font-medium whitespace-nowrap ${
+            activeTab === item.name
+              ? "text-[#0060A9]"
+              : "text-black hover:text-[#0060A9]/70"
+          }`}
+        >
+          {item.name}
+        </li>
+      ))}
+    </ul>
+  </div>
 
-          {/* Auth */}
-          <div className="flex-1 flex justify-end gap-4">
-            <button
-              onClick={() => navigate("/login?mode=login")}
-              className="text-[#F57600] font-medium hover:text-[#0060A9] transition-colors"
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => navigate("/login?mode=signup")}
-              className="bg-[#F57600] text-white hover:bg-[#0060A9]/90 transition-all px-6 py-2 rounded-full shadow-lg"
-            >
-              Sign Up
-            </button>
-          </div>
-        </div>
+  {/* Auth — fixed width, right-anchored */}
+  <div className="flex gap-4 shrink-0 w-48 justify-end">
+    <button
+      onClick={() => navigate("/login?mode=login")}
+      className="text-[#F57600] font-medium hover:text-[#0060A9] transition-colors"
+    >
+      Log In
+    </button>
+    <button
+      onClick={() => navigate("/login?mode=signup")}
+      className="bg-[#F57600] text-white hover:bg-[#0060A9]/90 transition-all px-6 py-2 rounded-full shadow-lg"
+    >
+      Sign Up
+    </button>
+  </div>
+</div>
 
         {/* ── MOBILE: logo + hamburger ───────────────────────────────────── */}
-        <div className="md:hidden flex items-center justify-between px-5 py-4">
+        <div className="md:hidden flex items-center justify-between pl-2 pr-5 py-4">
           <div
             className="flex items-center cursor-pointer"
             onClick={handleLogoClick}
@@ -165,7 +172,9 @@ export default function Navbar() {
 
       {/* ── Mobile drawer ─────────────────────────────────────────────────── */}
       <div
-        className={`fixed inset-x-0 top-0 z-40 md:hidden transition-all duration-300 ${
+        className={`fixed inset-x-0 top-0 z-40 md:hidden ${
+          prefersReducedMotion ? "" : "transition-all duration-300"
+        } ${
           menuOpen
             ? "opacity-100 pointer-events-auto translate-y-0"
             : "opacity-0 pointer-events-none -translate-y-1"

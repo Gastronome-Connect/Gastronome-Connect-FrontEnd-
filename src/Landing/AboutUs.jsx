@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import GCNavbar from "./NavigationBar";
 import GCGoal from "../components/Landing Components/GCGoalSection";
 import GCFooter from "../components/Footer/Footer";
 import Jomari from "../components/Assets/jomjom 1x1.png";
 import JC from "../components/Assets/JC.png";
-import Earl from "../components/Assets/EarlPhoto.png";
 import Matt from "../components/Assets/Matt Gallano.png";
 import Nathaniel from "../components/Assets/natnat.png";
 
@@ -28,6 +27,11 @@ const STYLES = `
     overflow: hidden;
   }
   .card-back { transform: rotateY(180deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .card-inner { transition: none; }
+    .flip-hint:not(.flipped):hover .card-inner { transform: none; }
+    .flip-hint.flipped:hover .card-inner { transform: rotateY(180deg); }
+  }
   .flip-hint:not(.flipped):hover .card-inner { transform: rotateY(25deg); }
   .flip-hint.flipped:hover .card-inner { transform: rotateY(155deg); }
 
@@ -37,17 +41,6 @@ const STYLES = `
 `;
 
 const team = [
-  {
-    name: "Earl Ace Domand",
-    role: "Full Stack",
-    img: Earl,
-    contributions: [
-      "Architected the full backend API",
-      "Designed the database schema",
-      "Built authentication & JWT flow",
-      "Led deployment & DevOps setup",
-    ],
-  },
   {
     name: "Jun Carlo Bisan",
     role: "Front-end",
@@ -106,12 +99,20 @@ const FlipIcon = ({ reverse }) => (
 
 const TeamMemberCard = ({ member, index }) => {
   const [flipped, setFlipped] = useState(false);
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.6, delay: index * 0.1 }
+      }
       /* Responsive card size: full-width on mobile, fixed on larger screens */
       className="flex-shrink-0 card-scene w-full sm:w-[240px] md:w-[260px] lg:w-[280px]"
       style={{ height: "clamp(340px, 45vw, 450px)" }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 import Karekare from "../Assets/Kare-kare.png";
 import Sisig from "../Assets/Sisig.png";
@@ -72,10 +72,14 @@ const RecipeCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(totalItems);
   const [isTransitioning, setIsTransitioning] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
   const scrollRef = useRef(null);
   const isProcessingClick = useRef(false);
   const extendedDishes = [...dishes, ...dishes, ...dishes];
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   // Detect mobile once
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -87,12 +91,16 @@ const RecipeCarousel = () => {
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+        }
+      },
       { threshold: 0.15, rootMargin: "0px 0px -50px 0px" },
     );
     if (scrollRef.current) observer.observe(scrollRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [hasAnimated]);
 
   const handleNext = useCallback(() => {
     if (isProcessingClick.current) return;
@@ -115,10 +123,10 @@ const RecipeCarousel = () => {
   }, []);
 
   useEffect(() => {
-    if (isHovered || !isVisible) return;
+    if (isHovered || !hasAnimated) return;
     const interval = setInterval(handleNext, 4000);
     return () => clearInterval(interval);
-  }, [handleNext, isHovered, isVisible]);
+  }, [handleNext, isHovered, hasAnimated]);
 
   useEffect(() => {
     let timer;
@@ -164,6 +172,9 @@ const RecipeCarousel = () => {
           100% { transform: scale(1); }
         }
         .animate-kenburns { animation: kenburns 12s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-kenburns { animation: none; }
+        }
       `}</style>
 
       {/* Heading */}
@@ -179,7 +190,13 @@ const RecipeCarousel = () => {
       <div
         className={`
         flex flex-col items-center w-full max-w-[1400px] transition-all duration-1000 ease-out
-        ${isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-20 scale-95 blur-sm"}
+        ${
+          prefersReducedMotion
+            ? "opacity-100 translate-y-0 scale-100"
+            : hasAnimated
+              ? "opacity-100 translate-y-0 scale-100"
+              : "opacity-0 translate-y-20 scale-95 blur-sm"
+        }
       `}
       >
         <div className="flex items-center w-full relative">

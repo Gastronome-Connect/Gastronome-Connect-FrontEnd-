@@ -1,9 +1,13 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import HeroBanner from "../Assets/HeroBanner.png";
 
 export default function Hero() {
   const heroRef = useRef(null);
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   const handleLearnMore = () => {
     if (heroRef.current) {
@@ -45,37 +49,52 @@ export default function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { duration: 0.8, delay: 0.2 }
+          }
           className="max-w-5xl"
         >
           {/* Eyebrow — mobile only */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { delay: 0.5 }
+            }
             className="sm:hidden text-[11px] uppercase tracking-[0.3em] text-orange-400 font-semibold mb-3"
           >
             Culinary Community
           </motion.p>
 
           <h1 className="text-5xl sm:text-6xl md:text-8xl font-black mb-3 sm:mb-4 tracking-tighter leading-[1.05]">
-            Gastronome{" "}
-            <span className="text-orange-500">Connect</span>
+            Elevating Every Ingredient.{" "}
+            <span className="text-orange-500">Connecting Every Kitchen.</span>
           </h1>
-
-          <p className="mb-8 sm:mb-10 text-sm sm:text-xl md:text-2xl text-gray-300 max-w-xs sm:max-w-2xl font-light leading-relaxed">
-            Elevating Every Ingredient. Connecting Every Kitchen.
-          </p>
 
           <div className="flex items-center">
             <motion.button
-              whileHover={{ scale: 1.05, x: 10 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={prefersReducedMotion ? {} : { scale: 1.05, x: 10 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
               onClick={handleLearnMore}
               className="flex items-center gap-3 bg-orange-600 hover:bg-orange-500 px-7 sm:px-10 py-3.5 sm:py-5 rounded-full text-sm sm:text-xl font-bold transition-colors shadow-2xl"
             >
               Learn More
-              <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1 }}>
+              <motion.span
+                animate={
+                  prefersReducedMotion
+                    ? {}
+                    : { x: [0, 5, 0] }
+                }
+                transition={
+                  prefersReducedMotion
+                    ? {}
+                    : { repeat: Infinity, duration: 1 }
+                }
+              >
                 →
               </motion.span>
             </motion.button>
@@ -85,8 +104,16 @@ export default function Hero() {
 
       {/* Scroll prompt — desktop only */}
       <motion.div
-        animate={{ opacity: [0.3, 0.7, 0.3], y: [0, 8, 0] }}
-        transition={{ repeat: Infinity, duration: 2.5 }}
+        animate={
+          prefersReducedMotion
+            ? {}
+            : { opacity: [0.3, 0.7, 0.3], y: [0, 8, 0] }
+        }
+        transition={
+          prefersReducedMotion
+            ? {}
+            : { repeat: Infinity, duration: 2.5 }
+        }
         className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-2"
       >
         <span className="text-[10px] uppercase tracking-[0.4em] text-white/60">Discover</span>

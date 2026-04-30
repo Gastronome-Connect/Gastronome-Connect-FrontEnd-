@@ -163,12 +163,7 @@ const AuthPage = () => {
 
   const getInitialX = () => {
     if (isMobile()) return null;
-    if (!initialIsLogin) {
-      const panelWidth = Math.min(480, window.innerWidth - 48);
-      const margin = 60;
-      return `${window.innerWidth - panelWidth - margin}px`;
-    }
-    return "60px";
+    return "0px";
   };
 
   const [panelX, setPanelX] = useState(getInitialX);
@@ -181,13 +176,7 @@ const AuthPage = () => {
       const nowMobile = isMobile();
       setMobile(nowMobile);
       if (!nowMobile) {
-        const panelWidth = Math.min(480, window.innerWidth - 48);
-        const margin = 60;
-        setPanelX(
-          isLogin
-            ? `${margin}px`
-            : `${window.innerWidth - panelWidth - margin}px`,
-        );
+        setPanelX("0px");
         setPanelTransition("none");
       }
     };
@@ -220,62 +209,29 @@ const AuthPage = () => {
   const [signupError, setSignupError] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
 
-  // ── Slide transition (desktop only) ─────────────────────────
+  // ── Fade transition (no sliding) ─────────────────────────
   const switchTo = (goToLogin) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
     const fadeDuration = 260;
 
-    if (isMobile()) {
-      setContentVisible(false);
-      navigate(goToLogin ? "/login?mode=login" : "/login?mode=signup", {
-        replace: true,
-      });
-      setTimeout(() => {
-        setIsLogin(goToLogin);
-        setContentVisible(true);
-        setIsAnimating(false);
-      }, fadeDuration);
-      return;
-    }
-
-    const panelEl = document.getElementById("auth-panel");
-    const panelWidth = panelEl ? panelEl.offsetWidth : 480;
-    const margin = 60;
-    const travel = window.innerWidth - panelWidth - margin * 2;
-    const slideDuration = 580;
-
+    // Fade out current content
     setContentVisible(false);
     navigate(goToLogin ? "/login?mode=login" : "/login?mode=signup", {
       replace: true,
     });
 
+    // After fade out, change content and fade in
     setTimeout(() => {
-      setPanelTransition(
-        `transform ${slideDuration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
-      );
-      setPanelX(goToLogin ? `${margin}px` : `${travel + margin}px`);
-    }, fadeDuration * 0.5);
+      setIsLogin(goToLogin);
+      setContentVisible(true);
+    }, fadeDuration);
 
-    setTimeout(
-      () => {
-        setIsLogin(goToLogin);
-      },
-      fadeDuration * 0.5 + slideDuration * 0.5,
-    );
-    setTimeout(
-      () => {
-        setContentVisible(true);
-      },
-      fadeDuration * 0.5 + slideDuration * 0.6,
-    );
-    setTimeout(
-      () => {
-        setIsAnimating(false);
-      },
-      fadeDuration * 0.5 + slideDuration + 60,
-    );
+    // End animation state
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, fadeDuration * 2);
   };
 
   // ── Login validation ─────────────────────────────────────────
@@ -546,10 +502,6 @@ const AuthPage = () => {
     : {
         width: "min(480px, calc(100vw - 48px))",
         height: "calc(100vh - 48px)",
-        marginLeft: "0px",
-        transform: `translateX(${panelX})`,
-        transition: panelTransition,
-        willChange: "transform",
       };
 
   return (
@@ -561,7 +513,7 @@ const AuthPage = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-center pointer-events-none"
         }
       >
         <div

@@ -5,45 +5,34 @@ import Background3 from "../Assets/Sinigang.png";
 import { useCarousel } from "./CarouselContext";
 
 const STYLES = `
-  @keyframes kenBurns1 {
-    0%   { transform: scale(1)    translateX(0%)   translateY(0%); }
-    100% { transform: scale(1.12) translateX(-2%)  translateY(-1%); }
+  @keyframes slideInFromRight {
+    0%   { transform: translateX(100%); }
+    100% { transform: translateX(0%); }
   }
-  @keyframes kenBurns2 {
-    0%   { transform: scale(1)    translateX(0%)   translateY(0%); }
-    100% { transform: scale(1.1)  translateX(2%)   translateY(-2%); }
+  @keyframes slideOutToLeft {
+    0%   { transform: translateX(0%); }
+    100% { transform: translateX(-100%); }
   }
-  @keyframes kenBurns3 {
-    0%   { transform: scale(1.08) translateX(-1%)  translateY(1%); }
-    100% { transform: scale(1)    translateX(1%)   translateY(-1%); }
-  }
-  .kb-1 { animation: kenBurns1 8s ease-in-out forwards; }
-  .kb-2 { animation: kenBurns2 8s ease-in-out forwards; }
-  .kb-3 { animation: kenBurns3 8s ease-in-out forwards; }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes fadeOut {
-    from { opacity: 1; }
-    to   { opacity: 0; }
-  }
-  .slide-enter { animation: fadeIn  1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-  .slide-exit  { animation: fadeOut 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .slide-in { animation: slideInFromRight 0.8s ease-in-out forwards; }
+  .slide-out { animation: slideOutToLeft 0.8s ease-in-out forwards; }
 
   @keyframes shimmer {
-    0%   { opacity: 0.4; }
-    50%  { opacity: 0.65; }
-    100% { opacity: 0.4; }
+    0%   { opacity: 0.2; }
+    50%  { opacity: 0.3; }
+    100% { opacity: 0.2; }
   }
-  .vignette-shimmer { animation: shimmer 6s ease-in-out infinite; }
+  .vignette-shimmer { animation: shimmer 8s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide-in, .slide-out { animation: none; opacity: 1 !important; }
+    .vignette-shimmer { animation: none; }
+  }
 `;
 
 const bgImages = [
-  { src: Background1, kb: "kb-1" },
-  { src: Background2, kb: "kb-2" },
-  { src: Background3, kb: "kb-3" },
+  { src: Background1 },
+  { src: Background2 },
+  { src: Background3 },
 ];
 
 const BackgroundCarousel = () => {
@@ -69,7 +58,7 @@ const BackgroundCarousel = () => {
                 style={{ zIndex: 1, opacity: 0, pointerEvents: "none" }}
               >
                 <div
-                  className={`absolute inset-0 ${img.kb}`}
+                  className="absolute inset-0"
                   style={{
                     backgroundImage: `url(${img.src})`,
                     backgroundSize: "cover",
@@ -84,11 +73,11 @@ const BackgroundCarousel = () => {
             return (
               <div
                 key={i}
-                className="absolute inset-0 slide-exit"
+                className="absolute inset-0 slide-out"
                 style={{ zIndex: 2, pointerEvents: "none" }}
               >
                 <div
-                  className={`absolute inset-0 ${img.kb}`}
+                  className="absolute inset-0"
                   style={{
                     backgroundImage: `url(${img.src})`,
                     backgroundSize: "cover",
@@ -100,15 +89,15 @@ const BackgroundCarousel = () => {
             );
           }
 
-          // isCurrent — use key so Ken Burns restarts for the new slide only
+          // isCurrent
           return (
             <div
               key={`curr-${key}-${i}`}
-              className="absolute inset-0 slide-enter"
+              className="absolute inset-0 slide-in"
               style={{ zIndex: 3, pointerEvents: "none" }}
             >
               <div
-                className={`absolute inset-0 ${img.kb}`}
+                className="absolute inset-0"
                 style={{
                   backgroundImage: `url(${img.src})`,
                   backgroundSize: "cover",

@@ -38,6 +38,7 @@ export default function useModeratedPostCreation({
       title: "Post under review",
       message:
         "Your post is under review because it does not appear to be food related.",
+      autoDismissDelay: 8000,
     },
   };
 }

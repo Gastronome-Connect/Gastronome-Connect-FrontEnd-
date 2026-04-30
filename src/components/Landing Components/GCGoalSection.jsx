@@ -1,21 +1,29 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import GoalsBG from "../Assets/GoalsBackground.png";
 import MissionIcon from "../Assets/Mission.png";
 import VisionIcon from "../Assets/Vision.png";
 import ValuesIcon from "../Assets/Values.png";
 
 export default function Goals() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef(null);
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+        }
+      },
       { threshold: 0.15 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [hasAnimated]);
 
   return (
     <section ref={sectionRef} className="relative py-20 sm:py-28 text-white overflow-hidden font-sans">
@@ -29,7 +37,11 @@ export default function Goals() {
 
       {/* Content */}
       <div className={`relative z-10 max-w-6xl mx-auto px-5 sm:px-8 text-center transition-all duration-1000 ease-out ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        prefersReducedMotion
+          ? "opacity-100 translate-y-0"
+          : hasAnimated
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
       }`}>
 
         <h2 className="text-3xl sm:text-5xl md:text-7xl font-extralight mb-5 sm:mb-8 tracking-tight drop-shadow-lg">
@@ -50,8 +62,12 @@ export default function Goals() {
           ].map((item, index) => (
             <div
               key={index}
-              className={`group flex flex-col items-center p-6 sm:p-8 rounded-2xl transition-all duration-700 hover:bg-white/5 hover:backdrop-blur-sm ${item.delay} ${
-                isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-20 scale-95"
+              className={`group flex flex-col items-center p-6 sm:p-8 rounded-2xl transition-all duration-700 hover:bg-white/5 hover:backdrop-blur-sm ${
+                prefersReducedMotion
+                  ? "opacity-100 translate-y-0 scale-100"
+                  : hasAnimated
+                    ? "opacity-100 translate-y-0 scale-100"
+                    : "opacity-0 translate-y-20 scale-95"
               }`}
             >
               <div className="mb-5 sm:mb-8 h-24 sm:h-32 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2">

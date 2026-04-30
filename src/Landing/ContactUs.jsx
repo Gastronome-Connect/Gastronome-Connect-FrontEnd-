@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Navbar from "../Landing/NavigationBar";
 import { buildApiUrl } from "../utils/api";
 import Footer from "../components/Footer/Footer";
@@ -16,6 +16,8 @@ function ContactUs() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const hasAnimatedRef = useRef(false);
+  const prefersReducedMotion = useRef(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   const orangeFilter = {
     filter:
@@ -23,8 +25,15 @@ function ContactUs() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
+    if (!hasAnimatedRef.current) {
+      hasAnimatedRef.current = true;
+      if (prefersReducedMotion.current) {
+        setIsLoaded(true);
+      } else {
+        const timer = setTimeout(() => setIsLoaded(true), 100);
+        return () => clearTimeout(timer);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -69,10 +78,15 @@ function ContactUs() {
     setLoading(false);
   };
 
-  const getAppearClass = (delayClass) =>
-    `transition-all duration-1000 transform ${delayClass} ${
+  const getAppearClass = (delayClass) => {
+    const baseClass = `${delayClass} ${
       isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
     }`;
+    if (prefersReducedMotion.current) {
+      return "opacity-100 translate-y-0";
+    }
+    return `transition-all duration-1000 ${baseClass}`;
+  };
 
   const fields = [
     {

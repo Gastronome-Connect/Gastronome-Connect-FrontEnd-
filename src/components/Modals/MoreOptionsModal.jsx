@@ -43,6 +43,7 @@ const MoreOptionsModal = ({
   const [step, setStep] = useState("reasons");
   const [picked, setPicked] = useState(null);
   const [detail, setDetail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ const MoreOptionsModal = ({
       setStep("reasons");
       setPicked(null);
       setDetail("");
+      setSubmitted(false);
     }
   }, [open]);
 
@@ -75,13 +77,54 @@ const MoreOptionsModal = ({
 
   if (!open) return null;
 
+  // Show success state
+  if (submitted) {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+          style={{ animation: "modalUp 0.22s cubic-bezier(.32,1,.46,1) both" }}
+        >
+          <style>{`
+            @keyframes modalUp {
+              from { opacity: 0; transform: translateY(24px) scale(0.98); }
+              to   { opacity: 1; transform: none; }
+            }
+          `}</style>
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+              <span className="text-4xl">✅</span>
+            </div>
+            <div>
+              <p className="font-extrabold text-gray-900 text-lg">Report Submitted</p>
+              <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                Thank you for helping us maintain a safe community. We'll review your report and take action if needed.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 px-6 py-2.5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold transition-colors w-full"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
   const submit = (reasonId, detailText = null) => {
     const targetType = comment?.targetType || comment?.type || "comment";
     const targetId = comment?.replyId || comment?.commentId || comment?.id;
 
     if (!comment || !targetId) {
       onSubmit?.(reasonId, detailText);
-      onClose();
+      setSubmitted(true);
       return;
     }
 
@@ -113,7 +156,7 @@ const MoreOptionsModal = ({
         }
 
         onSubmit?.(reasonId, detailText);
-        onClose();
+        setSubmitted(true);
       })
       .catch((error) => {
         console.error("Failed to submit comment report:", error);
