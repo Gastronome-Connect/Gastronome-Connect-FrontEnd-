@@ -53,13 +53,15 @@ const ForgotPassword = () => {
     setSubmitError("");
     if (!validateEmail()) return;
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
       const response = await fetch(buildApiUrl("/api/forgot-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       const data = await response.json();
@@ -75,7 +77,10 @@ const ForgotPassword = () => {
 
   const handleConfirmRedirect = () => {
     setShowResendPopup(false);
-    navigate("/login");
+    sessionStorage.setItem("pendingEmail", email.trim().toLowerCase());
+    sessionStorage.setItem("sourceFlow", "forgotpassword");
+    sessionStorage.removeItem("resetPasswordEmailVerified");
+    navigate("/verification", { replace: true });
   };
 
   const panelStyle = mobile

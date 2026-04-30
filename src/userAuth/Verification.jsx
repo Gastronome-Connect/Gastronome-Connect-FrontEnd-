@@ -25,10 +25,15 @@ const STYLES = `
 `;
 
 const isMobile = () => window.innerWidth < 640;
+const OTP_RESEND_COUNTDOWN_SECONDS = 90;
+const normalizeOtpInput = (value = "") =>
+  String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 6);
 
 const VerificationPage = () => {
   const [code, setCode] = useState(new Array(6).fill(""));
-  const [timer, setTimer] = useState(300);
+  const [timer, setTimer] = useState(OTP_RESEND_COUNTDOWN_SECONDS);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [error, setError] = useState("");
   const [showPorm] = useState(false);
@@ -66,21 +71,25 @@ const VerificationPage = () => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
-        const response = await fetch(buildApiUrl("/api/send-otp"), {
+        const endpoint =
+          sourceFlow === "forgotpassword"
+            ? "/api/forgot-password"
+            : "/api/send-otp";
+        const response = await fetch(buildApiUrl(endpoint), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Failed to send OTP");
-        setTimer(300);
+        setTimer(OTP_RESEND_COUNTDOWN_SECONDS);
         setIsTimerRunning(true);
       } catch (error) {
         setError(error.message);
       }
     };
-    if (email) sendOTP();
-  }, [email]);
+    if (email && sourceFlow === "signup") sendOTP();
+  }, [email, sourceFlow]);
 
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
@@ -97,14 +106,37 @@ const VerificationPage = () => {
   }, [isTimerRunning, timer]);
 
   const handleChange = (value, index) => {
-    if (/^\d*$/.test(value)) {
-      const newCode = [...code];
-      newCode[index] = value.slice(-1);
-      setCode(newCode);
-      if (value && index < 5)
-        document.getElementById(`code-${index + 1}`).focus();
+    const sanitizedValue = normalizeOtpInput(value);
+
+    if (!sanitizedValue) {
+      const nextCode = [...code];
+      nextCode[index] = "";
+      setCode(nextCode);
       setError("");
+      return;
     }
+
+    const nextCode = [...code];
+
+    if (sanitizedValue.length > 1) {
+      sanitizedValue.split("").forEach((digit, offset) => {
+        if (index + offset < nextCode.length) {
+          nextCode[index + offset] = digit;
+        }
+      });
+      setCode(nextCode);
+      const focusIndex = Math.min(index + sanitizedValue.length, 5);
+      document.getElementById(`code-${focusIndex}`)?.focus();
+      setError("");
+      return;
+    }
+
+    nextCode[index] = sanitizedValue;
+    setCode(nextCode);
+    if (index < 5) {
+      document.getElementById(`code-${index + 1}`)?.focus();
+    }
+    setError("");
   };
 
   const handleKeyDown = (e, index) => {
@@ -113,15 +145,36 @@ const VerificationPage = () => {
     }
   };
 
+  const handlePaste = (e) => {
+    const pastedCode = normalizeOtpInput(e.clipboardData.getData("text"));
+    if (!pastedCode) {
+      return;
+    }
+
+    e.preventDefault();
+    const nextCode = new Array(6).fill("");
+    pastedCode.split("").forEach((digit, index) => {
+      nextCode[index] = digit;
+    });
+    setCode(nextCode);
+    const focusIndex = Math.min(pastedCode.length, 5);
+    document.getElementById(`code-${focusIndex}`)?.focus();
+    setError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const enteredCode = code.join("");
+    const enteredCode = normalizeOtpInput(code.join(""));
     if (enteredCode.length < 6) {
       setError("Please enter the complete 6-digit code.");
       return;
     }
     try {
-      const response = await fetch(buildApiUrl("/api/verify-otp"), {
+      const endpoint =
+        sourceFlow === "forgotpassword"
+          ? "/api/verify-reset-otp"
+          : "/api/verify-otp";
+      const response = await fetch(buildApiUrl(endpoint), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: enteredCode }),
@@ -130,9 +183,8 @@ const VerificationPage = () => {
       if (!response.ok) throw new Error(data.message || "Failed to verify OTP");
 
       if (sourceFlow === "forgotpassword") {
-        sessionStorage.removeItem("pendingEmail");
-        sessionStorage.removeItem("sourceFlow");
-        navigate("/login", { replace: true });
+        sessionStorage.setItem("resetPasswordEmailVerified", "true");
+        navigate("/reset-password", { replace: true });
       } else {
         setSignupStep(SIGNUP_STEPS.PREFERENCES);
         navigate("/preferences", { replace: true });
@@ -149,7 +201,11 @@ const VerificationPage = () => {
         return;
       }
       try {
-        const response = await fetch(buildApiUrl("/api/send-otp"), {
+        const endpoint =
+          sourceFlow === "forgotpassword"
+            ? "/api/forgot-password"
+            : "/api/send-otp";
+        const response = await fetch(buildApiUrl(endpoint), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -157,7 +213,7 @@ const VerificationPage = () => {
         const data = await response.json();
         if (!response.ok)
           throw new Error(data.message || "Failed to resend OTP");
-        setTimer(300);
+        setTimer(OTP_RESEND_COUNTDOWN_SECONDS);
         setIsTimerRunning(true);
         setShowResendPopup(true);
       } catch (error) {
@@ -177,6 +233,7 @@ const VerificationPage = () => {
     // Clear flow state for both signup and forgotpassword flows
     sessionStorage.removeItem("pendingEmail");
     sessionStorage.removeItem("sourceFlow");
+    sessionStorage.removeItem("resetPasswordEmailVerified");
     clearSignupStep();
 
     // For signup flow, also clear any auth tokens and temp signup data
@@ -270,6 +327,7 @@ const VerificationPage = () => {
                         value={digit}
                         onChange={(e) => handleChange(e.target.value, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
+                        onPaste={handlePaste}
                         className={`w-10 h-10 sm:w-11 sm:h-11 text-base sm:text-lg text-center border ${
                           error ? "border-red-500" : "border-gray-300"
                         } rounded-lg shadow-sm focus:outline-none focus:border-[#0060A9] transition-colors`}
