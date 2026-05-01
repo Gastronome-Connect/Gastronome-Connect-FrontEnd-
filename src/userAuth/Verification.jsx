@@ -199,7 +199,7 @@ const VerificationPage = () => {
         setSuccessNotice("Code accepted, redirecting to reset password...");
         sessionStorage.setItem("resetPasswordEmailVerified", "true");
         setTimeout(() => {
-          navigate("/reset-password", { replace: true });
+          navigate("/forgot-password", { replace: true });
         }, 2000);
       } else {
         setSuccessNotice("Code accepted, redirecting to preferences...");

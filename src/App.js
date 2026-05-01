@@ -28,7 +28,6 @@ import Error from "./components/Loading Pages/error";
 
 // User Account
 import ForgotPassword from "./userAuth/Forgotpass";
-import ResetPassword from "./userAuth/ResetPassword";
 import ProfChangePassword from "./userAuth/ProfChangePass";
 
 // Components
@@ -122,14 +121,6 @@ export const router = createBrowserRouter([
       {
         path: "forgot-password",
         Component: () => <PublicRoute Component={ForgotPassword} />,
-      },
-      {
-        path: "reset-password",
-        Component: () => <PublicRoute Component={ResetPassword} />,
-      },
-      {
-        path: "reset-password/:token",
-        Component: () => <PublicRoute Component={ResetPassword} />,
       },
       {
         path: "profchangepass",
