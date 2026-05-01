@@ -8,7 +8,6 @@ import {
 import CommentList from "./CommentList";
 import CommentInput from "./CommentInput";
 import { apiFetch } from "../../../utils/api";
-import PostUnderReviewPopup from "../../../components/Popups/PostUnderReviewPopup";
 
 /**
  * @param {string}   postId
@@ -19,7 +18,6 @@ import PostUnderReviewPopup from "../../../components/Popups/PostUnderReviewPopu
 const CommentSection = forwardRef(
   ({ postId, initialComments = [], hideInput = false, onPostUpdate }, ref) => {
     const [comments, setComments] = useState(initialComments);
-    const [showCommentReviewPopup, setShowCommentReviewPopup] = useState(false);
     const bottomRef = useRef(null);
 
     useEffect(() => {
@@ -40,20 +38,12 @@ const CommentSection = forwardRef(
           throw new Error(data.message || "Failed to add comment");
         }
 
-        const isCommentUnderReview =
-          data.commentModeration?.status === "flagged" &&
-          data.commentModeration?.classification === "not_food_related";
-
         const nextComments = Array.isArray(data.post?.comments)
           ? data.post.comments
           : [...comments, data.comment].filter(Boolean);
 
         setComments(nextComments);
         onPostUpdate?.(data.post);
-
-        if (isCommentUnderReview) {
-          setShowCommentReviewPopup(true);
-        }
 
         setTimeout(
           () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
@@ -123,12 +113,6 @@ const CommentSection = forwardRef(
 
     return (
       <div className="flex flex-col">
-        <PostUnderReviewPopup
-          isOpen={showCommentReviewPopup}
-          title="Comment under review"
-          message="Your comment is under review because it does not appear to be food related."
-          onDismiss={() => setShowCommentReviewPopup(false)}
-        />
         <CommentList
           comments={comments}
           scrollable={!hideInput}

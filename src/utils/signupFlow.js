@@ -40,6 +40,9 @@ export const isSignupFlowActive = () =>
 export const isForgotPasswordFlowActive = () =>
   getSourceFlow() === FORGOT_PASSWORD_FLOW && !!getPendingEmail();
 
+export const isForgotPasswordResetVerified = () =>
+  sessionStorage.getItem("resetPasswordEmailVerified") === "true";
+
 export const isSignupVerified = () =>
   sessionStorage.getItem(SIGNUP_VERIFIED_KEY) === "true";
 
@@ -120,6 +123,7 @@ export const getSignupRedirectRoute = () => {
 export const clearSignupFlowState = () => {
   sessionStorage.removeItem("pendingEmail");
   sessionStorage.removeItem("sourceFlow");
+  sessionStorage.removeItem("resetPasswordEmailVerified");
   sessionStorage.removeItem("tempSignupData");
   sessionStorage.removeItem("tempPreferences");
   sessionStorage.removeItem("tempDislikes");

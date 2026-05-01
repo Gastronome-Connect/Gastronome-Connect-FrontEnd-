@@ -35,6 +35,8 @@ const VerificationPage = () => {
   const [code, setCode] = useState(new Array(6).fill(""));
   const [timer, setTimer] = useState(OTP_RESEND_COUNTDOWN_SECONDS);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successNotice, setSuccessNotice] = useState("");
   const [error, setError] = useState("");
   const [showPorm] = useState(false);
   const [showResendPopup, setShowResendPopup] = useState(false);
@@ -164,11 +166,20 @@ const VerificationPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
+
     const enteredCode = normalizeOtpInput(code.join(""));
     if (enteredCode.length < 6) {
       setError("Please enter the complete 6-digit code.");
       return;
     }
+
+    setIsSubmitting(true);
+    setError("");
+    setSuccessNotice("");
+
     try {
       const endpoint =
         sourceFlow === "forgotpassword"
@@ -183,14 +194,23 @@ const VerificationPage = () => {
       if (!response.ok) throw new Error(data.message || "Failed to verify OTP");
 
       if (sourceFlow === "forgotpassword") {
+        setSuccessNotice("Code accepted, redirecting to reset password...");
         sessionStorage.setItem("resetPasswordEmailVerified", "true");
-        navigate("/reset-password", { replace: true });
+        setTimeout(() => {
+          navigate("/reset-password", { replace: true });
+        }, 2000);
       } else {
+        setSuccessNotice("Code accepted, redirecting to preferences...");
         setSignupStep(SIGNUP_STEPS.PREFERENCES);
-        navigate("/preferences", { replace: true });
+        setTimeout(() => {
+          navigate("/preferences", { replace: true });
+        }, 2000);
       }
     } catch (error) {
       setError(error.message);
+      setSuccessNotice("");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -254,12 +274,15 @@ const VerificationPage = () => {
     ? {
         width: "calc(100vw - 32px)",
         maxWidth: "480px",
-        height: "calc(100vw - 32px)",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
         maxHeight: "calc(100vh - 32px)",
       }
     : {
-        width: "500px",
-        height: "500px",
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+        marginLeft: "0px",
+        transform: getPanelTransform(),
       };
 
   return (
@@ -271,7 +294,7 @@ const VerificationPage = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center pointer-events-none"
         }
       >
         <div
@@ -336,6 +359,12 @@ const VerificationPage = () => {
                     <p className="text-red-500 text-xs text-center">{error}</p>
                   )}
 
+                  {successNotice && (
+                    <p className="text-emerald-600 text-xs text-center font-semibold">
+                      {successNotice}
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-between text-sm flex-wrap gap-y-1">
                     <div>
                       <span className="text-gray-600">
@@ -361,9 +390,10 @@ const VerificationPage = () => {
 
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md"
                   >
-                    Verify
+                    {isSubmitting ? "Verifying..." : "Verify"}
                   </button>
                 </form>
 

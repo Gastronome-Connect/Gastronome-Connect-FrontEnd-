@@ -268,21 +268,17 @@ const Likes = () => {
 
   const isNextDisabled = flavors.length === 0 && cookingStyles.length === 0;
 
-  const desktopX = (() => {
-    const panelWidth = Math.min(480, window.innerWidth - 48);
-    return window.innerWidth - panelWidth - 60;
-  })();
-
   const panelStyle = mobile
     ? {
         width: "calc(100vw - 32px)",
         maxWidth: "480px",
-        height: "calc(100vw - 32px)",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
         maxHeight: "calc(100vh - 32px)",
       }
     : {
-        width: "500px",
-        height: "500px",
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
       };
 
   return (
@@ -294,7 +290,7 @@ const Likes = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-end pr-[60px] pointer-events-none"
         }
       >
         <div

@@ -160,29 +160,16 @@ const AuthPage = () => {
     new URLSearchParams(location.search).get("mode") !== "signup";
   const [isLogin, setIsLogin] = useState(initialIsLogin);
   const [isAnimating, setIsAnimating] = useState(false);
-
-  const getInitialX = () => {
-    if (isMobile()) return null;
-    return "0px";
-  };
-
-  const [panelX, setPanelX] = useState(getInitialX);
-  const [panelTransition, setPanelTransition] = useState("none");
   const [contentVisible, setContentVisible] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
 
   useEffect(() => {
     const onResize = () => {
-      const nowMobile = isMobile();
-      setMobile(nowMobile);
-      if (!nowMobile) {
-        setPanelX("0px");
-        setPanelTransition("none");
-      }
+      setMobile(isMobile());
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [isLogin]);
+  }, []);
 
   // ── Login state ──────────────────────────────────────────────
   const [loginIdentifier, setLoginIdentifier] = useState("");

@@ -135,12 +135,15 @@ const ResetPassword = () => {
     ? {
         width: "calc(100vw - 32px)",
         maxWidth: "480px",
-        height: "calc(100vw - 32px)",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
         maxHeight: "calc(100vh - 32px)",
       }
     : {
-        width: "500px",
-        height: "500px",
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+        marginLeft: "0px",
+        transform: "translateX(60px)",
       };
 
   return (
@@ -152,7 +155,7 @@ const ResetPassword = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center pointer-events-none"
         }
       >
         <div
@@ -168,8 +171,8 @@ const ResetPassword = () => {
                 className="relative flex flex-col justify-center px-6 sm:px-8 py-8"
                 style={{
                   minHeight: mobile
-                    ? "calc(100vw - 32px)"
-                    : "500px",
+                    ? "calc(100vh - 32px)"
+                    : "calc(100vh - 48px)",
                 }}
               >
                 {/* Logo */}
@@ -194,7 +197,8 @@ const ResetPassword = () => {
 
                 {(!pendingEmail || !isResetSessionVerified) && (
                   <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    Reset session expired. Please request a new password reset code.
+                    Reset session expired. Please request a new password reset
+                    code.
                   </div>
                 )}
 
@@ -215,7 +219,9 @@ const ResetPassword = () => {
                         onBlur={validateNewPassword}
                         placeholder=" "
                         className={`peer block w-full px-3 py-3 border ${
-                          newPasswordError ? "border-red-600" : "border-gray-300"
+                          newPasswordError
+                            ? "border-red-600"
+                            : "border-gray-300"
                         } rounded-lg focus:outline-none focus:border-[#0060A9] text-sm bg-transparent transition-colors`}
                       />
                       <label
@@ -239,7 +245,9 @@ const ResetPassword = () => {
                       </button>
                     </div>
                     {newPasswordError && (
-                      <p className="text-red-500 text-xs mt-1">{newPasswordError}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {newPasswordError}
+                      </p>
                     )}
                   </div>
 
@@ -253,7 +261,9 @@ const ResetPassword = () => {
                         onBlur={validateConfirmPassword}
                         placeholder=" "
                         className={`peer block w-full px-3 py-3 border ${
-                          confirmPasswordError ? "border-red-600" : "border-gray-300"
+                          confirmPasswordError
+                            ? "border-red-600"
+                            : "border-gray-300"
                         } rounded-lg focus:outline-none focus:border-[#0060A9] text-sm bg-transparent transition-colors`}
                       />
                       <label
@@ -266,7 +276,9 @@ const ResetPassword = () => {
                       </label>
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                       >
                         {showConfirmPassword ? (
@@ -277,13 +289,17 @@ const ResetPassword = () => {
                       </button>
                     </div>
                     {confirmPasswordError && (
-                      <p className="text-red-500 text-xs mt-1">{confirmPasswordError}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {confirmPasswordError}
+                      </p>
                     )}
                   </div>
 
                   <button
                     type="submit"
-                    disabled={loading || !pendingEmail || !isResetSessionVerified}
+                    disabled={
+                      loading || !pendingEmail || !isResetSessionVerified
+                    }
                     className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
                       loading || !pendingEmail || !isResetSessionVerified
                         ? "cursor-not-allowed opacity-50"

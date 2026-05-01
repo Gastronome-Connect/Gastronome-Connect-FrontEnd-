@@ -37,11 +37,11 @@ function EmptyStateWithInput({ initialValue = "", isBotTyping }) {
         />
         <div className="text-center">
           <p className="text-lg sm:text-2xl font-black text-[#F57600] tracking-tight italic">
-            "Search, cook, enjoy."
+            "Chat, ask, explore."
           </p>
           <p className="text-xs sm:text-sm text-gray-400 mt-1.5 sm:mt-2 max-w-[260px] sm:max-w-xs leading-relaxed">
-            Ask me anything about recipes, ingredients, cooking tips, or meal
-            planning.
+            Ask me anything. I can chat normally, and I can still help with
+            recipes, ingredients, cooking tips, and meal ideas when you want.
           </p>
         </div>
       </div>

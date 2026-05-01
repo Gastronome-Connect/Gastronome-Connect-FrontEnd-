@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 export default function PostUnderReviewPopup({
   isOpen,
@@ -51,9 +51,7 @@ export default function PostUnderReviewPopup({
 
                 <div className="space-y-2">
                   <p className="text-lg font-bold text-gray-900">{title}</p>
-                  <p className="text-sm leading-6 text-gray-600">
-                    {message}
-                  </p>
+                  <p className="text-sm leading-6 text-gray-600">{message}</p>
                 </div>
 
                 <button

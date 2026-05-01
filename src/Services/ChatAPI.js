@@ -28,7 +28,8 @@ export async function sendMessageToBot(
     role: "bot",
     type: recipes.length > 0 ? "recipe" : "text",
     text:
-      data?.reply || "I can help with recipes, ingredients, and cooking tips.",
+      data?.reply ||
+      "I can chat freely, and I can also help with recipes, ingredients, and cooking tips whenever you need.",
     recipes,
     time: formatTime(),
   };

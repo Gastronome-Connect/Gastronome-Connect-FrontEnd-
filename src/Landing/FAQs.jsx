@@ -4,16 +4,16 @@ import { buildApiUrl } from "../utils/api";
 export default function FAQ() {
   const [faqs, setFaqs] = useState([]);
   const [openItems, setOpenItems] = useState([]);
-  const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef(null);
-  const prefersReducedMotion = useRef(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const prefersReducedMotion = useRef(
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsVisible(entry.isIntersecting);
         if (entry.isIntersecting && !hasAnimated) {
           setHasAnimated(true);
         }
@@ -70,8 +70,7 @@ export default function FAQ() {
             Help Center
           </h2>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 tracking-tight leading-tight">
-            Frequently Asked{" "}
-            <span className="text-[#F57600]">Questions</span>
+            Frequently Asked <span className="text-[#F57600]">Questions</span>
           </h1>
         </div>
 
@@ -120,7 +119,9 @@ export default function FAQ() {
                     <span className="shrink-0">
                       <svg
                         className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 ${
-                          isOpen ? "rotate-180 text-[#F57600]" : "text-orange-300"
+                          isOpen
+                            ? "rotate-180 text-[#F57600]"
+                            : "text-orange-300"
                         }`}
                         fill="none"
                         viewBox="0 0 24 24"
