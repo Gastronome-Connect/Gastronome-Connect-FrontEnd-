@@ -93,7 +93,7 @@ const VerificationPage = () => {
       }
     };
     if (email && sourceFlow === "signup") sendOTP();
-  }, [email, sourceFlow]);
+  }, [email, sourceFlow, username, password]);
 
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
