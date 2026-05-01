@@ -107,7 +107,7 @@ const ForgotPassword = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-center pointer-events-none"
         }
       >
         <div

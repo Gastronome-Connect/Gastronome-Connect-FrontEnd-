@@ -44,7 +44,7 @@ const ResetPassword = () => {
 
   const validateNewPassword = () => {
     const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_])[A-Za-z\d@$!%*?&#_]{8,}$/;
     if (!newPassword) {
       setNewPasswordError("Password is required");
       return false;
@@ -155,7 +155,7 @@ const ResetPassword = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-center pointer-events-none"
         }
       >
         <div

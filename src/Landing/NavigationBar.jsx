@@ -152,7 +152,7 @@ export default function Navbar() {
             <img
               src={LogoIcon}
               alt="Logo"
-              className="w-52 h-11 object-contain"
+              className="h-10 w-auto object-contain"
             />
           </div>
           <button

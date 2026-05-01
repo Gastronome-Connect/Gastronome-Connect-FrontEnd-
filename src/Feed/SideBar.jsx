@@ -160,7 +160,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
           window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-          navigate("/login?mode=login", { replace: true });
+          navigate("/", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
@@ -707,7 +707,7 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
           window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-          navigate("/login?mode=login", { replace: true });
+          navigate("/", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />

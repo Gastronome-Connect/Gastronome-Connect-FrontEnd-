@@ -10,7 +10,7 @@ const LogOutModal = ({ isOpen, onConfirm, onCancel }) => {
     try {
       await logout();
     } finally {
-      window.location.href = "/login";
+      window.location.href = "/Home";
     }
   };
 

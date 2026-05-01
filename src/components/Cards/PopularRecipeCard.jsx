@@ -137,12 +137,6 @@ const PopularRecipeCard = ({ recipe, index, onArchive, onReport, onSave }) => {
             {recipe.name}
           </h4>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span
-              className={`text-[9px] font-black uppercase tracking-tighter
-              ${podium ? podium.text : "text-[#00B4FA]"}`}
-            >
-              Chef
-            </span>
             <p className="text-[11px] text-gray-500 font-bold truncate">
               {recipe.author}
             </p>

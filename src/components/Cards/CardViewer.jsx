@@ -607,7 +607,7 @@ const CardExpandedView = ({
               <button
                 onClick={handleChatbot}
                 className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center transition-all duration-200 hover:border-orange-200 hover:bg-orange-50"
-                title="Ask chatbot about recipe"
+                title="Go to chat bot with this recipe"
               >
                 <img
                   src={AILogo}
