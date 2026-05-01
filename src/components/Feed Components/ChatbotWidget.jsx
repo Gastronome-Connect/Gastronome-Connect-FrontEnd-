@@ -216,11 +216,14 @@ export default function AIChatbotWidget({ onExpandChange }) {
                         {m.text}
                       </div>
 
-                      {m.role === "ai" && m.type === "recipe" &&
-                      Array.isArray(m.recipes) && m.recipes.length > 0 ? (
+                      {m.role === "ai" &&
+                      m.type === "recipe" &&
+                      Array.isArray(m.recipes) &&
+                      m.recipes.length > 0 ? (
                         <div className="max-w-[85%] space-y-2">
                           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#F57600] px-1">
-                            {m.recipes.length} recipe{m.recipes.length !== 1 ? "s" : ""} found
+                            {m.recipes.length} recipe
+                            {m.recipes.length !== 1 ? "s" : ""} found
                           </p>
                           <div className="space-y-1.5">
                             {m.recipes.slice(0, 3).map((recipe, index) => (
@@ -232,7 +235,9 @@ export default function AIChatbotWidget({ onExpandChange }) {
                                   {recipe.title || recipe.name || "Recipe"}
                                 </p>
                                 <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5">
-                                  {recipe.description || recipe.caption || "Tap the full AI chat to explore more details."}
+                                  {recipe.description ||
+                                    recipe.caption ||
+                                    "Tap the full AI chat to explore more details."}
                                 </p>
                               </div>
                             ))}
