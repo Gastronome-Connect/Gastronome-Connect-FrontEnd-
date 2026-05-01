@@ -43,6 +43,8 @@ const VerificationPage = () => {
   const [mobile, setMobile] = useState(isMobile());
   const navigate = useNavigate();
   const email = sessionStorage.getItem("pendingEmail");
+  const username = sessionStorage.getItem("pendingUsername");
+  const password = sessionStorage.getItem("pendingPassword");
 
   const sourceFlow = sessionStorage.getItem("sourceFlow");
 
