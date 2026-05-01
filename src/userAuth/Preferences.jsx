@@ -5,7 +5,7 @@ import { FaChevronDown, FaChevronUp, FaTimes } from "react-icons/fa";
 import LogoImage from "../components/Assets/Gastro.png";
 import Flavor from "../components/Assets/Flavor.png";
 import CookingStyle from "../components/Assets/Cooking Style.png";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 import useBlockBrowserBack from "../Hooks/useBlockBrowserBack";
 import { setSignupStep, SIGNUP_STEPS } from "../utils/signupFlow";
 
@@ -193,19 +193,12 @@ const Preferences = () => {
       return;
     }
     try {
-      const response = await fetch(
-        buildApiUrl(`/api/user/preferences/${userId}`),
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            preferences: { flavors, techniques: cookingStyles },
-          }),
-        },
-      );
+      const response = await apiFetch(`/api/user/preferences/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          preferences: { flavors, techniques: cookingStyles },
+        }),
+      });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to save preferences.");
@@ -247,19 +240,12 @@ const Preferences = () => {
       if (tempPreferences) {
         try {
           const { flavors, cookingStyles } = JSON.parse(tempPreferences);
-          const response = await fetch(
-            buildApiUrl(`/api/user/preferences/${userId}`),
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                preferences: { flavors, techniques: cookingStyles },
-              }),
-            },
-          );
+          const response = await apiFetch(`/api/user/preferences/${userId}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              preferences: { flavors, techniques: cookingStyles },
+            }),
+          });
           if (!response.ok) {
             const e = await response.json();
             throw new Error(e.message || "Failed to sync preferences.");
@@ -274,17 +260,10 @@ const Preferences = () => {
       if (tempDislikes) {
         try {
           const { dislikes, allergens } = JSON.parse(tempDislikes);
-          const response = await fetch(
-            buildApiUrl(`/api/user/preferences/${userId}`),
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ dislikes, allergies: allergens }),
-            },
-          );
+          const response = await apiFetch(`/api/user/preferences/${userId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ dislikes, allergies: allergens }),
+          });
           if (!response.ok) {
             const e = await response.json();
             throw new Error(e.message || "Failed to sync dislikes.");
@@ -300,11 +279,6 @@ const Preferences = () => {
 
   const isNextDisabled = flavors.length === 0 && cookingStyles.length === 0;
 
-  const desktopX = (() => {
-    const panelWidth = Math.min(480, window.innerWidth - 48);
-    return window.innerWidth - panelWidth - 60;
-  })();
-
   const panelStyle = mobile
     ? {
         width: "calc(100vw - 32px)",
@@ -316,8 +290,6 @@ const Preferences = () => {
     : {
         width: "min(480px, calc(100vw - 48px))",
         height: "calc(100vh - 48px)",
-        marginLeft: "0px",
-        transform: `translateX(${desktopX}px)`,
       };
 
   return (
@@ -329,7 +301,7 @@ const Preferences = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-end pr-[60px] pointer-events-none"
         }
       >
         <div

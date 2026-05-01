@@ -34,7 +34,9 @@ export default function ReportedComments() {
           setLoading(true);
         }
 
-        const response = await adminApi.get("/admin/flagged-comments");
+        const response = await adminApi.get("/admin/reports", {
+          params: { targetType: "comment,reply", status: "pending" },
+        });
         if (!isMounted) {
           return;
         }
@@ -71,19 +73,11 @@ export default function ReportedComments() {
   // ── Admin actions ────────────────────────────────────────────────────────────
   const handleKeep = useCallback(async (item) => {
     try {
-      await adminApi.post("/admin/moderation/resolve", {
-        type: "comment",
-        postId: item.postId,
-        commentId: item.commentId || item.id,
-        action: "approve",
+      await adminApi.patch(`/admin/reports/${item.id}`, {
+        action: "keep",
         notes: "Approved by admin.",
       });
-      setItems((current) =>
-        current.filter(
-          (entry) =>
-            (entry.commentId || entry.id) !== (item.commentId || item.id),
-        ),
-      );
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
     } catch (err) {
       setError("Failed to approve flagged comment.");
     }
@@ -91,19 +85,11 @@ export default function ReportedComments() {
 
   const handleRemove = useCallback(async (item) => {
     try {
-      await adminApi.post("/admin/moderation/resolve", {
-        type: "comment",
-        postId: item.postId,
-        commentId: item.commentId || item.id,
-        action: "reject",
+      await adminApi.patch(`/admin/reports/${item.id}`, {
+        action: "remove",
         notes: "Rejected by admin.",
       });
-      setItems((current) =>
-        current.filter(
-          (entry) =>
-            (entry.commentId || entry.id) !== (item.commentId || item.id),
-        ),
-      );
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
     } catch (err) {
       setError("Failed to reject flagged comment.");
     }

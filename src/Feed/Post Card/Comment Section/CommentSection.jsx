@@ -8,7 +8,6 @@ import {
 import CommentList from "./CommentList";
 import CommentInput from "./CommentInput";
 import { apiFetch } from "../../../utils/api";
-import PostUnderReviewPopup from "../../../components/Popups/PostUnderReviewPopup";
 
 /**
  * @param {string}   postId
@@ -19,7 +18,6 @@ import PostUnderReviewPopup from "../../../components/Popups/PostUnderReviewPopu
 const CommentSection = forwardRef(
   ({ postId, initialComments = [], hideInput = false, onPostUpdate }, ref) => {
     const [comments, setComments] = useState(initialComments);
-    const [showCommentReviewPopup, setShowCommentReviewPopup] = useState(false);
     const bottomRef = useRef(null);
 
     useEffect(() => {
@@ -57,32 +55,12 @@ const CommentSection = forwardRef(
           throw new Error(data.message || "Failed to add comment");
         }
 
-        // Handle different response formats
-        const updatedPost = data.post || data.data || {};
-        const newComment = data.comment || data.newComment || {};
-        const postComments = Array.isArray(updatedPost.comments)
-          ? updatedPost.comments
-          : [...comments, newComment].filter(Boolean);
+        const nextComments = Array.isArray(data.post?.comments)
+          ? data.post.comments
+          : [...comments, data.comment].filter(Boolean);
 
-        setComments(postComments);
-
-        if (updatedPost && (updatedPost.id || updatedPost._id)) {
-          onPostUpdate?.(updatedPost);
-        } else {
-          onPostUpdate?.({
-            id: postId,
-            comments: postComments,
-            commentsCount: postComments.length,
-          });
-        }
-
-        const isCommentUnderReview =
-          data.commentModeration?.status === "flagged" &&
-          data.commentModeration?.classification === "not_food_related";
-
-        if (isCommentUnderReview) {
-          setShowCommentReviewPopup(true);
-        }
+        setComments(nextComments);
+        onPostUpdate?.(data.post);
 
         setTimeout(
           () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
@@ -101,18 +79,72 @@ const CommentSection = forwardRef(
       }
     };
 
+    const addReply = async ({ commentId, text, parentReplyId = null }) => {
+      if (!commentId || !text?.trim()) return;
+
+      try {
+        const response = await apiFetch(
+          `/api/posts/${postId}/comments/${commentId}/replies`,
+          {
+            method: "POST",
+            body: JSON.stringify({ text: text.trim(), parentReplyId }),
+          },
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to add reply");
+        }
+
+        const nextComments = Array.isArray(data.post?.comments)
+          ? data.post.comments
+          : comments;
+
+        setComments(nextComments);
+        onPostUpdate?.(data.post);
+      } catch (error) {
+        console.error("Failed to add reply:", error);
+      }
+    };
+
+    const reactToComment = async (commentId, type) => {
+      if (!commentId || !type) return;
+
+      try {
+        const response = await apiFetch(
+          `/api/comments/${commentId}/reactions`,
+          {
+            method: "POST",
+            body: JSON.stringify({ type }),
+          },
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to update reaction");
+        }
+
+        if (Array.isArray(data.post?.comments)) {
+          setComments(data.post.comments);
+          onPostUpdate?.(data.post);
+        }
+      } catch (error) {
+        console.error("Failed to update comment reaction:", error);
+      }
+    };
+
     // expose addComment so ExpandedView's pinned input can call it
-    useImperativeHandle(ref, () => ({ addComment }));
+    useImperativeHandle(ref, () => ({ addComment, addReply, reactToComment }));
 
     return (
       <div className="flex flex-col">
-        <PostUnderReviewPopup
-          isOpen={showCommentReviewPopup}
-          title="Comment under review"
-          message="Your comment is under review because it does not appear to be food related."
-          onDismiss={() => setShowCommentReviewPopup(false)}
+        <CommentList
+          comments={comments}
+          scrollable={!hideInput}
+          postId={postId}
+          onReply={addReply}
+          onReact={reactToComment}
         />
-        <CommentList comments={comments} scrollable={!hideInput} />
         <div ref={bottomRef} />
         {!hideInput && <CommentInput onSubmit={addComment} />}
       </div>

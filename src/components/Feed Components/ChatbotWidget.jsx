@@ -2,19 +2,36 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import AILogo from "../Assets/AILogo.png";
+import { sendMessageToBot } from "../../Services/ChatAPI";
 
 const SUGGESTIONS = [
-  "Generate a recipe",
+  "Tell me something interesting",
   "What can I cook with chicken?",
-  "15-min meal idea",
+  "Help me plan a quick dinner",
 ];
+
+const formatTime = () =>
+  new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 export default function AIChatbotWidget({ onExpandChange }) {
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [isBotTyping, setIsBotTyping] = useState(false);
   const textareaRef = useRef(null);
   const bottomRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    const currentAbortController = abortControllerRef.current;
+
+    return () => {
+      currentAbortController?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -27,33 +44,76 @@ export default function AIChatbotWidget({ onExpandChange }) {
     if (expanded) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, expanded]);
 
-  const sendMessage = (text) => {
+  const sendMessage = async (text) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || isBotTyping) return;
 
-    // Expand if not already open
     if (!expanded) {
       setExpanded(true);
       onExpandChange?.(true);
     }
 
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now(), role: "user", text: trimmed },
-    ]);
+    const nextUserMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      type: "text",
+      text: trimmed,
+      time: formatTime(),
+    };
+
+    const nextMessages = [...messages, nextUserMessage];
+
+    setMessages(nextMessages);
+    setIsBotTyping(true);
     setInput("");
+
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    setTimeout(() => {
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    try {
+      const history = nextMessages.map((message) => ({
+        role: message.role === "ai" ? "assistant" : "user",
+        content: message.text,
+      }));
+
+      const botMessage = await sendMessageToBot(
+        trimmed,
+        formatTime,
+        history,
+        abortController.signal,
+      );
+
       setMessages((prev) => [
         ...prev,
         {
-          id: Date.now() + 1,
+          ...botMessage,
           role: "ai",
-          text: "I'm learning your tastes! 🍳",
         },
       ]);
-    }, 600);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "ai",
+            type: "text",
+            text:
+              error.message ||
+              "I couldn't reach Gastro AI right now. Please try again.",
+            time: formatTime(),
+          },
+        ]);
+      }
+    } finally {
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
+
+      setIsBotTyping(false);
+    }
   };
 
   const handleSend = () => sendMessage(input);
@@ -155,9 +215,51 @@ export default function AIChatbotWidget({ onExpandChange }) {
                       >
                         {m.text}
                       </div>
+
+                      {m.role === "ai" &&
+                      m.type === "recipe" &&
+                      Array.isArray(m.recipes) &&
+                      m.recipes.length > 0 ? (
+                        <div className="max-w-[85%] space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#F57600] px-1">
+                            {m.recipes.length} recipe
+                            {m.recipes.length !== 1 ? "s" : ""} found
+                          </p>
+                          <div className="space-y-1.5">
+                            {m.recipes.slice(0, 3).map((recipe, index) => (
+                              <div
+                                key={`${m.id}-recipe-${index}`}
+                                className="rounded-xl border border-orange-100 bg-white px-3 py-2 text-[11px] shadow-sm"
+                              >
+                                <p className="font-bold text-gray-900 line-clamp-1">
+                                  {recipe.title || recipe.name || "Recipe"}
+                                </p>
+                                <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5">
+                                  {recipe.description ||
+                                    recipe.caption ||
+                                    "Tap the full AI chat to explore more details."}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </motion.div>
                   ))
                 )}
+
+                {isBotTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-end gap-2 justify-start"
+                  >
+                    <div className="max-w-[85%] px-3 py-2 rounded-xl text-[12px] font-medium leading-relaxed shadow-sm bg-gray-100 text-gray-700 rounded-bl-none border border-gray-200">
+                      Thinking...
+                    </div>
+                  </motion.div>
+                )}
+
                 <div ref={bottomRef} />
               </div>
             </motion.div>
@@ -176,15 +278,15 @@ export default function AIChatbotWidget({ onExpandChange }) {
               onFocus={() => {
                 if (!expanded) toggleExpand(true);
               }}
-              placeholder="Ask AI..."
+              placeholder="Ask anything..."
               className="flex-1 text-[12px] text-gray-600 placeholder-gray-400 bg-transparent border-none focus:ring-0 outline-none resize-none leading-tight py-1"
               style={{ minHeight: "18px", maxHeight: "60px" }}
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isBotTyping}
               className={`p-1.5 rounded-lg transition-all ${
-                input.trim()
+                input.trim() && !isBotTyping
                   ? "text-[#0060A9] hover:scale-110 active:scale-95"
                   : "text-gray-300"
               }`}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch } from "../utils/api";
 
 const ChangePass = ({ onCancel, onSuccess }) => {
   const [oldPassword, setOldPassword] = useState("");
@@ -51,17 +51,12 @@ const ChangePass = ({ onCancel, onSuccess }) => {
 
       setIsLoading(true);
 
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
+      if (!localStorage.getItem("accessToken")) {
         throw new Error("You must be logged in to change your password");
       }
 
-      const response = await fetch(buildApiUrl("/api/update-password"), {
+      const response = await apiFetch("/api/update-password", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           oldPassword,
           newPassword,

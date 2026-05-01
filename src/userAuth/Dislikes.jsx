@@ -6,6 +6,7 @@ import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
 import PrefPopup from "../components/Popups/PrefPopup";
+import { apiFetch, buildApiUrl } from "../utils/api";
 
 const STYLES = `
   @keyframes fadeSlideIn {
@@ -159,7 +160,10 @@ const Dislikes = () => {
   const [dislikes, setDislikes] = useState([]);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
-  const [optionsData, setOptionsData] = useState({ allergens: [], dislikes: [] });
+  const [optionsData, setOptionsData] = useState({
+    allergens: [],
+    dislikes: [],
+  });
   const [loading, setLoading] = useState(true);
   const [mobile, setMobile] = useState(isMobile());
 
@@ -171,12 +175,19 @@ const Dislikes = () => {
 
   const fetchOptions = async () => {
     try {
-      const allergensResponse = await fetch("http://localhost:3000/api/allergens");
-      const allergensData = allergensResponse.ok ? await allergensResponse.json() : [];
+      const allergensResponse = await fetch(buildApiUrl("/api/allergens"));
+      const allergensData = allergensResponse.ok
+        ? await allergensResponse.json()
+        : [];
 
-      const dislikesResponse = await fetch("http://localhost:3000/api/options?type=dislikes");
-      const dislikesData = dislikesResponse.ok ? await dislikesResponse.json() : [];
-      const dislikes = dislikesData.find((item) => item.type === "dislikes")?.values || [];
+      const dislikesResponse = await fetch(
+        buildApiUrl("/api/options?type=dislikes"),
+      );
+      const dislikesData = dislikesResponse.ok
+        ? await dislikesResponse.json()
+        : [];
+      const dislikes =
+        dislikesData.find((item) => item.type === "dislikes")?.values || [];
 
       setOptionsData({
         allergens: Array.isArray(allergensData) ? allergensData : [],
@@ -194,13 +205,15 @@ const Dislikes = () => {
     const token = localStorage.getItem("accessToken");
     const userId = localStorage.getItem("userId");
     if (!token || !userId) {
-      localStorage.setItem("tempDislikes", JSON.stringify({ dislikes, allergens }));
+      localStorage.setItem(
+        "tempDislikes",
+        JSON.stringify({ dislikes, allergens }),
+      );
       return;
     }
     try {
-      await fetch(`http://localhost:3000/api/user/preferences/${userId}`, {
+      await apiFetch(`/api/user/preferences/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ dislikes, allergies: allergens }),
       });
     } catch (error) {
@@ -208,49 +221,75 @@ const Dislikes = () => {
     }
   };
 
-  useEffect(() => { fetchOptions(); }, []);
+  useEffect(() => {
+    fetchOptions();
+  }, []);
 
   const isDoneDisabled = allergens.length === 0 && dislikes.length === 0;
 
-  /* ── Panel positioning ── */
-  const desktopX = (() => {
-    const panelWidth = Math.min(480, window.innerWidth - 48);
-    return window.innerWidth - panelWidth - 60;
-  })();
-
   const panelStyle = mobile
-    ? { width: "calc(100vw - 32px)", maxWidth: "480px", height: "auto", minHeight: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
-    : { width: "min(480px, calc(100vw - 48px))", height: "calc(100vh - 48px)", marginLeft: "0px", transform: `translateX(${desktopX}px)` };
+    ? {
+        width: "calc(100vw - 32px)",
+        maxWidth: "480px",
+        height: "auto",
+        minHeight: "calc(100vh - 32px)",
+        maxHeight: "calc(100vh - 32px)",
+      }
+    : {
+        width: "min(480px, calc(100vw - 48px))",
+        height: "calc(100vh - 48px)",
+      };
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden">
       <style>{STYLES}</style>
       <BackgroundCarousel />
 
-      <div className={mobile ? "absolute inset-0 flex items-center justify-center pointer-events-none" : "absolute inset-0 flex items-center pointer-events-none"}>
+      <div
+        className={
+          mobile
+            ? "absolute inset-0 flex items-center justify-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-end pr-[60px] pointer-events-none"
+        }
+      >
         <div
           className="pointer-events-auto bg-white rounded-3xl shadow-2xl overflow-hidden"
           style={panelStyle}
         >
           <div className="overflow-y-auto h-full">
-            <div className="content-in h-full" style={{ willChange: "opacity, transform" }}>
+            <div
+              className="content-in h-full"
+              style={{ willChange: "opacity, transform" }}
+            >
               <div
                 className="relative flex flex-col justify-center px-6 sm:px-8 py-8"
-                style={{ minHeight: mobile ? "calc(100vh - 32px)" : "calc(100vh - 48px)" }}
+                style={{
+                  minHeight: mobile
+                    ? "calc(100vh - 32px)"
+                    : "calc(100vh - 48px)",
+                }}
               >
                 {/* Logo */}
                 <div className="flex justify-center mb-2">
-                  <img src={LogoImage} alt="Gastronome Connect Logo" className="h-16 sm:h-20 w-auto object-contain" />
+                  <img
+                    src={LogoImage}
+                    alt="Gastronome Connect Logo"
+                    className="h-16 sm:h-20 w-auto object-contain"
+                  />
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-sfpro font-bold text-center text-black mb-6">
                   ALLER
-                  <span className="bg-gradient-to-b from-[#0060A9] to-[#00B4FA] bg-clip-text text-transparent">G</span>
+                  <span className="bg-gradient-to-b from-[#0060A9] to-[#00B4FA] bg-clip-text text-transparent">
+                    G
+                  </span>
                   ENS & DISLIKES
                 </h1>
 
                 {loading ? (
-                  <div className="text-center text-gray-400 text-sm py-8">Loading options...</div>
+                  <div className="text-center text-gray-400 text-sm py-8">
+                    Loading options...
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     <Dropdown
@@ -260,7 +299,9 @@ const Dislikes = () => {
                       selected={allergens}
                       setSelected={setAllergens}
                       isOpen={openDropdown === "allergens"}
-                      setIsOpen={(state) => setOpenDropdown(state ? "allergens" : null)}
+                      setIsOpen={(state) =>
+                        setOpenDropdown(state ? "allergens" : null)
+                      }
                       closeOthers={() => setOpenDropdown("allergens")}
                     />
                     <Dropdown
@@ -270,17 +311,24 @@ const Dislikes = () => {
                       selected={dislikes}
                       setSelected={setDislikes}
                       isOpen={openDropdown === "dislikes"}
-                      setIsOpen={(state) => setOpenDropdown(state ? "dislikes" : null)}
+                      setIsOpen={(state) =>
+                        setOpenDropdown(state ? "dislikes" : null)
+                      }
                       closeOthers={() => setOpenDropdown("dislikes")}
                     />
                   </div>
                 )}
 
                 <button
-                  onClick={async () => { await saveDislikes(); setShowPopup(true); }}
+                  onClick={async () => {
+                    await saveDislikes();
+                    setShowPopup(true);
+                  }}
                   disabled={isDoneDisabled}
                   className={`w-full flex justify-center mt-6 py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] outline-none shadow-md transition-all ${
-                    isDoneDisabled ? "cursor-not-allowed opacity-50" : "hover:brightness-110 active:scale-[0.98]"
+                    isDoneDisabled
+                      ? "cursor-not-allowed opacity-50"
+                      : "hover:brightness-110 active:scale-[0.98]"
                   }`}
                 >
                   Done
@@ -295,7 +343,10 @@ const Dislikes = () => {
 
                 <div className="mt-6 pt-4 border-t border-orange-200 text-center">
                   <button
-                    onClick={async () => { await saveDislikes(); navigate("/likes"); }}
+                    onClick={async () => {
+                      await saveDislikes();
+                      navigate("/likes");
+                    }}
                     className="text-sm font-semibold text-[#F57600] hover:underline outline-none"
                   >
                     Back

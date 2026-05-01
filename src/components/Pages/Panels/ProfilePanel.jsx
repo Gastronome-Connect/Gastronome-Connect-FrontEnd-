@@ -1,12 +1,22 @@
 import React, { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaEdit } from "react-icons/fa";
-import { AlertTriangle, Check, Flag, X, ZoomIn } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Flag,
+  Loader2,
+  Users,
+  X,
+  ZoomIn,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import HeaderImg from "../../Assets/ProfileHeader.png";
 import UserImg from "../../Assets/Silhouette ni ano.png";
 import EditProfileModal from "../../Modals/EditProfileModal";
 import { addProfileReport } from "../../../Store/ReportStore";
+import { apiFetch } from "../../../utils/api";
 
 const DEFAULT_PROFILE = {
   name: "Juan Dela Cruz",
@@ -29,6 +39,164 @@ const REPORT_REASON_OPTIONS = [
   { id: "abusive_profile", label: "Abusive Profile Content" },
   { id: "other", label: "Others" },
 ];
+
+const RelationshipListModal = ({
+  open,
+  onClose,
+  title,
+  users,
+  isLoading,
+  error,
+  onOpenProfile,
+  onToggleFollow,
+  pendingUserIds,
+  viewerUserId,
+}) => {
+  if (!open) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="relationship-list-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[9998] flex items-center justify-center p-4 sm:p-6"
+        style={{
+          background: "rgba(15, 23, 42, 0.55)",
+          backdropFilter: "blur(8px)",
+        }}
+        onClick={onClose}
+      >
+        <motion.div
+          key="relationship-list-modal"
+          initial={{ opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 18, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          onClick={(event) => event.stopPropagation()}
+          className="w-full max-w-2xl rounded-[28px] bg-white border border-orange-100 shadow-[0_30px_80px_rgba(15,23,42,0.18)] overflow-hidden"
+        >
+          <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-slate-100">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-[#0060A9] border border-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
+                <Users size={14} />
+                Relationships
+              </div>
+              <h3 className="mt-3 text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">
+                {title}
+              </h3>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all"
+              aria-label="Close relationship modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="max-h-[65vh] overflow-y-auto px-5 sm:px-6 py-5 sm:py-6">
+            {isLoading && (
+              <div className="flex items-center justify-center gap-3 py-16 text-slate-500">
+                <Loader2 size={18} className="animate-spin" />
+                <span className="text-sm font-semibold">
+                  Loading {title.toLowerCase()}...
+                </span>
+              </div>
+            )}
+
+            {!isLoading && error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
+
+            {!isLoading && !error && users.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-slate-400">
+                <Users size={28} />
+                <p className="text-sm font-medium">No users found here yet.</p>
+              </div>
+            )}
+
+            {!isLoading && !error && users.length > 0 && (
+              <div className="space-y-3">
+                {users.map((user) => {
+                  const userId = user.id || user._id;
+                  const canToggleFollow =
+                    userId && String(userId) !== String(viewerUserId || "");
+                  const isPending = pendingUserIds.has(String(userId || ""));
+
+                  return (
+                    <div
+                      key={userId}
+                      className="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left transition-all hover:border-blue-200 hover:bg-blue-50/50"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onOpenProfile(user)}
+                        className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                      >
+                        <img
+                          src={user.avatar || UserImg}
+                          alt={user.displayName || user.username || "User"}
+                          className="h-12 w-12 rounded-full object-cover ring-2 ring-white shadow-sm"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-slate-900">
+                            {user.displayName ||
+                              user.name ||
+                              user.username ||
+                              "Unknown User"}
+                          </p>
+                          <p className="truncate text-xs font-semibold text-orange-500">
+                            @
+                            {user.accountUsername || user.username || "unknown"}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            {user.bio || "No bio yet."}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right text-[11px] font-semibold text-slate-400">
+                          <p>{user.followersCount || 0} followers</p>
+                          <p>{user.followingCount || 0} following</p>
+                        </div>
+                      </button>
+                      {canToggleFollow && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onToggleFollow?.(userId);
+                          }}
+                          className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                            user.isFollowedByViewer
+                              ? "border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                              : "border border-blue-500 bg-blue-500 text-white hover:bg-blue-600"
+                          } ${isPending ? "cursor-wait opacity-60" : ""}`}
+                        >
+                          {isPending
+                            ? "Working..."
+                            : user.isFollowedByViewer
+                              ? "Unfollow"
+                              : "Follow"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  );
+};
 
 // ── Avatar Lightbox ────────────────────────────────────────────────────────────
 const AvatarLightbox = ({ src, alt, onClose }) =>
@@ -108,7 +276,10 @@ const ReportProfileModal = ({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
         className="fixed inset-0 z-[9998] flex items-center justify-center p-4 sm:p-6"
-        style={{ background: "rgba(15, 23, 42, 0.55)", backdropFilter: "blur(8px)" }}
+        style={{
+          background: "rgba(15, 23, 42, 0.55)",
+          backdropFilter: "blur(8px)",
+        }}
         onClick={onClose}
       >
         <motion.div
@@ -130,7 +301,8 @@ const ReportProfileModal = ({
                 Report {profileName || "this user"}
               </h3>
               <p className="mt-1 text-sm sm:text-[15px] text-slate-600 leading-relaxed">
-                Tell us what is wrong with this account, such as impersonation, fake identity, scam behavior, or abusive profile details.
+                Tell us what is wrong with this account, such as impersonation,
+                fake identity, scam behavior, or abusive profile details.
               </p>
             </div>
 
@@ -143,7 +315,10 @@ const ReportProfileModal = ({
             </button>
           </div>
 
-          <form onSubmit={onSubmit} className="px-5 sm:px-6 py-5 sm:py-6 space-y-5">
+          <form
+            onSubmit={onSubmit}
+            className="px-5 sm:px-6 py-5 sm:py-6 space-y-5"
+          >
             <div className="space-y-3">
               <label className="block text-sm font-bold text-slate-900">
                 Why are you reporting this account?
@@ -188,7 +363,10 @@ const ReportProfileModal = ({
 
             {reason === "other" && (
               <div className="space-y-2">
-                <label htmlFor="profile-report-detail" className="block text-sm font-bold text-slate-900">
+                <label
+                  htmlFor="profile-report-detail"
+                  className="block text-sm font-bold text-slate-900"
+                >
                   Tell us more
                 </label>
                 <textarea
@@ -205,14 +383,18 @@ const ReportProfileModal = ({
             {submitState === "success" && (
               <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
                 <Check size={18} className="mt-0.5 shrink-0" />
-                <p className="text-sm font-medium">Thanks. Your report has been submitted for review.</p>
+                <p className="text-sm font-medium">
+                  Thanks. Your report has been submitted for review.
+                </p>
               </div>
             )}
 
             {submitState === "error" && (
               <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
                 <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                <p className="text-sm font-medium">Please select a reason before submitting your report.</p>
+                <p className="text-sm font-medium">
+                  Please select a reason before submitting your report.
+                </p>
               </div>
             )}
 
@@ -226,7 +408,11 @@ const ReportProfileModal = ({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !reason || (reason === "other" && !detail.trim())}
+                disabled={
+                  isSubmitting ||
+                  !reason ||
+                  (reason === "other" && !detail.trim())
+                }
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-600 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Flag size={16} />
@@ -246,17 +432,29 @@ function ProfilePanel({
   profile = DEFAULT_PROFILE,
   onProfileSave,
   isOwner = true,
+  onToggleFollow,
+  viewerUserId,
 }) {
+  const navigate = useNavigate();
   const mergedProfile = { ...DEFAULT_PROFILE, ...profile };
 
   const [showModal, setShowModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState("");
   const [reportDetail, setReportDetail] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [reportSubmitState, setReportSubmitState] = useState("idle");
+  const [relationshipModal, setRelationshipModal] = useState({
+    open: false,
+    title: "Followers",
+    users: [],
+    isLoading: false,
+    error: "",
+  });
+  const [pendingRelationshipUserIds, setPendingRelationshipUserIds] = useState(
+    () => new Set(),
+  );
 
   const displayAvatar = mergedProfile.avatarSrc || UserImg;
   const reportProfilePayload = useMemo(
@@ -267,7 +465,14 @@ function ProfilePanel({
       avatar: mergedProfile.avatarSrc || displayAvatar,
       bio: mergedProfile.bio,
     }),
-    [displayAvatar, mergedProfile.avatarSrc, mergedProfile.bio, mergedProfile.id, mergedProfile.name, mergedProfile.userId],
+    [
+      displayAvatar,
+      mergedProfile.avatarSrc,
+      mergedProfile.bio,
+      mergedProfile.id,
+      mergedProfile.name,
+      mergedProfile.userId,
+    ],
   );
 
   const statItems = [
@@ -287,7 +492,10 @@ function ProfilePanel({
   const handleSubmitReport = (event) => {
     event.preventDefault();
 
-    if (!selectedReason || (selectedReason === "other" && !reportDetail.trim())) {
+    if (
+      !selectedReason ||
+      (selectedReason === "other" && !reportDetail.trim())
+    ) {
       setReportSubmitState("error");
       return;
     }
@@ -313,6 +521,106 @@ function ProfilePanel({
       }, 1200);
     } finally {
       setIsSubmittingReport(false);
+    }
+  };
+
+  const openRelationshipModal = async (type) => {
+    if (!mergedProfile.id) {
+      return;
+    }
+
+    const title = type === "following" ? "Following" : "Followers";
+    setRelationshipModal({
+      open: true,
+      title,
+      users: [],
+      isLoading: true,
+      error: "",
+    });
+
+    try {
+      const response = await apiFetch(`/api/user/${mergedProfile.id}/${type}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to load ${type}`);
+      }
+
+      setRelationshipModal({
+        open: true,
+        title,
+        users: Array.isArray(data.users) ? data.users : [],
+        isLoading: false,
+        error: "",
+      });
+    } catch (error) {
+      setRelationshipModal({
+        open: true,
+        title,
+        users: [],
+        isLoading: false,
+        error: error.message || `Failed to load ${type}`,
+      });
+    }
+  };
+
+  const closeRelationshipModal = () => {
+    setRelationshipModal((current) => ({
+      ...current,
+      open: false,
+      isLoading: false,
+      error: "",
+    }));
+  };
+
+  const handleOpenProfile = (user) => {
+    closeRelationshipModal();
+    navigate(`/profile/${user.id || user._id}`);
+  };
+
+  const handleToggleRelationshipFollow = async (userId) => {
+    if (!userId) {
+      return;
+    }
+
+    const key = String(userId);
+    setPendingRelationshipUserIds((current) => new Set([...current, key]));
+
+    try {
+      const response = await apiFetch(`/api/follow/${userId}`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update follow status");
+      }
+
+      setRelationshipModal((current) => ({
+        ...current,
+        users: current.users.map((user) => {
+          const currentUserId = String(user.id || user._id || "");
+          if (currentUserId !== key) {
+            return user;
+          }
+
+          return {
+            ...user,
+            isFollowedByViewer: Boolean(data.isFollowing),
+            followersCount:
+              typeof data.followersCount === "number"
+                ? data.followersCount
+                : user.followersCount,
+          };
+        }),
+      }));
+    } catch (error) {
+      console.error("Failed to toggle relationship follow:", error);
+    } finally {
+      setPendingRelationshipUserIds((current) => {
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
@@ -374,16 +682,16 @@ function ProfilePanel({
               </button>
             ) : (
               <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 sm:mb-1">
-                {isFollowing ? (
+                {mergedProfile.isFollowedByViewer ? (
                   <button
-                    onClick={() => setIsFollowing(false)}
+                    onClick={onToggleFollow}
                     className="inline-flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full text-xs sm:text-sm font-semibold hover:bg-red-100 transition-all shadow-sm active:scale-95"
                   >
                     Unfollow
                   </button>
                 ) : (
                   <button
-                    onClick={() => setIsFollowing(true)}
+                    onClick={onToggleFollow}
                     className="inline-flex items-center gap-2 bg-blue-500 text-white border border-blue-500 px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-all shadow-sm active:scale-95"
                   >
                     Follow
@@ -406,31 +714,51 @@ function ProfilePanel({
 
           {/* Name, bio, stats */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-6 lg:gap-8 mt-1 sm:mt-2">
-<div className="space-y-1 sm:space-y-2 text-center sm:text-left">
-  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tighter leading-tight">
-    {mergedProfile.name}
-  </h2>
-  {mergedProfile.username && (
-    <p className="text-sm sm:text-base font-semibold text-orange-500 tracking-tight -mt-0.5">
-      @{mergedProfile.username}
-    </p>
-  )}
-  <p className="text-slate-700 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-2xl opacity-90 mx-auto sm:mx-0">
-    {mergedProfile.bio}
-  </p>
-</div>
+            <div className="space-y-1 sm:space-y-2 text-center sm:text-left">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tighter leading-tight">
+                {mergedProfile.name}
+              </h2>
+              {mergedProfile.username && (
+                <p className="text-sm sm:text-base font-semibold text-orange-500 tracking-tight -mt-0.5">
+                  @{mergedProfile.username}
+                </p>
+              )}
+              <p className="text-slate-700 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-2xl opacity-90 mx-auto sm:mx-0">
+                {mergedProfile.bio}
+              </p>
+            </div>
 
             <div className="flex justify-center lg:justify-end gap-6 sm:gap-8 md:gap-10 lg:gap-12 border-t lg:border-t-0 pt-5 sm:pt-6 lg:pt-0 border-slate-100 shrink-0">
-              {statItems.map(({ label, value }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-                    {value}
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1 sm:mt-1.5">
-                    {label}
-                  </span>
-                </div>
-              ))}
+              {statItems.map(({ label, value }) => {
+                const lowerLabel = label.toLowerCase();
+                const isRelationship =
+                  lowerLabel === "followers" || lowerLabel === "following";
+
+                return isRelationship ? (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => openRelationshipModal(lowerLabel)}
+                    className="flex flex-col items-center rounded-2xl px-2 py-1 transition-all hover:bg-slate-50"
+                  >
+                    <span className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                      {value}
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1 sm:mt-1.5">
+                      {label}
+                    </span>
+                  </button>
+                ) : (
+                  <div key={label} className="flex flex-col items-center">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                      {value}
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1 sm:mt-1.5">
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -466,6 +794,19 @@ function ProfilePanel({
         isSubmitting={isSubmittingReport}
         submitState={reportSubmitState}
         profileName={mergedProfile.name}
+      />
+
+      <RelationshipListModal
+        open={relationshipModal.open}
+        onClose={closeRelationshipModal}
+        title={relationshipModal.title}
+        users={relationshipModal.users}
+        isLoading={relationshipModal.isLoading}
+        error={relationshipModal.error}
+        onOpenProfile={handleOpenProfile}
+        onToggleFollow={handleToggleRelationshipFollow}
+        pendingUserIds={pendingRelationshipUserIds}
+        viewerUserId={viewerUserId}
       />
     </>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaEnvelope } from "react-icons/fa";
 import ChangePassword from "../userAuth/ProfChangePass";
 import ChangePopup from "../components/Popups/SavePopup";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch } from "../utils/api";
 
 const Account = () => {
   const [email, setEmail] = useState("");
@@ -11,21 +11,25 @@ const Account = () => {
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
+    let isMounted = true;
 
-    fetch(buildApiUrl("/api/user"), {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.user?.email) {
+    const loadUser = async () => {
+      try {
+        const res = await apiFetch("/api/user");
+        const data = await res.json();
+        if (isMounted && data?.user?.email) {
           setEmail(data.user.email);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Failed to fetch user info:", error);
-      });
+      }
+    };
+
+    loadUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handlePasswordUpdate = (newPassword) => {

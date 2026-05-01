@@ -16,11 +16,11 @@ import { useUserLibrary } from "../../Context/UserLibraryContext";
 import { useChat } from "../../Hooks/UseChats"; // ← adjust path if needed
 import { apiFetch } from "../../utils/api";
 import AILogo from "../Assets/AILogo.png";
+import DefaultAvatar from "../Assets/Silhouette ni ano.png";
 
 /* ── Inline avatar ── */
 const Avatar = ({ src, alt, size = 9 }) => {
   const px = size * 4;
-  const initials = alt ? alt.charAt(0).toUpperCase() : "?";
   return src ? (
     <img
       src={src}
@@ -29,14 +29,12 @@ const Avatar = ({ src, alt, size = 9 }) => {
       className="rounded-full object-cover border-2 border-orange-200 shrink-0"
     />
   ) : (
-    <div
-      style={{ width: px, height: px, background: "#F0AE35" }}
-      className="rounded-full flex items-center justify-center shrink-0 border-2 border-orange-200"
-    >
-      <span style={{ fontSize: px * 0.4, color: "#fff", fontWeight: 700 }}>
-        {initials}
-      </span>
-    </div>
+    <img
+      src={DefaultAvatar}
+      alt={alt}
+      style={{ width: px, height: px }}
+      className="rounded-full object-cover border-2 border-orange-200 shrink-0"
+    />
   );
 };
 

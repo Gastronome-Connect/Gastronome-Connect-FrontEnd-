@@ -1,5 +1,8 @@
+import DefaultAvatar from "../components/Assets/Silhouette ni ano.png";
+
 // Centralized fetch wrapper that attaches access token and handles refresh.
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3000";
+const AUTH_STATE_EVENT = "auth-state-changed";
 
 function buildApiUrl(path) {
   return path.startsWith("http") ? path : `${API_BASE}${path}`;
@@ -10,12 +13,22 @@ function resolveUploadUrl(value) {
   if (value.startsWith("data:")) {
     return value;
   }
+  if (value.startsWith("blob:")) {
+    return value;
+  }
   if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
+  }
+  if (value.startsWith("/")) {
+    return buildApiUrl(value);
   }
 
   const filename = value.split("/").filter(Boolean).pop();
   return filename ? buildApiUrl(`/uploads/${filename}`) : "";
+}
+
+function resolveAvatarUrl(value) {
+  return resolveUploadUrl(value) || DefaultAvatar;
 }
 
 function getAccessToken() {
@@ -31,13 +44,41 @@ function setAccessToken(token) {
     if (token) localStorage.setItem("accessToken", token);
     else localStorage.removeItem("accessToken");
   } catch (e) {}
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
 }
 
 function clearAuth() {
   try {
     localStorage.removeItem("accessToken");
   } catch (e) {}
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
   // navigate to login should be done by caller
+}
+
+function getAdminAccessToken() {
+  try {
+    return localStorage.getItem("adminAccessToken");
+  } catch (e) {
+    return null;
+  }
+}
+
+function hasUserSession() {
+  return !!getAccessToken();
+}
+
+function hasAdminSession() {
+  return !!getAdminAccessToken();
+}
+
+function clearAllAuth() {
+  try {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("adminAccessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userId");
+  } catch (e) {}
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
 }
 
 async function refreshAccessToken() {
@@ -117,9 +158,15 @@ async function apiFetch(input, init = {}) {
 
 export {
   API_BASE,
+  AUTH_STATE_EVENT,
   buildApiUrl,
   apiFetch,
+  clearAllAuth,
   getAccessToken,
+  getAdminAccessToken,
+  hasAdminSession,
+  hasUserSession,
+  resolveAvatarUrl,
   setAccessToken,
   resolveUploadUrl,
   clearAuth,

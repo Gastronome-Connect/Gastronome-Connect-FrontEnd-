@@ -1,9 +1,10 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import {
   getSignupRedirectPath,
   isForgotPasswordFlowActive,
+  isForgotPasswordResetVerified,
   isSignupFlowActive,
 } from "../utils/signupFlow";
 
@@ -13,6 +14,8 @@ import {
  * Redirects to /feed or /admin if user is already authenticated
  */
 const PublicRoute = ({ Component }) => {
+  const location = useLocation();
+
   const getStoredToken = () => {
     return (
       localStorage.getItem("adminAccessToken") ||
@@ -51,6 +54,13 @@ const PublicRoute = ({ Component }) => {
   }
 
   if (isForgotPasswordFlowActive()) {
+    if (
+      location.pathname === "/reset-password" &&
+      isForgotPasswordResetVerified()
+    ) {
+      return <Component />;
+    }
+
     return <Navigate to="/verification" replace />;
   }
 

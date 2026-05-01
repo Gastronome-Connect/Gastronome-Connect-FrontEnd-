@@ -15,7 +15,7 @@ import { SkeletonPostList } from "../Skeletons";
 import SkeletonProfilePanel from "../Skeletons/SkeletonProfilePanel";
 import SkeletonPreferencesPanel from "../Skeletons/SkeletonPreferencesPanel";
 import SkeletonAllergensPanel from "../Skeletons/SkeletonAllergensPanel";
-import { apiFetch, resolveUploadUrl } from "../../utils/api";
+import { apiFetch, resolveAvatarUrl, resolveUploadUrl } from "../../utils/api";
 
 const DEFAULT_PROFILE_DATA = {
   id: "",
@@ -26,6 +26,7 @@ const DEFAULT_PROFILE_DATA = {
   followersCount: 0,
   followingCount: 0,
   postsCount: 0,
+  isFollowedByViewer: false,
   flavors: [],
   cookingStyles: [],
   allergens: [],
@@ -37,7 +38,7 @@ const normalizeProfileData = (user = {}) => ({
   name: user.displayName || user.name || DEFAULT_PROFILE_DATA.name,
   username: user.accountUsername || user.username || "",
   bio: user.bio || "",
-  avatarSrc: resolveUploadUrl(user.avatar || ""),
+  avatarSrc: resolveAvatarUrl(user.avatar || ""),
   followersCount:
     typeof user.followersCount === "number"
       ? user.followersCount
@@ -51,6 +52,7 @@ const normalizeProfileData = (user = {}) => ({
         ? user.following.length
         : 0,
   postsCount: typeof user.postsCount === "number" ? user.postsCount : 0,
+  isFollowedByViewer: Boolean(user.isFollowedByViewer),
   flavors: Array.isArray(user.preferences?.flavors)
     ? user.preferences.flavors
     : [],
@@ -294,6 +296,34 @@ const GCProfile = () => {
     );
   };
 
+  const handleToggleFollow = async () => {
+    if (isOwner || !profileData.id) {
+      return;
+    }
+
+    try {
+      const response = await apiFetch(`/api/follow/${profileData.id}`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update follow status");
+      }
+
+      setProfileData((current) => ({
+        ...current,
+        isFollowedByViewer: Boolean(data.isFollowing),
+        followersCount:
+          typeof data.followersCount === "number"
+            ? data.followersCount
+            : current.followersCount,
+      }));
+    } catch (error) {
+      console.error("Failed to toggle follow:", error);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#FDFCF9]">
       <Sidebar onNewPost={handleNewPost} />
@@ -307,6 +337,8 @@ const GCProfile = () => {
               profile={profileData}
               onProfileSave={handleProfileSave}
               isOwner={isOwner}
+              onToggleFollow={handleToggleFollow}
+              viewerUserId={currentUserId}
             />
           )}
 

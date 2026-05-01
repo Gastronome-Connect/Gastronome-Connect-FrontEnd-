@@ -3,11 +3,11 @@ import { Github, Instagram, Twitter, Mail } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-[#F0AE35] to-[#F57600] text-white pt-12 sm:pt-16 pb-8 px-6 sm:px-10 md:px-24 overflow-hidden">
+    <footer className="bg-gradient-to-br from-[#E67E22] via-[#F57600] to-[#D35400] text-white pt-12 sm:pt-16 pb-8 px-6 sm:px-10 md:px-24 overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
         className="max-w-7xl mx-auto"
       >

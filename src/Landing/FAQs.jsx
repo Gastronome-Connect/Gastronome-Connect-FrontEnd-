@@ -4,18 +4,25 @@ import { buildApiUrl } from "../utils/api";
 export default function FAQ() {
   const [faqs, setFaqs] = useState([]);
   const [openItems, setOpenItems] = useState([]);
-  const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef(null);
+  const prefersReducedMotion = useRef(
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+        }
+      },
       { threshold: 0.1 },
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [hasAnimated]);
 
   useEffect(() => {
     const fetchFAQs = async () => {
@@ -49,8 +56,12 @@ export default function FAQ() {
       className="bg-[#FDEEE0] py-16 sm:py-24 px-4 sm:px-6 md:px-16 min-h-screen"
     >
       <div
-        className={`max-w-3xl mx-auto transition-all duration-1000 ease-out ${
-          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        className={`max-w-3xl mx-auto ${
+          prefersReducedMotion.current
+            ? "opacity-100"
+            : hasAnimated
+              ? "transition-all duration-1000 ease-out opacity-100 translate-y-0"
+              : "transition-all duration-1000 ease-out opacity-0 translate-y-10"
         }`}
       >
         {/* Header */}
@@ -59,8 +70,7 @@ export default function FAQ() {
             Help Center
           </h2>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 tracking-tight leading-tight">
-            Frequently Asked{" "}
-            <span className="text-[#F57600]">Questions</span>
+            Frequently Asked <span className="text-[#F57600]">Questions</span>
           </h1>
         </div>
 
@@ -74,9 +84,19 @@ export default function FAQ() {
               return (
                 <div
                   key={faq._id || i}
-                  style={{ transitionDelay: isVisible ? `${i * 100}ms` : "0ms" }}
+                  style={{
+                    transitionDelay: prefersReducedMotion.current
+                      ? "0ms"
+                      : hasAnimated
+                        ? `${i * 100}ms`
+                        : "0ms",
+                  }}
                   className={`transition-all duration-700 rounded-xl sm:rounded-2xl border-2 ${
-                    isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+                    prefersReducedMotion.current
+                      ? "opacity-100"
+                      : hasAnimated
+                        ? "opacity-100 translate-x-0"
+                        : "opacity-0 -translate-x-4"
                   } ${
                     isOpen
                       ? "border-orange-400 bg-white shadow-xl"
@@ -99,7 +119,9 @@ export default function FAQ() {
                     <span className="shrink-0">
                       <svg
                         className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 ${
-                          isOpen ? "rotate-180 text-[#F57600]" : "text-orange-300"
+                          isOpen
+                            ? "rotate-180 text-[#F57600]"
+                            : "text-orange-300"
                         }`}
                         fill="none"
                         viewBox="0 0 24 24"

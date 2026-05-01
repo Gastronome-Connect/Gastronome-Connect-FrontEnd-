@@ -10,7 +10,7 @@ import PauseOrPlay from "../components/Assets/PauseOrPlay.png";
 import Backward from "../components/Assets/Backward.png";
 import RecipePopup from "../components/Popups/RecipePopup";
 import Buffer from "../components/Loading Pages/buffer";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 
 function ViewRecipe() {
   const { id } = useParams();
@@ -51,15 +51,9 @@ function ViewRecipe() {
     try {
       // Show modal first for better user experience
       setIsModalVisible(true);
-      
-      const token = localStorage.getItem("accessToken");
 
-      const saveRes = await fetch(buildApiUrl("/api/recipes/saveRecipe"), {
+      const saveRes = await apiFetch("/api/recipes/saveRecipe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           spoonacularId: recipe.id,
           title: recipe.title,
@@ -72,22 +66,21 @@ function ViewRecipe() {
       }
 
       const saveData = await saveRes.json();
-      
+
       // Check if we have a recipe ID to work with
-      const recipeId = saveData?.newRecipe?.id || saveData?.existingRecipe?.id || 
-                       saveData?.newRecipe?._id || saveData?.existingRecipe?._id;
-      
+      const recipeId =
+        saveData?.newRecipe?.id ||
+        saveData?.existingRecipe?.id ||
+        saveData?.newRecipe?._id ||
+        saveData?.existingRecipe?._id;
+
       if (!recipeId) {
         console.error("No recipe ID found in response:", saveData);
         return;
       }
 
-      const logRes = await fetch(buildApiUrl("/api/logs"), {
+      const logRes = await apiFetch("/api/logs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           recipeId: recipeId,
           recipeName: recipe.title,
@@ -100,10 +93,10 @@ function ViewRecipe() {
       }
 
       const logData = await logRes.json();
-      
+
       // Handle both potential ID formats
       const logIdValue = logData?.log?.id || logData?.log?._id;
-      
+
       if (logIdValue) {
         setLogId(logIdValue);
       } else {
@@ -123,16 +116,11 @@ function ViewRecipe() {
     }
 
     try {
-      const token = localStorage.getItem("accessToken");
-      const updateRes = await fetch(buildApiUrl(`/api/logs/${logId}`), {
+      const updateRes = await apiFetch(`/api/logs/${logId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ [field]: true }),
       });
-      
+
       if (!updateRes.ok) {
         console.error("Log update failed with status:", updateRes.status);
       }

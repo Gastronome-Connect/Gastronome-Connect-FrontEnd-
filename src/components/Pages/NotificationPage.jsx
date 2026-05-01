@@ -15,10 +15,12 @@ import { useNotifications } from "../../Context/NotificationContext";
 const FILTERS = [
   { key: "all", label: "All" },
   { key: "like", label: "Likes" },
+  { key: "dislike", label: "Dislikes" },
   { key: "comment", label: "Comments" },
   { key: "reply", label: "Replies" },
   { key: "follow", label: "Follows" },
   { key: "repost", label: "Reposts" },
+  { key: "report_status", label: "Report Updates" },
   { key: "hidden", label: "Hidden" },
 ];
 
@@ -64,8 +66,6 @@ export default function NotificationsPage() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [sortOpen, setSortOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
   const sortRef = useRef(null);
 
   const {
@@ -81,6 +81,7 @@ export default function NotificationsPage() {
   });
 
   const {
+    isLoading,
     visibleNotifications,
     hiddenNotifications,
     unreadCount,
@@ -106,12 +107,6 @@ export default function NotificationsPage() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 550);
-    return () => clearTimeout(timer);
   }, []);
 
   const baseList = useMemo(() => {

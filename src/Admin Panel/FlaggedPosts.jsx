@@ -4,12 +4,6 @@ import { Search, Flag } from "lucide-react";
 import FlaggedPostCard from "./FlaggedPostCards";
 import { SkeletonAdminCardList } from "../components/Skeletons";
 import adminApi from "../utils/adminApi";
-import {
-  subscribe,
-  getSnapshot,
-  removePostReport,
-  syncReportedPosts,
-} from "../Store/ReportStore";
 
 // ─── The 7 canonical filter categories ───────────────────────────────────────
 const CATEGORIES = [
@@ -24,22 +18,12 @@ const CATEGORIES = [
 ];
 
 export default function FlaggedPosts() {
-  const [posts, setPosts] = useState(() => getSnapshot().posts ?? []);
-  const [initialTotal, setInitialTotal] = useState(
-    () => (getSnapshot().posts ?? []).length,
-  );
+  const [posts, setPosts] = useState([]);
+  const [initialTotal, setInitialTotal] = useState(0);
   const [searchTerm, setSearch] = useState("");
   const [activeFilter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const unsub = subscribe(() => {
-      const snap = getSnapshot();
-      setPosts([...(snap.posts ?? [])]);
-    });
-    return unsub;
-  }, []);
 
   useEffect(() => {
     setInitialTotal((prev) => Math.max(prev, posts.length));
@@ -54,31 +38,16 @@ export default function FlaggedPosts() {
           setLoading(true);
         }
 
-        const response = await adminApi.get("/admin/flagged-posts");
+        const response = await adminApi.get("/admin/reports", {
+          params: { targetType: "post", status: "pending" },
+        });
         if (!isMounted) {
           return;
         }
 
         const nextPosts = Array.isArray(response.data) ? response.data : [];
-        const localReportedPosts = getSnapshot().posts ?? [];
-        const mergedPosts =
-          nextPosts.length > 0
-            ? [
-                ...nextPosts,
-                ...localReportedPosts.filter(
-                  (localPost) =>
-                    !nextPosts.some(
-                      (serverPost) =>
-                        (serverPost.postId || serverPost.id) ===
-                        (localPost.postId || localPost.id),
-                    ),
-                ),
-              ]
-            : localReportedPosts;
-
-        syncReportedPosts(mergedPosts);
-        setPosts(mergedPosts);
-        setInitialTotal((prev) => Math.max(prev, mergedPosts.length));
+        setPosts(nextPosts);
+        setInitialTotal((prev) => Math.max(prev, nextPosts.length));
         setError(null);
         setLoading(false);
       } catch (err) {
@@ -108,26 +77,22 @@ export default function FlaggedPosts() {
   // ── Admin actions ────────────────────────────────────────────────────────────
   const handleKeep = useCallback(async (postId) => {
     try {
-      await adminApi.post("/admin/moderation/resolve", {
-        type: "post",
-        postId,
-        action: "approve",
+      await adminApi.patch(`/admin/reports/${postId}`, {
+        action: "keep",
         notes: "Approved by admin.",
       });
+      setPosts((current) => current.filter((entry) => entry.id !== postId));
     } catch (err) {}
-    removePostReport(postId);
   }, []);
 
   const handleRemove = useCallback(async (postId) => {
     try {
-      await adminApi.post("/admin/moderation/resolve", {
-        type: "post",
-        postId,
-        action: "reject",
+      await adminApi.patch(`/admin/reports/${postId}`, {
+        action: "remove",
         notes: "Rejected by admin.",
       });
+      setPosts((current) => current.filter((entry) => entry.id !== postId));
     } catch (err) {}
-    removePostReport(postId);
   }, []);
 
   // ── Filtering ────────────────────────────────────────────────────────────────
@@ -255,8 +220,8 @@ export default function FlaggedPosts() {
                   <FlaggedPostCard
                     key={post.id}
                     post={post}
-                    onKeep={() => handleKeep(post.postId || post.id)}
-                    onRemove={() => handleRemove(post.postId || post.id)}
+                    onKeep={() => handleKeep(post.id)}
+                    onRemove={() => handleRemove(post.id)}
                   />
                 ))}
               </AnimatePresence>

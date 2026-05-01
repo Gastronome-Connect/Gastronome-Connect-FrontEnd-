@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.0bb57046.css",
-    "main.js": "/static/js/main.6036164b.js",
+    "main.css": "/static/css/main.830a7b9e.css",
+    "main.js": "/static/js/main.3638d445.js",
     "static/js/453.ab7e3297.chunk.js": "/static/js/453.ab7e3297.chunk.js",
     "static/media/top-view-table-full-food.png": "/static/media/top-view-table-full-food.966b1d1aaffdc1a4fdee.png",
     "static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.png": "/static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.de8a2ec12507d2335e38.png",
@@ -12,6 +12,7 @@
     "static/media/error_404.gif": "/static/media/error_404.90465e701fd12c8eba99.gif",
     "static/media/Bicol Express.png": "/static/media/Bicol Express.532e139bedae0cb650d3.png",
     "static/media/Gastro.png": "/static/media/Gastro.702000c34ea742bb18c9.png",
+    "static/media/GC Logo.png": "/static/media/GC Logo.a6f234422524b09a6d7f.png",
     "static/media/Lechong Kawali.png": "/static/media/Lechong Kawali.bde328cf38445d1a7c78.png",
     "static/media/GCFifthImage.png": "/static/media/GCFifthImage.b215d5fc1ffb3e6720dc.png",
     "static/media/Pancit Canton.png": "/static/media/Pancit Canton.1d4d54c7984963016faa.png",
@@ -32,16 +33,14 @@
     "static/media/Sinigang.png": "/static/media/Sinigang.b9898345bc71ed3e8ee0.png",
     "static/media/Laing.png": "/static/media/Laing.875550c1c13e60ced4b7.png",
     "static/media/GastroLogo.png": "/static/media/GastroLogo.66062a3e7c594f67e816.png",
-    "static/media/EarlPhoto.png": "/static/media/EarlPhoto.10ba85322352c8182dee.png",
     "static/media/Lince.jpg": "/static/media/Lince.bc32cd03b60dd2a5d6fd.jpg",
-    "static/media/GC Navbar Logo.png": "/static/media/GC Navbar Logo.929f92b4c701e77c67ae.png",
     "index.html": "/index.html",
-    "main.0bb57046.css.map": "/static/css/main.0bb57046.css.map",
-    "main.6036164b.js.map": "/static/js/main.6036164b.js.map",
+    "main.830a7b9e.css.map": "/static/css/main.830a7b9e.css.map",
+    "main.3638d445.js.map": "/static/js/main.3638d445.js.map",
     "453.ab7e3297.chunk.js.map": "/static/js/453.ab7e3297.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.0bb57046.css",
-    "static/js/main.6036164b.js"
+    "static/css/main.830a7b9e.css",
+    "static/js/main.3638d445.js"
   ]
 }

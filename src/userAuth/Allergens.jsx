@@ -6,7 +6,7 @@ import LogoImage from "../components/Assets/Gastro.png";
 import AllergenIcon from "../components/Assets/Allergen.png";
 import DislikeIcon from "../components/Assets/Dislike.png";
 import PrefPopup from "../components/Popups/PrefPopup";
-import { buildApiUrl } from "../utils/api";
+import { apiFetch, buildApiUrl } from "../utils/api";
 import {
   clearSignupStep,
   setSignupStep,
@@ -259,12 +259,8 @@ const Allergens = () => {
       return;
     }
     try {
-      await fetch(buildApiUrl(`/api/user/preferences/${userId}`), {
+      await apiFetch(`/api/user/preferences/${userId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ dislikes, allergies: allergens }),
       });
     } catch (error) {
@@ -337,12 +333,6 @@ const Allergens = () => {
 
   const isDoneDisabled = allergens.length === 0 && dislikes.length === 0;
 
-  /* ── Panel positioning ── */
-  const desktopX = (() => {
-    const panelWidth = Math.min(480, window.innerWidth - 48);
-    return window.innerWidth - panelWidth - 60;
-  })();
-
   const panelStyle = mobile
     ? {
         width: "calc(100vw - 32px)",
@@ -354,8 +344,6 @@ const Allergens = () => {
     : {
         width: "min(480px, calc(100vw - 48px))",
         height: "calc(100vh - 48px)",
-        marginLeft: "0px",
-        transform: `translateX(${desktopX}px)`,
       };
 
   return (
@@ -367,7 +355,7 @@ const Allergens = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center pointer-events-none"
+            : "absolute inset-0 flex items-center justify-end pr-[60px] pointer-events-none"
         }
       >
         <div

@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { FaThumbsUp } from "react-icons/fa";
-import { MoreMenu, CURRENT_USER } from "./CommentItem"; // shared ··· menu + identity
+import { MoreMenu } from "./CommentItem"; // shared ··· menu + identity
 
 // ─── Auto-growing textarea ────────────────────────────────────────────────────
-const AutoTextarea = ({ value, onChange, onKeyDown, placeholder, inputRef }) => {
+const AutoTextarea = ({
+  value,
+  onChange,
+  onKeyDown,
+  placeholder,
+  inputRef,
+}) => {
   useEffect(() => {
     if (!inputRef?.current) return;
     inputRef.current.style.height = "auto";
@@ -26,52 +32,55 @@ const AutoTextarea = ({ value, onChange, onKeyDown, placeholder, inputRef }) => 
 };
 
 // ─── ReplyBubble ──────────────────────────────────────────────────────────────
-const ReplyBubble = ({ reply, depth = 0 }) => {
-  const [vote,          setVote]          = useState("none");
-  const [likes,         setLikes]         = useState(reply.likes ?? 0);
-  const [showInput,     setShowInput]     = useState(false);
-  const [input,         setInput]         = useState("");
-  const [nested,        setNested]        = useState(reply.replies ?? []);
+const ReplyBubble = ({
+  reply,
+  depth = 0,
+  threadCommentId,
+  onAddReply,
+  onReact,
+  postId,
+}) => {
+  const vote = reply.viewerReaction || "none";
+  const likes = reply.likesCount ?? reply.likes ?? 0;
+  const [showInput, setShowInput] = useState(false);
+  const [input, setInput] = useState("");
   const [nestedVisible, setNestedVisible] = useState(true);
   const inputRef = useRef(null);
+  const nested = Array.isArray(reply.replies) ? reply.replies : [];
 
   useEffect(() => {
     if (showInput && inputRef.current) inputRef.current.focus();
   }, [showInput]);
 
   const handleLike = () => {
-    if (vote === "liked") { setVote("none"); setLikes((l) => l - 1); }
-    else { setVote("liked"); setLikes((l) => l + (vote === "disliked" ? 1 : 1)); }
+    onReact?.(reply.id, "like");
   };
   const handleDislike = () => {
-    if (vote === "disliked") setVote("none");
-    else { if (vote === "liked") setLikes((l) => l - 1); setVote("disliked"); }
+    onReact?.(reply.id, "dislike");
   };
 
   const handleSubmit = () => {
     const text = input.trim();
     if (!text) return;
-    setNested((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substr(2, 9),
-        author: CURRENT_USER,
-        avatar: "https://i.pravatar.cc/100?img=12",
-        text,
-        replyingTo: reply.author,
-        time: "Just now",
-        likes: 0,
-        replies: [],
-      },
-    ]);
+    onAddReply?.({
+      commentId: threadCommentId,
+      parentReplyId: reply.id,
+      text,
+    });
     setNestedVisible(true);
     setInput("");
     setShowInput(false);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
-    if (e.key === "Escape") { setShowInput(false); setInput(""); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+    if (e.key === "Escape") {
+      setShowInput(false);
+      setInput("");
+    }
   };
 
   return (
@@ -100,7 +109,9 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
           <button
             onClick={handleLike}
             className={`text-[10px] font-bold transition-colors flex items-center gap-0.5 ${
-              vote === "liked" ? "text-[#F57600]" : "text-gray-500 hover:text-[#F57600]"
+              vote === "liked"
+                ? "text-[#F57600]"
+                : "text-gray-500 hover:text-[#F57600]"
             }`}
           >
             {vote === "liked" && <FaThumbsUp size={9} />}
@@ -110,7 +121,9 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
           <button
             onClick={handleDislike}
             className={`text-[10px] font-bold transition-colors ${
-              vote === "disliked" ? "text-blue-500" : "text-gray-500 hover:text-blue-500"
+              vote === "disliked"
+                ? "text-blue-500"
+                : "text-gray-500 hover:text-blue-500"
             }`}
           >
             Dislike
@@ -119,7 +132,9 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
           <button
             onClick={() => setShowInput((v) => !v)}
             className={`text-[10px] font-bold transition-colors ${
-              showInput ? "text-[#F57600]" : "text-gray-500 hover:text-[#F57600]"
+              showInput
+                ? "text-[#F57600]"
+                : "text-gray-500 hover:text-[#F57600]"
             }`}
           >
             Reply
@@ -131,6 +146,13 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
             author={reply.author}
             reportLabel="Report reply"
             subject="this reply"
+            comment={{
+              ...reply,
+              postId,
+              replyId: reply.id,
+              commentId: threadCommentId,
+              targetType: "reply",
+            }}
           />
         </div>
 
@@ -148,7 +170,15 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
             {nestedVisible && (
               <div className="flex flex-col gap-2">
                 {nested.map((r) => (
-                  <ReplyBubble key={r.id} reply={r} depth={depth + 1} />
+                  <ReplyBubble
+                    key={r.id}
+                    reply={r}
+                    depth={depth + 1}
+                    threadCommentId={threadCommentId}
+                    onAddReply={onAddReply}
+                    onReact={onReact}
+                    postId={postId}
+                  />
                 ))}
               </div>
             )}
@@ -195,17 +225,20 @@ const ReplyBubble = ({ reply, depth = 0 }) => {
 
 // ─── ReplySection ─────────────────────────────────────────────────────────────
 const ReplySection = ({
-  parentId,
+  threadCommentId,
   parentAuthor,
-  replies      = [],
-  showInput    = false,
+  replies = [],
+  showInput = false,
   onAdd,
   onCloseInput,
+  onReply,
+  onReact,
+  postId,
 }) => {
-  const [visible,      setVisible]      = useState(true);
-  const [localReplies, setLocalReplies] = useState(replies);
-  const [input,        setInput]        = useState("");
+  const [visible, setVisible] = useState(true);
+  const [input, setInput] = useState("");
   const inputRef = useRef(null);
+  const localReplies = Array.isArray(replies) ? replies : [];
 
   useEffect(() => {
     if (showInput && inputRef.current) inputRef.current.focus();
@@ -214,19 +247,6 @@ const ReplySection = ({
   const handleSubmit = () => {
     const text = input.trim();
     if (!text) return;
-    setLocalReplies((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substr(2, 9),
-        author: CURRENT_USER,
-        avatar: "https://i.pravatar.cc/100?img=12",
-        text,
-        replyingTo: null,
-        time: "Just now",
-        likes: 0,
-        replies: [],
-      },
-    ]);
     setVisible(true);
     onAdd?.(text);
     setInput("");
@@ -234,8 +254,14 @@ const ReplySection = ({
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
-    if (e.key === "Escape") { onCloseInput?.(); setInput(""); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+    if (e.key === "Escape") {
+      onCloseInput?.();
+      setInput("");
+    }
   };
 
   const hasReplies = localReplies.length > 0;
@@ -254,9 +280,18 @@ const ReplySection = ({
         </button>
       )}
 
-      {visible && localReplies.map((r) => (
-        <ReplyBubble key={r.id} reply={r} depth={0} />
-      ))}
+      {visible &&
+        localReplies.map((r) => (
+          <ReplyBubble
+            key={r.id}
+            reply={r}
+            depth={0}
+            threadCommentId={threadCommentId}
+            onAddReply={onReply}
+            onReact={onReact}
+            postId={postId}
+          />
+        ))}
 
       {showInput && (
         <div className="flex items-center gap-2">

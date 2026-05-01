@@ -10,16 +10,44 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { FaFlag } from "react-icons/fa";
-import { addPostReport } from "../../Store/ReportStore";  // ← adjust path to match your project
+import { apiFetch } from "../../utils/api";
 
 const REPORT_REASONS = [
-  { id: "spam",          label: "Spam or Misleading",       description: "Repetitive or unsolicited content" },
-  { id: "harassment",    label: "Harassment or Bullying",   description: "Targeted abuse toward a person" },
-  { id: "hate",          label: "Hate Speech",              description: "Content promoting hatred or discrimination" },
-  { id: "violence",      label: "Violence or Dangerous Content", description: "Graphic violence or harmful acts" },
-  { id: "false",         label: "False Information",        description: "Misleading or factually incorrect content" },
-  { id: "nudity",        label: "Nudity or Sexual Content", description: "Explicit or adult material" },
-  { id: "other",         label: "Others",                   description: "Something else not listed here" },
+  {
+    id: "spam",
+    label: "Spam or Misleading",
+    description: "Repetitive or unsolicited content",
+  },
+  {
+    id: "harassment",
+    label: "Harassment or Bullying",
+    description: "Targeted abuse toward a person",
+  },
+  {
+    id: "hate",
+    label: "Hate Speech",
+    description: "Content promoting hatred or discrimination",
+  },
+  {
+    id: "violence",
+    label: "Violence or Dangerous Content",
+    description: "Graphic violence or harmful acts",
+  },
+  {
+    id: "false",
+    label: "False Information",
+    description: "Misleading or factually incorrect content",
+  },
+  {
+    id: "nudity",
+    label: "Nudity or Sexual Content",
+    description: "Explicit or adult material",
+  },
+  {
+    id: "other",
+    label: "Others",
+    description: "Something else not listed here",
+  },
 ];
 
 /**
@@ -29,21 +57,39 @@ const REPORT_REASONS = [
  *   post       object   ← NEW: the full post object (for the store)
  */
 const ReportModal = ({ onConfirm, onCancel, post = null }) => {
-  const [selected,  setSelected]  = useState(null);
+  const [selected, setSelected] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = () => {
     if (!selected) return;
 
-    // Save to store so admin dashboard picks it up
-    if (post) {
-      addPostReport(post, selected);
-    }
+    apiFetch("/api/reports", {
+      method: "POST",
+      body: JSON.stringify({
+        targetType: "post",
+        targetId: post?.id ?? post?._id,
+        postId: post?.id ?? post?._id,
+        reasonId: selected,
+        snapshot: {
+          author: post?.author,
+          text: post?.caption ?? post?.description ?? "",
+          postTitle: post?.title ?? post?.name ?? "",
+          image: post?.mediaItems?.[0]?.url ?? post?.img ?? "",
+          reportedUserId: post?.userId ?? null,
+        },
+      }),
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to submit report");
+        }
 
-    setSubmitted(true);
-    setTimeout(() => {
-      onConfirm?.(selected);
-    }, 1500);
+        setSubmitted(true);
+      })
+      .catch((error) => {
+        console.error("Failed to submit post report:", error);
+      });
   };
 
   return createPortal(
@@ -62,7 +108,9 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
           </div>
           <div>
             <p className="font-extrabold text-gray-900 text-sm">Report Post</p>
-            <p className="text-xs text-gray-400">Help us understand what's wrong</p>
+            <p className="text-xs text-gray-400">
+              Help us understand what's wrong
+            </p>
           </div>
           <button
             onClick={onCancel}
@@ -80,8 +128,15 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
             </div>
             <p className="font-extrabold text-gray-900">Report Submitted</p>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Thanks for letting us know. We'll review this post and take action if it violates our guidelines.
+              Thanks for letting us know. We'll review this post and take action
+              if it violates our guidelines.
             </p>
+            <button
+              onClick={onCancel}
+              className="mt-4 px-6 py-2 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold transition-colors"
+            >
+              Close
+            </button>
           </div>
         ) : (
           <>
@@ -99,16 +154,24 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
                   {/* Radio indicator */}
                   <span
                     className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
-                      selected === reason.id ? "border-red-400 bg-red-400" : "border-gray-300"
+                      selected === reason.id
+                        ? "border-red-400 bg-red-400"
+                        : "border-gray-300"
                     }`}
                   >
-                    {selected === reason.id && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                    {selected === reason.id && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                    )}
                   </span>
                   <div>
-                    <p className={`text-sm font-bold leading-tight ${selected === reason.id ? "text-red-600" : "text-gray-800"}`}>
+                    <p
+                      className={`text-sm font-bold leading-tight ${selected === reason.id ? "text-red-600" : "text-gray-800"}`}
+                    >
                       {reason.label}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{reason.description}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {reason.description}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -126,7 +189,9 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
                 onClick={handleSubmit}
                 disabled={!selected}
                 className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all ${
-                  selected ? "bg-red-500 hover:bg-red-600 text-white shadow" : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                  selected
+                    ? "bg-red-500 hover:bg-red-600 text-white shadow"
+                    : "bg-gray-100 text-gray-300 cursor-not-allowed"
                 }`}
               >
                 Submit Report
@@ -136,7 +201,7 @@ const ReportModal = ({ onConfirm, onCancel, post = null }) => {
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 

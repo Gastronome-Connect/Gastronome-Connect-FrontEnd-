@@ -4,7 +4,13 @@ import CommentItem from "./CommentItem";
  * @param {Array}   comments   - list of comment objects
  * @param {boolean} scrollable - true for feed card (caps height), false for ExpandedView (flows freely)
  */
-const CommentList = ({ comments = [], scrollable = true }) => {
+const CommentList = ({
+  comments = [],
+  scrollable = true,
+  postId,
+  onReply,
+  onReact,
+}) => {
   return (
     <div
       className={`px-4 pt-3 pb-2 flex flex-col gap-3 ${
@@ -16,7 +22,15 @@ const CommentList = ({ comments = [], scrollable = true }) => {
           No comments yet. Be the first to comment!
         </p>
       ) : (
-        comments.map((c) => <CommentItem key={c.id} comment={c} />)
+        comments.map((c) => (
+          <CommentItem
+            key={c.id}
+            comment={c}
+            postId={postId}
+            onReply={onReply}
+            onReact={onReact}
+          />
+        ))
       )}
     </div>
   );
