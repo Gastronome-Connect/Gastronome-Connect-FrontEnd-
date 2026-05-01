@@ -145,7 +145,7 @@ const PostCard = ({
 
     // Handle different response formats from backend
     const updatedPost = data.post || data.data || data;
-    if (updatedPost && updatedPost.id || updatedPost._id) {
+    if (updatedPost && (updatedPost.id || updatedPost._id)) {
       applyPostUpdate(updatedPost);
     }
 

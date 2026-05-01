@@ -101,7 +101,6 @@ export default function GCFeed() {
     popupQueue,
     unreadCount,
     hasNotifications,
-    seedDemoNotification,
     dismissPopup,
   } = useNotifications();
 
