@@ -1,5 +1,6 @@
 import React from "react";
 import { createBrowserRouter, Outlet } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { CarouselProvider } from "./components/Carousel Background/CarouselContext";
 import { ChatProvider } from "./Context/ChatContext";
 import { NotificationProvider } from "./Context/NotificationContext";
@@ -72,6 +73,7 @@ const RootLayout = () => (
           <NotificationProvider>
             <SessionManager />
             <Outlet />
+            <Analytics />
           </NotificationProvider>
         </UserLibraryProvider>
       </CarouselProvider>
