@@ -259,12 +259,12 @@ const AuthPage = () => {
     const isPasswordValid = validateLoginPassword();
     if (isEmailValid && isPasswordValid) {
       try {
-        const identifier = loginIdentifier.trim();
-        const isEmailLogin = identifier.includes("@");
+        const email = loginIdentifier.trim();
+        const isEmailLogin = email.includes("@");
 
         let response = await apiFetch("/api/login", {
           method: "POST",
-          body: JSON.stringify({ identifier, password: loginPassword }),
+          body: JSON.stringify({ email, password: loginPassword }),
         });
         let data = await response.json();
         let isAdminLogin = false;
@@ -273,7 +273,7 @@ const AuthPage = () => {
           response = await apiFetch("/api/admin/login", {
             method: "POST",
             body: JSON.stringify({
-              username: identifier,
+              username: email,
               password: loginPassword,
             }),
           });
