@@ -121,6 +121,16 @@ export const recipeAPI = {
       method: "GET",
     }).then((r) => r.json()),
 
+  getDailyPickRecipes: () =>
+    apiFetch("/api/recipes/daily-picks", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
+  getWeeklyTopRecipes: () =>
+    apiFetch("/api/recipes/weekly-top", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
   getFavoriteRecipes: () =>
     apiFetch("/api/recipes/favorites", { method: "GET" }).then((r) =>
       r.json()
@@ -304,6 +314,37 @@ export const adminAPI = {
     apiFetch(`/api/admin/restore-account/${id}`, {
       method: "POST",
     }).then((r) => r.json()),
+
+  getFlaggedContent: () =>
+    apiFetch("/api/admin/flagged", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
+  getFlaggedPosts: () =>
+    apiFetch("/api/admin/flagged-posts", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
+  getFlaggedComments: () =>
+    apiFetch("/api/admin/flagged-comments", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
+  getModerationQueue: () =>
+    apiFetch("/api/admin/moderation/queue", { method: "GET" }).then((r) =>
+      r.json()
+    ),
+
+  resolveModeration: (moderationData) =>
+    apiFetch("/api/admin/moderation/resolve", {
+      method: "POST",
+      body: JSON.stringify(moderationData),
+    }).then((r) => r.json()),
+
+  getRestoreStats: () =>
+    apiFetch("/api/admin/restore-stats", { method: "GET" }).then((r) =>
+      r.json()
+    ),
 };
 
 /**
@@ -331,4 +372,26 @@ export const faqAPI = {
 export const optionsAPI = {
   getOptions: () =>
     apiFetch("/api/options/", { method: "GET" }).then((r) => r.json()),
+};
+
+/**
+ * Chat API
+ */
+export const chatAPI = {
+  sendMessage: (message) =>
+    apiFetch("/api/chatbot/message", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }).then((r) => r.json()),
+};
+
+/**
+ * Text-to-Speech API
+ */
+export const ttsAPI = {
+  textToSpeech: (text) =>
+    apiFetch("/api/tts", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }).then((r) => r.json()),
 };

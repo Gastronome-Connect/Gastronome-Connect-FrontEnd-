@@ -1,7 +1,7 @@
 import DefaultAvatar from "../components/Assets/Silhouette ni ano.png";
 
 // Centralized fetch wrapper that attaches access token and handles refresh.
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3000";
+const API_BASE = process.env.REACT_APP_API_BASE || "https://api.gastronomeconnect.online";
 const AUTH_STATE_EVENT = "auth-state-changed";
 
 function buildApiUrl(path) {
