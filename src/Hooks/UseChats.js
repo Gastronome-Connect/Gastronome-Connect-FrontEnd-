@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useChatContext } from "../Context/ChatContext";
-import { sendMessageToBot } from "../Services/ChatAPI";
+import { deleteChatSession, sendMessageToBot } from "../Services/ChatAPI";
 
 function formatTime() {
   return new Date().toLocaleTimeString([], {
@@ -35,8 +35,14 @@ export function useChat() {
   );
 
   const deleteSession = useCallback(
-    (sessionId) => {
+    async (sessionId) => {
       dispatch({ type: "DELETE_SESSION", payload: sessionId });
+
+      try {
+        await deleteChatSession(sessionId);
+      } catch (error) {
+        console.error("Failed to delete chat session:", error);
+      }
     },
     [dispatch],
   );
@@ -81,6 +87,7 @@ export function useChat() {
         const botMsg = await sendMessageToBot(
           text,
           formatTime,
+          sessionId,
           history,
           abortController.signal,
         );

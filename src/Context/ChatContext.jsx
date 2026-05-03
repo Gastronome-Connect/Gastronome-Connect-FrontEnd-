@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { fetchChatSessions } from "../Services/ChatAPI";
+import { hasUserSession } from "../utils/api";
 
 const STORAGE_KEY = "gastro_chat_sessions";
 const AUTH_STATE_EVENT = "auth-state-changed";
@@ -61,8 +63,23 @@ const initialState = buildInitialState();
 
 function reducer(state, action) {
   switch (action.type) {
-    case "HYDRATE_FROM_STORAGE":
-      return buildInitialState(action.payload || getStorageOwner());
+    case "HYDRATE_SESSIONS": {
+      const owner = action.payload?.owner || getStorageOwner();
+      const sessions = Array.isArray(action.payload?.sessions)
+        ? action.payload.sessions
+        : loadSessions(owner);
+      const nextActiveSessionId = sessions.some(
+        (session) => session.id === state.activeSessionId,
+      )
+        ? state.activeSessionId
+        : sessions[0]?.id || null;
+
+      return {
+        storageOwner: owner,
+        sessions,
+        activeSessionId: nextActiveSessionId,
+      };
+    }
 
     case "NEW_SESSION": {
       const session = {
@@ -146,8 +163,33 @@ export function ChatProvider({ children }) {
   }, [state.sessions, state.storageOwner]);
 
   useEffect(() => {
-    const hydrate = () => {
-      dispatch({ type: "HYDRATE_FROM_STORAGE", payload: getStorageOwner() });
+    let ignore = false;
+
+    const hydrate = async () => {
+      const owner = getStorageOwner();
+
+      if (hasUserSession()) {
+        try {
+          const sessions = await fetchChatSessions();
+
+          if (!ignore) {
+            dispatch({
+              type: "HYDRATE_SESSIONS",
+              payload: { owner, sessions },
+            });
+          }
+          return;
+        } catch (error) {
+          console.error("Failed to hydrate remote chat sessions:", error);
+        }
+      }
+
+      if (!ignore) {
+        dispatch({
+          type: "HYDRATE_SESSIONS",
+          payload: { owner, sessions: loadSessions(owner) },
+        });
+      }
     };
 
     const handleStorage = (event) => {
@@ -164,8 +206,10 @@ export function ChatProvider({ children }) {
 
     window.addEventListener("storage", handleStorage);
     window.addEventListener(AUTH_STATE_EVENT, hydrate);
+    hydrate();
 
     return () => {
+      ignore = true;
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener(AUTH_STATE_EVENT, hydrate);
     };
