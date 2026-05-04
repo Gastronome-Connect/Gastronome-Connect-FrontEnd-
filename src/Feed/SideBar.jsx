@@ -162,7 +162,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
           window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-          navigate("/", { replace: true });
+          navigate("/login", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />

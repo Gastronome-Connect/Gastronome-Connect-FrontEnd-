@@ -68,6 +68,7 @@ const PostCard = ({
   onUpdate,
   onArchive,
   viewerProfile = null,
+  autoOpenComments = false,
 }) => {
   const [post, setPost] = useState(() => normalizePost(initialPost));
   const [expandedIndex, setExpandedIndex] = useState(null);
@@ -83,6 +84,12 @@ const PostCard = ({
   useEffect(() => {
     setPost(normalizePost(initialPost));
   }, [initialPost]);
+
+  useEffect(() => {
+    if (autoOpenComments) {
+      setShowCommentModal(true);
+    }
+  }, [autoOpenComments]);
 
   const applyPostUpdate = (nextPost) => {
     if (!nextPost) {

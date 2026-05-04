@@ -108,8 +108,35 @@ const CommentSection = forwardRef(
       }
     };
 
+    const deleteComment = async (commentId) => {
+      if (!commentId) return;
+
+      try {
+        const response = await apiFetch(`/api/comments/${commentId}`, {
+          method: "DELETE",
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to delete comment");
+        }
+
+        if (Array.isArray(data.post?.comments)) {
+          setComments(data.post.comments);
+          onPostUpdate?.(data.post);
+        }
+      } catch (error) {
+        console.error("Failed to delete comment:", error);
+      }
+    };
+
     // expose addComment so ExpandedView's pinned input can call it
-    useImperativeHandle(ref, () => ({ addComment, addReply, reactToComment }));
+    useImperativeHandle(ref, () => ({
+      addComment,
+      addReply,
+      reactToComment,
+      deleteComment,
+    }));
 
     return (
       <div className="flex flex-col">
@@ -119,6 +146,7 @@ const CommentSection = forwardRef(
           postId={postId}
           onReply={addReply}
           onReact={reactToComment}
+          onDelete={deleteComment}
         />
         <div ref={bottomRef} />
         {!hideInput && <CommentInput onSubmit={addComment} />}

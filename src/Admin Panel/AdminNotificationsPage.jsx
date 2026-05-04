@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell } from "lucide-react";
@@ -17,6 +18,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function AdminNotificationsPage() {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const {
@@ -129,7 +131,12 @@ export default function AdminNotificationsPage() {
                   <NotificationCard
                     notification={notification}
                     isHidden={notification.hidden}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={async (_, destination) => {
+                      await markAsRead(notification.id);
+                      if (destination) {
+                        navigate(destination);
+                      }
+                    }}
                     onDelete={() => deleteNotification(notification.id)}
                     onHide={() => hideNotification(notification.id)}
                     onUnhide={() => unhideNotification(notification.id)}

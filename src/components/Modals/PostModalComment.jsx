@@ -11,6 +11,9 @@ import PostMenu from "../../Feed/Post Card/Post Header/PostMenu";
 import PostActions from "../../Feed/Post Card/Post Action/PostActions";
 import CommentSection from "../../Feed/Post Card/Comment Section/CommentSection";
 import ExpandedView from "../../Feed/Post Card/Expanded View/ExpandedView";
+import useCurrentUserAvatar from "../../Hooks/useCurrentUserAvatar";
+import useMentionSuggestions from "../../Hooks/useMentionSuggestions";
+import MentionSuggestionsDropdown from "../../components/Editor/MentionSuggestionsDropdown";
 
 // ── Safe parse helper (same as PostContent) ──────────────────────────────────
 const parseIngredients = (raw) => {
@@ -189,6 +192,7 @@ const PostCommentModal = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [pinnedInput, setPinnedInput] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const currentUserAvatar = useCurrentUserAvatar();
 
   const handleClose = useCallback(() => {
     setVisible(false);
@@ -198,6 +202,17 @@ const PostCommentModal = ({
   const menuRef = useRef(null);
   const commentSectionRef = useRef(null);
   const pinnedTextareaRef = useRef(null);
+  const {
+    suggestions,
+    isOpen: mentionDropdownOpen,
+    setIsOpen: setMentionDropdownOpen,
+    selectMention,
+    syncCaretPosition,
+  } = useMentionSuggestions({
+    value: pinnedInput,
+    setValue: setPinnedInput,
+    textareaRef: pinnedTextareaRef,
+  });
 
   const media =
     post.mediaItems ??
@@ -236,6 +251,7 @@ const PostCommentModal = ({
     if (!text) return;
     await commentSectionRef.current?.addComment(text);
     setPinnedInput("");
+    setMentionDropdownOpen(false);
     if (pinnedTextareaRef.current)
       pinnedTextareaRef.current.style.height = "auto";
   };
@@ -391,16 +407,34 @@ const PostCommentModal = ({
                   }}
                 >
                   <img
-                    src="https://i.pravatar.cc/100?img=12"
+                    src={currentUserAvatar}
                     alt="You"
                     className="w-8 h-8 rounded-full object-cover shrink-0 border border-orange-200"
                   />
-                  <div className="flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-[#F57600] transition-colors">
+                  <div className="relative flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-[#F57600] transition-colors">
+                    {mentionDropdownOpen && (
+                      <MentionSuggestionsDropdown
+                        suggestions={suggestions}
+                        onSelect={(suggestion) =>
+                          selectMention(suggestion.username)
+                        }
+                      />
+                    )}
                     <textarea
                       ref={pinnedTextareaRef}
                       rows={1}
                       value={pinnedInput}
-                      onChange={(e) => setPinnedInput(e.target.value)}
+                      onChange={(e) => {
+                        setPinnedInput(e.target.value);
+                        syncCaretPosition(e);
+                      }}
+                      onClick={syncCaretPosition}
+                      onKeyUp={syncCaretPosition}
+                      onSelect={syncCaretPosition}
+                      onBlur={() => {
+                        setTimeout(() => setMentionDropdownOpen(false), 120);
+                      }}
+                      onFocus={syncCaretPosition}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();

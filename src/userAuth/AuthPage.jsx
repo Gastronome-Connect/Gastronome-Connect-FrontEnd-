@@ -452,7 +452,18 @@ const AuthPage = () => {
       const registerData = await registerResponse.json();
 
       if (!registerResponse.ok) {
-        setSignupError(registerData.message || "Failed to start signup");
+        const message = registerData.message || "Failed to start signup";
+        const normalizedMessage = String(message).toLowerCase();
+
+        if (normalizedMessage.includes("username")) {
+          setSignupUsernameError(message);
+          setSignupError("");
+        } else if (normalizedMessage.includes("email")) {
+          setSignupEmailError(message);
+          setSignupError("");
+        } else {
+          setSignupError(message);
+        }
         setSignupLoading(false);
         return;
       }

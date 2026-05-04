@@ -93,7 +93,7 @@ export default function AdminSidebar({ onCollapse }) {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
     window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-    navigate("/", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return (
