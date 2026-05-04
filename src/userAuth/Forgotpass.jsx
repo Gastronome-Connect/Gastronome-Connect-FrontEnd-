@@ -25,6 +25,7 @@ const ForgotPassword = () => {
   const [showResendPopup, setShowResendPopup] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [mobile, setMobile] = useState(isMobile());
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -54,6 +55,7 @@ const ForgotPassword = () => {
     if (!validateEmail()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
+    setIsLoading(true);
 
     try {
       const response = await fetch(buildApiUrl("/api/forgot-password"), {
@@ -72,6 +74,8 @@ const ForgotPassword = () => {
       setShowResendPopup(true);
     } catch (error) {
       setSubmitError(error.message || "Failed to send reset link");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -183,9 +187,10 @@ const ForgotPassword = () => {
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md"
+                    disabled={isLoading}
+                    className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-sfpro font-bold text-white bg-gradient-to-b from-[#0060A9] to-[#00B4FA] hover:brightness-110 active:scale-[0.98] transition-all outline-none shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Send Code
+                    {isLoading ? "Sending..." : "Send Code"}
                   </button>
                 </form>
 

@@ -22,6 +22,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const [skipIngredientPrompt, setSkipIngredientPrompt] = useState(false);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [showIngredientPrompt, setShowIngredientPrompt] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
   const fileInputRef = useRef(null);
@@ -142,6 +143,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
 
   const handlePost = async () => {
     if (isPostEmpty) return;
+    if (isLoading) return;
     if (ingredients.length === 0 && !skipIngredientPrompt) {
       setShowIngredientPrompt(true);
       return;
@@ -150,60 +152,68 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   };
 
   const submitPost = async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      alert("User is not authenticated. Please log in again.");
-      return;
-    }
-
-    let decoded;
+    setIsLoading(true);
     try {
-      decoded = jwtDecode(token);
-    } catch (error) {
-      console.error("Invalid token:", error);
-      alert("Invalid token. Please log in again.");
-      return;
-    }
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        alert("User is not authenticated. Please log in again.");
+        return;
+      }
 
-    if (!decoded.userId && !decoded.id) {
-      alert("User ID is missing. Please log in again.");
-      return;
-    }
+      let decoded;
+      try {
+        decoded = jwtDecode(token);
+      } catch (error) {
+        console.error("Invalid token:", error);
+        alert("Invalid token. Please log in again.");
+        return;
+      }
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("caption", postText);
-    formData.append("userId", decoded.userId || decoded.id);
-    formData.append("ingredients", JSON.stringify(ingredients));
-    mediaItems.forEach((item) => {
-      if (item.file) formData.append("media", item.file);
-    });
+      if (!decoded.userId && !decoded.id) {
+        alert("User ID is missing. Please log in again.");
+        return;
+      }
 
-    const response = await apiFetch("/api/posts", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Failed to create post");
-
-    if (typeof onPost === "function") {
-      onPost({
-        ...data,
-        title,
-        caption: postText,
-        ingredients,
-        mediaItems: mediaItems.map(({ file, ...rest }) => rest),
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("caption", postText);
+      formData.append("userId", decoded.userId || decoded.id);
+      formData.append("ingredients", JSON.stringify(ingredients));
+      mediaItems.forEach((item) => {
+        if (item.file) formData.append("media", item.file);
       });
-    }
 
-    clearDraft();
-    setTitle("");
-    setPostText("");
-    setMediaItems([]);
-    setIngredients([]);
-    setStep(STEP_COMPOSE);
-    onClose();
+      const response = await apiFetch("/api/posts", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to create post");
+
+      if (typeof onPost === "function") {
+        onPost({
+          ...data,
+          title,
+          caption: postText,
+          ingredients,
+          mediaItems: mediaItems.map(({ file, ...rest }) => rest),
+        });
+      }
+
+      clearDraft();
+      setTitle("");
+      setPostText("");
+      setMediaItems([]);
+      setIngredients([]);
+      setStep(STEP_COMPOSE);
+      onClose();
+    } catch (error) {
+      console.error("Error submitting post:", error);
+      alert(error.message || "Failed to create post");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleIngredientPromptAdd = () => setShowIngredientPrompt(false);
@@ -241,6 +251,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
     isPostEmpty,
     onAttemptClose: attemptClose,
     onPost: handlePost,
+    isLoading,
   };
 
   return createPortal(

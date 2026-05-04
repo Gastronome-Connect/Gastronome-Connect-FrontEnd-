@@ -6,6 +6,7 @@ import IngredientInput from "../IngredientsInput";
 const CaptionsStep = ({
   mediaItems,
   isPostEmpty,
+  isLoading,
   onBack,
   onAttemptClose,
   onPost,
@@ -68,14 +69,14 @@ const CaptionsStep = ({
         </button>
         <button
           onClick={onPost}
-          disabled={isPostEmpty}
+          disabled={isPostEmpty || isLoading}
           className={`flex-1 font-bold py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm shadow-lg transition-all active:scale-95 ${
-            isPostEmpty
+            isPostEmpty || isLoading
               ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
               : "bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white hover:opacity-90"
           }`}
         >
-          Post Recipe
+          {isLoading ? "Posting..." : "Post Recipe"}
         </button>
       </div>
     </div>

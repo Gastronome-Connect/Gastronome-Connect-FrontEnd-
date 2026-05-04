@@ -31,6 +31,7 @@ export default function ComposeStep({
   skipIngredientPrompt,
   setSkipIngredientPrompt,
   isPostEmpty,
+  isLoading,
   onAttemptClose,
   onPost,
 }) {
@@ -222,15 +223,15 @@ export default function ComposeStep({
         {/* Post button */}
         <button
           onClick={onPost}
-          disabled={isPostEmpty}
+          disabled={isPostEmpty || isLoading}
           className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm font-bold shadow transition-all
             ${
-              isPostEmpty
+              isPostEmpty || isLoading
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white hover:opacity-90 active:scale-[0.98]"
             }`}
         >
-          Post
+          {isLoading ? "Posting..." : "Post"}
         </button>
       </div>
     </div>
