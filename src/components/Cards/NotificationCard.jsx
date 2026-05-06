@@ -16,6 +16,44 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("en", {
+  numeric: "auto",
+});
+
+const getRelativeTimeLabel = (timestamp, now = Date.now()) => {
+  const parsedTimestamp = Number(timestamp);
+
+  if (!Number.isFinite(parsedTimestamp) || parsedTimestamp <= 0) {
+    return "just now";
+  }
+
+  const diffMs = parsedTimestamp - now;
+  const diffSeconds = Math.round(diffMs / 1000);
+  const absoluteSeconds = Math.abs(diffSeconds);
+
+  if (absoluteSeconds < 45) {
+    return "just now";
+  }
+
+  const ranges = [
+    { unit: "year", seconds: 60 * 60 * 24 * 365 },
+    { unit: "month", seconds: 60 * 60 * 24 * 30 },
+    { unit: "week", seconds: 60 * 60 * 24 * 7 },
+    { unit: "day", seconds: 60 * 60 * 24 },
+    { unit: "hour", seconds: 60 * 60 },
+    { unit: "minute", seconds: 60 },
+  ];
+
+  for (const range of ranges) {
+    if (absoluteSeconds >= range.seconds) {
+      const value = Math.round(diffSeconds / range.seconds);
+      return RELATIVE_TIME_FORMATTER.format(value, range.unit);
+    }
+  }
+
+  return RELATIVE_TIME_FORMATTER.format(diffSeconds, "second");
+};
+
 const ROUTE_MAP = {
   like: "/feed",
   dislike: "/feed",
@@ -122,6 +160,7 @@ export default function NotificationCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+  const [now, setNow] = useState(() => Date.now());
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -133,7 +172,7 @@ export default function NotificationCard({
     actorUsername = "",
     content = "interacted with your post.",
     caption = "There is new activity on your account.",
-    timeAgo = "just now",
+    timeAgo,
     timestamp,
     type = "like",
     targetRoute,
@@ -148,14 +187,24 @@ export default function NotificationCard({
   const hiddenCount =
     normalizedImages.length > 3 ? normalizedImages.length - 3 : 0;
   const destination = targetRoute || ROUTE_MAP[type] || "/feed";
-  const displayTime =
-    timeAgo || (timestamp ? new Date(timestamp).toLocaleString() : "just now");
+  const displayTime = timeAgo || getRelativeTimeLabel(timestamp, now);
   const Icon = config.Icon;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const handleCardClick = (e) => {
     if (buttonRef.current?.contains(e.target)) return;
     if (dropdownRef.current?.contains(e.target)) return;
-    onClick?.();
+    if (onClick) {
+      onClick(notification, destination, navigate);
+      return;
+    }
     if (destination) navigate(destination);
   };
 

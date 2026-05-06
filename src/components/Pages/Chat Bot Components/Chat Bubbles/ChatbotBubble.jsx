@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import AILogo from "../../../Assets/AILogo.png";
 
+const INLINE_TOKEN_REGEX =
+  /(\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s]+))/g;
+
 const RECIPE_FIELDS = [
   "Title of the dish",
   "Author",
@@ -31,7 +34,9 @@ const parseRecipeMessage = (message = "") => {
   fieldPositions.forEach((entry, index) => {
     const start = entry.index + entry.field.length + 1;
     const end =
-      index < fieldPositions.length - 1 ? fieldPositions[index + 1].index : text.length;
+      index < fieldPositions.length - 1
+        ? fieldPositions[index + 1].index
+        : text.length;
 
     parsed[entry.field] = text.slice(start, end).trim();
   });
@@ -68,14 +73,146 @@ const parseProcedureSteps = (value = "") => {
     .filter(Boolean);
 };
 
+const normalizeMessageText = (value = "") =>
+  String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/([^\n])\s+(\d+[.)]\s+)/g, "$1\n$2")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const stripTrailingPunctuation = (url = "") => {
+  let normalizedUrl = String(url || "");
+  let trailing = "";
+
+  while (/[.,!?;:]$/.test(normalizedUrl)) {
+    trailing = normalizedUrl.slice(-1) + trailing;
+    normalizedUrl = normalizedUrl.slice(0, -1);
+  }
+
+  return { normalizedUrl, trailing };
+};
+
+function renderInlineContent(text = "", keyPrefix = "inline") {
+  const value = String(text || "");
+  const nodes = [];
+  let lastIndex = 0;
+  let match;
+  let tokenIndex = 0;
+
+  while ((match = INLINE_TOKEN_REGEX.exec(value)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(value.slice(lastIndex, match.index));
+    }
+
+    if (match[2]) {
+      nodes.push(
+        <strong
+          key={`${keyPrefix}-bold-${tokenIndex}`}
+          className="font-extrabold text-gray-900"
+        >
+          {match[2]}
+        </strong>,
+      );
+    } else if (match[3] && match[4]) {
+      nodes.push(
+        <a
+          key={`${keyPrefix}-md-link-${tokenIndex}`}
+          href={match[4]}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-[#0060A9] underline decoration-[#0060A9]/40 underline-offset-2 break-all hover:text-[#F57600]"
+        >
+          {match[3]}
+        </a>,
+      );
+    } else if (match[5]) {
+      const { normalizedUrl, trailing } = stripTrailingPunctuation(match[5]);
+      nodes.push(
+        <a
+          key={`${keyPrefix}-raw-link-${tokenIndex}`}
+          href={normalizedUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-[#0060A9] underline decoration-[#0060A9]/40 underline-offset-2 break-all hover:text-[#F57600]"
+        >
+          {normalizedUrl}
+        </a>,
+      );
+
+      if (trailing) {
+        nodes.push(trailing);
+      }
+    }
+
+    lastIndex = INLINE_TOKEN_REGEX.lastIndex;
+    tokenIndex += 1;
+  }
+
+  if (lastIndex < value.length) {
+    nodes.push(value.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function FormattedMessage({ text, showCursor = false }) {
+  const normalized = normalizeMessageText(text);
+  const lines = normalized ? normalized.split("\n") : [];
+
+  if (lines.length === 0) {
+    return showCursor ? (
+      <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-0.5 align-middle animate-pulse" />
+    ) : null;
+  }
+
+  return (
+    <div className="space-y-2 text-xs sm:text-sm text-gray-800 leading-6 sm:leading-7 break-words">
+      {lines.map((line, index) => {
+        const numberedMatch = line.match(/^(\d+[.)])\s+(.*)$/);
+
+        if (!line.trim()) {
+          return <div key={`line-${index}`} className="h-2" />;
+        }
+
+        if (numberedMatch) {
+          return (
+            <div key={`line-${index}`} className="flex items-start gap-2.5">
+              <span className="shrink-0 font-extrabold text-[#F57600]">
+                {numberedMatch[1]}
+              </span>
+              <span className="min-w-0">
+                {renderInlineContent(numberedMatch[2], `line-${index}`)}
+                {showCursor && index === lines.length - 1 && (
+                  <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-0.5 align-middle animate-pulse" />
+                )}
+              </span>
+            </div>
+          );
+        }
+
+        return (
+          <p key={`line-${index}`}>
+            {renderInlineContent(line, `line-${index}`)}
+            {showCursor && index === lines.length - 1 && (
+              <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-0.5 align-middle animate-pulse" />
+            )}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function RecipeMessageLayout({ recipe }) {
   const title = recipe["Title of the dish"] || "Recipe";
   const author = recipe["Author"] || "Not available in the source data.";
   const ingredients = parseIngredients(recipe["Ingredients and Measurement"]);
   const steps = parseProcedureSteps(recipe["Procedure/Description"]);
-  const websiteLink = recipe["Website link (if any)"] || "Not available in the source data.";
+  const websiteLink =
+    recipe["Website link (if any)"] || "Not available in the source data.";
   const otherInfo = recipe["Other information or AI's chat"] || "";
-  const hasLink = websiteLink && websiteLink !== "Not available in the source data.";
+  const hasLink =
+    websiteLink && websiteLink !== "Not available in the source data.";
 
   return (
     <div className="space-y-4 rounded-[22px] border border-orange-100 bg-white/95 p-4 sm:p-5 shadow-[0_12px_30px_-20px_rgba(245,118,0,0.45)]">
@@ -104,14 +241,21 @@ function RecipeMessageLayout({ recipe }) {
         {ingredients.length > 0 ? (
           <ul className="space-y-1.5">
             {ingredients.map((item, index) => (
-              <li key={`${index}-${item.slice(0, 18)}`} className="flex items-start gap-2">
+              <li
+                key={`${index}-${item.slice(0, 18)}`}
+                className="flex items-start gap-2"
+              >
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F57600] shrink-0" />
-                <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">{item}</span>
+                <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                  {item}
+                </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-xs sm:text-sm text-gray-500">Not available in the source data.</p>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Not available in the source data.
+          </p>
         )}
       </div>
 
@@ -122,16 +266,23 @@ function RecipeMessageLayout({ recipe }) {
         {steps.length > 0 ? (
           <ol className="space-y-2.5">
             {steps.map((step, index) => (
-              <li key={`${index}-${step.slice(0, 18)}`} className="flex items-start gap-3">
+              <li
+                key={`${index}-${step.slice(0, 18)}`}
+                className="flex items-start gap-3"
+              >
                 <span className="shrink-0 text-xs font-extrabold text-[#F57600]">
                   {index + 1}.
                 </span>
-                <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">{step}</span>
+                <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                  {step}
+                </span>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="text-xs sm:text-sm text-gray-500">Not available in the source data.</p>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Not available in the source data.
+          </p>
         )}
       </div>
 
@@ -157,9 +308,12 @@ function RecipeMessageLayout({ recipe }) {
         <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#F57600] mb-2">
           Other Information or AI's Chat
         </p>
-        <p className="text-xs sm:text-sm text-gray-700 leading-6 whitespace-pre-line break-words">
-          {otherInfo || "Ask me if you want substitutions, serving ideas, or a simpler version of this dish."}
-        </p>
+        <FormattedMessage
+          text={
+            otherInfo ||
+            "Ask me if you want substitutions, serving ideas, or a simpler version of this dish."
+          }
+        />
       </div>
     </div>
   );
@@ -222,19 +376,12 @@ export default function BotMessageBubble({
               />
             ))}
           </span>
+        ) : parsedRecipe ? (
+          <div>
+            <RecipeMessageLayout recipe={parsedRecipe} />
+          </div>
         ) : (
-          parsedRecipe ? (
-            <div>
-              <RecipeMessageLayout recipe={parsedRecipe} />
-            </div>
-          ) : (
-            <p className="text-xs sm:text-sm text-gray-800 leading-6 sm:leading-7 whitespace-pre-line break-words">
-              {displayed}
-              {!done && (
-                <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-0.5 align-middle animate-pulse" />
-              )}
-            </p>
-          )
+          <FormattedMessage text={displayed} showCursor={!done} />
         )}
 
         {done && !hideActions && (

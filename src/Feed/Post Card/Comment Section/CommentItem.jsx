@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { FaThumbsUp } from "react-icons/fa";
-import { ChevronRight, Copy, Flag } from "lucide-react";
+import { ChevronRight, Copy, Flag, Trash2 } from "lucide-react";
 import ReplySection from "./ReplySection";
 import ReportModal from "../../../components/Modals/MoreOptionsModal";
 import ReportToast from "../../../components/Toast/ReportToast";
+import DeleteConfirmModal from "../../../components/Modals/DeleteConfirmModal";
+import MentionText from "../../../components/Editor/MentionText";
 
 // ─── Current user identity ─────────────────────────────────────────────────────
 // In a real app, pull this from your auth context / store.
@@ -46,8 +48,11 @@ const useSmartPosition = (triggerRef, open) => {
 const OptionsDropdown = ({
   onCopy,
   onReport,
+  onDelete,
   reportLabel = "Report",
   canReport = true,
+  canDelete = false,
+  deleteLabel = "Delete",
 }) => (
   <div
     className="bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden py-1"
@@ -60,6 +65,19 @@ const OptionsDropdown = ({
       <Copy size={14} className="text-gray-400 shrink-0" />
       Copy
     </button>
+
+    {canDelete && (
+      <>
+        <div className="h-px bg-gray-100 mx-2" />
+        <button
+          onClick={onDelete}
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors text-left"
+        >
+          <Trash2 size={14} className="shrink-0" />
+          {deleteLabel}
+        </button>
+      </>
+    )}
 
     {canReport && (
       <>
@@ -89,13 +107,18 @@ export const MoreMenu = ({
   subject = "this",
   comment = null, // ← ADD
   postTitle = "", // ← ADD
+  canDelete = false,
+  onDelete,
+  canReport = true,
+  deleteLabel = "Delete",
 }) => {
   const isOwner = author === CURRENT_USER; // owner cannot report their own content
-  const canReport = !isOwner;
+  const resolvedCanReport = canDelete ? false : canReport && !isOwner;
 
   const [dropOpen, setDropOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const btnRef = useRef(null);
   const wrapRef = useRef(null);
@@ -122,6 +145,20 @@ export const MoreMenu = ({
     setModalOpen(true);
   };
 
+  const handleDelete = () => {
+    setDropOpen(false);
+    if (!canDelete) {
+      return;
+    }
+
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteModalOpen(false);
+    onDelete?.();
+  };
+
   const handleSubmitReport = (reasonId, detail) => {
     console.log("Report submitted:", { reasonId, detail });
     setToastVisible(true);
@@ -146,15 +183,18 @@ export const MoreMenu = ({
             <OptionsDropdown
               onCopy={handleCopy}
               onReport={handleOpenReport}
+              onDelete={handleDelete}
               reportLabel={reportLabel}
-              canReport={canReport}
+              canReport={resolvedCanReport}
+              canDelete={canDelete}
+              deleteLabel={deleteLabel}
             />
           </div>
         )}
       </div>
 
       {/* Only render modal when reporting is allowed */}
-      {canReport && (
+      {resolvedCanReport && (
         <ReportModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
@@ -169,12 +209,25 @@ export const MoreMenu = ({
         visible={toastVisible}
         onDone={() => setToastVisible(false)}
       />
+
+      <DeleteConfirmModal
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+        title={subject === "this reply" ? "Delete Reply?" : "Delete Comment?"}
+        message={
+          subject === "this reply"
+            ? "This action cannot be undone. The reply will be permanently removed."
+            : "This action cannot be undone. The comment will be permanently removed."
+        }
+        confirmLabel="Delete"
+        isOpen={deleteModalOpen}
+      />
     </>
   );
 };
 
 // ─── CommentItem ───────────────────────────────────────────────────────────────
-const CommentItem = ({ comment, postId, onReply, onReact }) => {
+const CommentItem = ({ comment, postId, onReply, onReact, onDelete }) => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const vote = comment.viewerReaction || "none";
   const likes = comment.likesCount ?? comment.likes ?? 0;
@@ -192,7 +245,7 @@ const CommentItem = ({ comment, postId, onReply, onReact }) => {
   };
 
   return (
-    <div className="flex gap-2 sm:gap-2.5 w-full">
+    <div className="flex gap-2 sm:gap-2.5 w-full max-w-[540px] self-center">
       <img
         src={comment.avatar}
         alt={comment.author}
@@ -203,9 +256,11 @@ const CommentItem = ({ comment, postId, onReply, onReact }) => {
           <p className="text-xs font-bold text-gray-800 mb-0.5">
             {comment.author}
           </p>
-          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
-            {comment.text}
-          </p>
+          <MentionText
+            text={comment.text}
+            mentions={comment.mentions}
+            className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap break-words"
+          />
         </div>
 
         <div className="flex items-center gap-3 mt-1 ml-1 flex-wrap">
@@ -251,6 +306,9 @@ const CommentItem = ({ comment, postId, onReply, onReact }) => {
             author={comment.author}
             reportLabel="Report comment"
             subject="this comment"
+            canDelete={Boolean(comment.canDeleteByViewer)}
+            onDelete={() => onDelete?.(comment.id)}
+            deleteLabel="Delete comment"
             comment={{
               ...comment,
               postId,
@@ -264,6 +322,7 @@ const CommentItem = ({ comment, postId, onReply, onReact }) => {
         <ReplySection
           threadCommentId={comment.id}
           parentAuthor={comment.author}
+          parentUsername={comment.username}
           replies={replies}
           showInput={showReplyInput}
           onAdd={handleAddReply}
@@ -271,6 +330,7 @@ const CommentItem = ({ comment, postId, onReply, onReact }) => {
           onReply={onReply}
           onReact={onReact}
           postId={postId}
+          onDelete={onDelete}
         />
       </div>
     </div>

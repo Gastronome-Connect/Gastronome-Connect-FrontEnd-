@@ -376,7 +376,7 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
   const modal = (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
-      onClick={handleAttemptClose}
+      onClick={saveLoading ? undefined : handleAttemptClose}
     >
       <div
         className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300"
@@ -395,7 +395,8 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
           </div>
           <button
             onClick={handleAttemptClose}
-            className="p-2 rounded-full bg-black/10 hover:bg-white/20 transition-all"
+            disabled={saveLoading}
+            className="p-2 rounded-full bg-black/10 hover:bg-white/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </button>
@@ -502,11 +503,14 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
               setDeleteError("");
               setShowDeletePopup(true);
             }}
+            disabled={saveLoading}
             className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase border-2 transition-all
               ${
-                activeTab === "profile"
+                activeTab === "profile" && !saveLoading
                   ? "text-red-400 border-red-100 hover:bg-red-50 hover:border-red-300 hover:text-red-600 cursor-pointer"
-                  : "text-transparent border-transparent pointer-events-none select-none"
+                  : saveLoading
+                    ? "text-red-200 border-red-100 pointer-events-none select-none opacity-60"
+                    : "text-transparent border-transparent pointer-events-none select-none"
               }`}
           >
             <Trash2
@@ -520,14 +524,15 @@ const EditProfileModal = ({ onClose, onSave, initialData }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={handleAttemptClose}
-              className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black text-gray-500 uppercase hover:bg-gray-100 transition-all"
+              disabled={saveLoading}
+              className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black text-gray-500 uppercase hover:bg-gray-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saveLoading}
-              className="px-5 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black bg-[#0060A9] text-white hover:bg-[#00B4FA] shadow-lg shadow-blue-200 uppercase transition-all active:scale-95"
+              className="px-5 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-[10px] sm:text-xs font-black bg-[#0060A9] text-white hover:bg-[#00B4FA] shadow-lg shadow-blue-200 uppercase transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saveLoading ? "Saving..." : "Save"}
             </button>

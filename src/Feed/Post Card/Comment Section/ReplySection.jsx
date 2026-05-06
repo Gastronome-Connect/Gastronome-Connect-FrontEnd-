@@ -2,6 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { FaThumbsUp } from "react-icons/fa";
 import { MoreMenu } from "./CommentItem"; // shared ··· menu + identity
+import useCurrentUserAvatar from "../../../Hooks/useCurrentUserAvatar";
+import useMentionSuggestions from "../../../Hooks/useMentionSuggestions";
+import MentionSuggestionsDropdown from "../../../components/Editor/MentionSuggestionsDropdown";
+import MentionText from "../../../components/Editor/MentionText";
+
+const buildMentionSeed = (username = "") => {
+  const normalizedUsername = String(username || "").trim();
+  return normalizedUsername ? `@${normalizedUsername} ` : "";
+};
 
 // ─── Auto-growing textarea ────────────────────────────────────────────────────
 const AutoTextarea = ({
@@ -10,6 +19,7 @@ const AutoTextarea = ({
   onKeyDown,
   placeholder,
   inputRef,
+  ...textareaProps
 }) => {
   useEffect(() => {
     if (!inputRef?.current) return;
@@ -25,6 +35,7 @@ const AutoTextarea = ({
       onChange={onChange}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
+      {...textareaProps}
       className="w-full text-xs text-gray-700 placeholder-gray-400 border-none focus:ring-0 outline-none bg-transparent resize-none overflow-y-auto leading-relaxed"
       style={{ minHeight: "18px", maxHeight: "100px" }}
     />
@@ -39,6 +50,8 @@ const ReplyBubble = ({
   onAddReply,
   onReact,
   postId,
+  onDelete,
+  currentUserAvatar,
 }) => {
   const vote = reply.viewerReaction || "none";
   const likes = reply.likesCount ?? reply.likes ?? 0;
@@ -47,10 +60,25 @@ const ReplyBubble = ({
   const [nestedVisible, setNestedVisible] = useState(true);
   const inputRef = useRef(null);
   const nested = Array.isArray(reply.replies) ? reply.replies : [];
+  const replyTargetUsername = reply.username || reply.replyingToUsername || "";
+  const { suggestions, isOpen, setIsOpen, selectMention, syncCaretPosition } =
+    useMentionSuggestions({
+      value: input,
+      setValue: setInput,
+      textareaRef: inputRef,
+    });
 
   useEffect(() => {
     if (showInput && inputRef.current) inputRef.current.focus();
   }, [showInput]);
+
+  useEffect(() => {
+    if (!showInput) {
+      return;
+    }
+
+    setInput((current) => current || buildMentionSeed(replyTargetUsername));
+  }, [showInput, replyTargetUsername]);
 
   const handleLike = () => {
     onReact?.(reply.id, "like");
@@ -69,6 +97,7 @@ const ReplyBubble = ({
     });
     setNestedVisible(true);
     setInput("");
+    setIsOpen(false);
     setShowInput(false);
   };
 
@@ -93,14 +122,13 @@ const ReplyBubble = ({
       <div className="flex-1 min-w-0">
         <div className="bg-gray-100 rounded-2xl px-3 py-2 w-full">
           <p className="text-xs font-bold text-gray-800 mb-0.5">
-            {reply.replyingTo && (
-              <span className="text-[#F57600] mr-1">@{reply.replyingTo}</span>
-            )}
             {reply.author}
           </p>
-          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
-            {reply.text}
-          </p>
+          <MentionText
+            text={reply.text}
+            mentions={reply.mentions}
+            className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap break-words"
+          />
         </div>
 
         <div className="flex items-center gap-3 mt-1 ml-1 flex-wrap">
@@ -146,6 +174,9 @@ const ReplyBubble = ({
             author={reply.author}
             reportLabel="Report reply"
             subject="this reply"
+            canDelete={Boolean(reply.canDeleteByViewer)}
+            onDelete={() => onDelete?.(reply.id)}
+            deleteLabel="Delete reply"
             comment={{
               ...reply,
               postId,
@@ -178,6 +209,8 @@ const ReplyBubble = ({
                     onAddReply={onAddReply}
                     onReact={onReact}
                     postId={postId}
+                    onDelete={onDelete}
+                    currentUserAvatar={currentUserAvatar}
                   />
                 ))}
               </div>
@@ -189,21 +222,34 @@ const ReplyBubble = ({
         {showInput && (
           <div className="mt-2 flex items-center gap-2">
             <img
-              src="https://i.pravatar.cc/100?img=12"
+              src={currentUserAvatar}
               alt="You"
               className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-300"
             />
-            <div className="flex-1 min-w-0 flex items-center bg-white rounded-2xl border border-gray-200 px-3 py-1.5 gap-2 focus-within:border-[#F57600] transition-colors">
+            <div className="relative flex-1 min-w-0 flex items-center bg-white rounded-2xl border border-gray-200 px-3 py-1.5 gap-2 focus-within:border-[#F57600] transition-colors">
+              {isOpen && (
+                <MentionSuggestionsDropdown
+                  suggestions={suggestions}
+                  onSelect={(suggestion) => selectMention(suggestion.username)}
+                />
+              )}
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-[#F57600] font-semibold mb-0.5">
-                  @{reply.author}
-                </p>
                 <AutoTextarea
                   inputRef={inputRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    syncCaretPosition(e);
+                  }}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Reply to ${reply.author}...`}
+                  onClick={syncCaretPosition}
+                  onKeyUp={syncCaretPosition}
+                  onSelect={syncCaretPosition}
+                  onBlur={() => {
+                    setTimeout(() => setIsOpen(false), 120);
+                  }}
+                  onFocus={syncCaretPosition}
+                  placeholder={`Mention @${replyTargetUsername || "username"} and write a reply...`}
                 />
               </div>
               <button
@@ -227,6 +273,7 @@ const ReplyBubble = ({
 const ReplySection = ({
   threadCommentId,
   parentAuthor,
+  parentUsername,
   replies = [],
   showInput = false,
   onAdd,
@@ -234,11 +281,27 @@ const ReplySection = ({
   onReply,
   onReact,
   postId,
+  onDelete,
 }) => {
   const [visible, setVisible] = useState(true);
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
   const localReplies = Array.isArray(replies) ? replies : [];
+  const currentUserAvatar = useCurrentUserAvatar();
+  const { suggestions, isOpen, setIsOpen, selectMention, syncCaretPosition } =
+    useMentionSuggestions({
+      value: input,
+      setValue: setInput,
+      textareaRef: inputRef,
+    });
+
+  useEffect(() => {
+    if (!showInput) {
+      return;
+    }
+
+    setInput((current) => current || buildMentionSeed(parentUsername));
+  }, [showInput, parentUsername]);
 
   useEffect(() => {
     if (showInput && inputRef.current) inputRef.current.focus();
@@ -250,6 +313,7 @@ const ReplySection = ({
     setVisible(true);
     onAdd?.(text);
     setInput("");
+    setIsOpen(false);
     onCloseInput?.();
   };
 
@@ -290,27 +354,42 @@ const ReplySection = ({
             onAddReply={onReply}
             onReact={onReact}
             postId={postId}
+            onDelete={onDelete}
+            currentUserAvatar={currentUserAvatar}
           />
         ))}
 
       {showInput && (
         <div className="flex items-center gap-2">
           <img
-            src="https://i.pravatar.cc/100?img=12"
+            src={currentUserAvatar}
             alt="You"
             className="w-7 h-7 rounded-full object-cover shrink-0 border border-orange-300"
           />
-          <div className="flex-1 min-w-0 flex items-center bg-white rounded-2xl border border-gray-200 px-3 py-1.5 gap-2 focus-within:border-[#F57600] transition-colors">
+          <div className="relative flex-1 min-w-0 flex items-center bg-white rounded-2xl border border-gray-200 px-3 py-1.5 gap-2 focus-within:border-[#F57600] transition-colors">
+            {isOpen && (
+              <MentionSuggestionsDropdown
+                suggestions={suggestions}
+                onSelect={(suggestion) => selectMention(suggestion.username)}
+              />
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-[#F57600] font-semibold mb-0.5">
-                @{parentAuthor}
-              </p>
               <AutoTextarea
                 inputRef={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  syncCaretPosition(e);
+                }}
                 onKeyDown={handleKeyDown}
-                placeholder={`Reply to ${parentAuthor}...`}
+                onClick={syncCaretPosition}
+                onKeyUp={syncCaretPosition}
+                onSelect={syncCaretPosition}
+                onBlur={() => {
+                  setTimeout(() => setIsOpen(false), 120);
+                }}
+                onFocus={syncCaretPosition}
+                placeholder={`Mention @${parentUsername || "username"} and write a reply...`}
               />
             </div>
             <button

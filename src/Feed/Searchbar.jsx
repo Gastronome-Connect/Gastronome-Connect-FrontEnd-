@@ -213,7 +213,7 @@ export default function Searchbar({
             className="absolute top-[120%] left-0 z-50 flex items-center gap-2 bg-[#F57600] text-white text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-lg shadow-orange-500/20"
           >
             <Sparkles size={10} />
-            Quick Access
+            Open search bar
           </motion.div>
         )}
       </AnimatePresence>

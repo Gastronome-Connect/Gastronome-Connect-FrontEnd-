@@ -10,12 +10,14 @@ const CommentList = ({
   postId,
   onReply,
   onReact,
+  onDelete,
 }) => {
   return (
     <div
       className={`px-4 pt-3 pb-2 flex flex-col gap-3 ${
         scrollable ? "max-h-48 sm:max-h-56 overflow-y-auto" : ""
       }`}
+      style={{ alignItems: "center" }}
     >
       {comments.length === 0 ? (
         <p className="text-xs text-gray-400 text-center py-4">
@@ -29,6 +31,7 @@ const CommentList = ({
             postId={postId}
             onReply={onReply}
             onReact={onReact}
+            onDelete={onDelete}
           />
         ))
       )}

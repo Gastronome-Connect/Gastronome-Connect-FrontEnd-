@@ -29,6 +29,7 @@ import CreatePostModal from "../components/Modals/CreatePostModal";
 import LogOutModal from "../components/Modals/LogOutModal";
 import PopularRecipes from "../components/Feed Components/PopularRecipePanel";
 import useAccountSearch from "../Hooks/useAccountSearch";
+import { useChat } from "../Hooks/UseChats";
 
 const AUTH_STATE_EVENT = "auth-state-changed";
 
@@ -86,7 +87,8 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { userName, userUsername, userAvatar } = useUserInfo();
-  const { sessions, activeSessionId, dispatch } = useChatContext();
+  const { sessions, activeSessionId } = useChatContext();
+  const { deleteSession, switchSession } = useChat();
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true",
@@ -160,7 +162,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
           window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-          navigate("/login?mode=login", { replace: true });
+          navigate("/login", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
@@ -326,10 +328,7 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                           >
                             <button
                               onClick={() => {
-                                dispatch({
-                                  type: "SET_ACTIVE_SESSION",
-                                  payload: session.id,
-                                });
+                                switchSession(session.id);
                                 navigate("/chatbot");
                               }}
                               className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-xs
@@ -498,12 +497,9 @@ function DesktopSidebar({ onNewPost, hasNotifications }) {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (deleteConfirm.sessionId) {
-                    dispatch({
-                      type: "DELETE_SESSION",
-                      payload: deleteConfirm.sessionId,
-                    });
+                    await deleteSession(deleteConfirm.sessionId);
                   }
                   setDeleteConfirm({
                     open: false,
@@ -707,7 +703,7 @@ function MobileBottomNav({ onNewPost, hasNotifications, onMobileSearch }) {
           localStorage.removeItem("adminAccessToken");
           localStorage.removeItem("userId");
           window.dispatchEvent(new Event(AUTH_STATE_EVENT));
-          navigate("/login?mode=login", { replace: true });
+          navigate("/", { replace: true });
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />

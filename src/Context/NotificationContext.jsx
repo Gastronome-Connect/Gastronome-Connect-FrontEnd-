@@ -52,6 +52,9 @@ const normalizeNotification = (notification) => {
       notification?.id ||
       `notif-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
     type: notification?.type || "like",
+    postId: notification?.postId ? String(notification.postId) : null,
+    commentId: notification?.commentId ? String(notification.commentId) : null,
+    reportId: notification?.reportId ? String(notification.reportId) : null,
     actorName: notification?.actorName || notification?.author || "Someone",
     actorAvatar:
       resolveAvatarUrl(notification?.actorAvatar || notification?.avatar) ||

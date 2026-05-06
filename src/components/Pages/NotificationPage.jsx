@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
+import { useLocation } from "react-router-dom";
 import Sidebar from "../../Feed/SideBar";
 import { Bell } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -59,13 +66,100 @@ const LazyItem = ({ children, placeholderHeight = 96 }) => {
   );
 };
 
+const buildReportModalCopy = (notification) => {
+  const action = String(notification?.metadata?.action || "updated").trim();
+  const targetType = String(
+    notification?.metadata?.targetType || "content",
+  ).trim();
+
+  if (action === "reported") {
+    return {
+      title: "Report Received",
+      body: `Your ${targetType} was reported and is now under verification/checking by the admin team.`,
+    };
+  }
+
+  if (action === "submitted") {
+    return {
+      title: "Report Submitted",
+      body: `Your report about this ${targetType} was submitted to the admin team and is now under verification/checking.`,
+    };
+  }
+
+  if (action === "remove") {
+    return {
+      title: "Report Resolved",
+      body: `The admin team reviewed your ${targetType} report and removed the reported content.`,
+    };
+  }
+
+  if (action === "keep") {
+    return {
+      title: "Report Resolved",
+      body: `The admin team reviewed your ${targetType} report and decided to keep the reported content visible.`,
+    };
+  }
+
+  return {
+    title: "Report Update",
+    body:
+      notification?.caption ||
+      "This report update is now available for review.",
+  };
+};
+
+const ReportUpdateModal = ({ notification, onClose }) => {
+  if (!notification) {
+    return null;
+  }
+
+  const copy = buildReportModalCopy(notification);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl"
+      >
+        <div className="mb-4 inline-flex rounded-full bg-[#0060A9]/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#0060A9]">
+          Report Update
+        </div>
+        <h2 className="text-2xl font-black tracking-tight text-gray-900">
+          {copy.title}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-gray-600">{copy.body}</p>
+        {notification.content && (
+          <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-gray-700">
+            {notification.content}
+          </div>
+        )}
+        <button
+          onClick={onClose}
+          className="mt-6 w-full rounded-2xl bg-[#0060A9] px-4 py-3 text-sm font-black text-white transition-colors hover:bg-[#004f8d]"
+        >
+          Close
+        </button>
+      </motion.div>
+    </div>
+  );
+};
+
 export default function NotificationsPage() {
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true",
   );
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [sortOpen, setSortOpen] = useState(false);
+  const [selectedReportNotification, setSelectedReportNotification] =
+    useState(null);
   const sortRef = useRef(null);
 
   const {
@@ -126,6 +220,48 @@ export default function NotificationsPage() {
   }, [baseList, sortBy]);
 
   const hiddenCount = hiddenNotifications.length;
+
+  const handleNotificationClick = useCallback(
+    async (notification, destination, navigate) => {
+      await markAsRead(notification.id);
+
+      if (notification.type === "report_status") {
+        setSelectedReportNotification(notification);
+        return;
+      }
+
+      if (destination) {
+        navigate(destination);
+      }
+    },
+    [markAsRead],
+  );
+
+  useEffect(() => {
+    const notificationId = new URLSearchParams(location.search).get(
+      "notificationId",
+    );
+
+    if (!notificationId) {
+      return;
+    }
+
+    const matchingNotification = [
+      ...visibleNotifications,
+      ...hiddenNotifications,
+    ].find(
+      (notification) =>
+        notification.id === notificationId &&
+        notification.type === "report_status",
+    );
+
+    if (!matchingNotification) {
+      return;
+    }
+
+    markAsRead(matchingNotification.id);
+    setSelectedReportNotification(matchingNotification);
+  }, [hiddenNotifications, location.search, markAsRead, visibleNotifications]);
 
   return (
     <div className="flex h-screen w-full bg-[#F8F9FA] overflow-hidden">
@@ -292,7 +428,7 @@ export default function NotificationsPage() {
                       <NotificationCard
                         notification={notif}
                         isHidden={notif.hidden}
-                        onClick={() => markAsRead(notif.id)}
+                        onClick={handleNotificationClick}
                         onDelete={() => deleteNotification(notif.id)}
                         onHide={() => hideNotification(notif.id)}
                         onUnhide={() => unhideNotification(notif.id)}
@@ -337,6 +473,14 @@ export default function NotificationsPage() {
         onDone={resetUpload}
       />
       <PostUnderReviewPopup {...reviewPopupProps} />
+      <AnimatePresence>
+        {selectedReportNotification && (
+          <ReportUpdateModal
+            notification={selectedReportNotification}
+            onClose={() => setSelectedReportNotification(null)}
+          />
+        )}
+      </AnimatePresence>
       <UploadFailedModal
         isOpen={uploadState === "failed"}
         onRetry={retryUpload}

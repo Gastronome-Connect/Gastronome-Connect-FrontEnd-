@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 
 import Sidebar from "../Feed/SideBar";
 import Searchbar from "./Searchbar";
@@ -79,6 +80,7 @@ const InfiniteScrollTrigger = ({ onTrigger, hasMore, isLoading }) => {
 };
 
 export default function GCFeed() {
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -87,7 +89,16 @@ export default function GCFeed() {
   const [, setChatExpanded] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const mainRef = useRef(null);
+  const postRefs = useRef(new Map());
   const { isSuppressedByArchive } = useUserLibrary();
+  const targetParams = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return {
+      postId: searchParams.get("postId") || "",
+      open: searchParams.get("open") || "",
+      commentId: searchParams.get("commentId") || "",
+    };
+  }, [location.search]);
 
   const {
     uploadState,
@@ -140,6 +151,45 @@ export default function GCFeed() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
+    const fetchTargetedPost = async () => {
+      if (!targetParams.postId) {
+        return;
+      }
+
+      const alreadyLoaded = posts.some(
+        (post) => String(post.id) === String(targetParams.postId),
+      );
+
+      if (alreadyLoaded) {
+        return;
+      }
+
+      try {
+        const response = await apiFetch(
+          `/api/posts?postId=${encodeURIComponent(targetParams.postId)}`,
+        );
+        const data = await response.json();
+        const targetedPost = Array.isArray(data) ? data[0] : data?.post;
+
+        if (!targetedPost?.id) {
+          return;
+        }
+
+        setPosts((prev) => {
+          const withoutDuplicate = prev.filter(
+            (post) => String(post.id) !== String(targetedPost.id),
+          );
+          return [targetedPost, ...withoutDuplicate];
+        });
+      } catch (error) {
+        console.error("Failed to fetch targeted post:", error);
+      }
+    };
+
+    fetchTargetedPost();
+  }, [posts, targetParams.postId]);
+
+  useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const response = await apiFetch("/api/user");
@@ -164,6 +214,28 @@ export default function GCFeed() {
     setPage(next);
     fetchPage(next);
   }, [hasMore, isFetching, page, fetchPage]);
+
+  useEffect(() => {
+    if (!targetParams.postId) {
+      return;
+    }
+
+    const targetElement = postRefs.current.get(String(targetParams.postId));
+    if (!targetElement) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [posts, targetParams.postId, targetParams.open, targetParams.commentId]);
+
+  const shouldRenderPost = useCallback(
+    (post) =>
+      String(post.id) === String(targetParams.postId || "") ||
+      !isSuppressedByArchive(post),
+    [isSuppressedByArchive, targetParams.postId],
+  );
 
   return (
     <div className="flex h-screen w-full bg-gray-50">
@@ -199,8 +271,7 @@ export default function GCFeed() {
             {initialLoading && <SkeletonPostList count={3} />}
 
             {!initialLoading &&
-              posts.filter((post) => !isSuppressedByArchive(post)).length ===
-                0 && (
+              posts.filter((post) => shouldRenderPost(post)).length === 0 && (
                 <p className="text-center text-gray-400 py-16">
                   No posts yet. Share your first recipe!
                 </p>
@@ -208,36 +279,52 @@ export default function GCFeed() {
 
             {!initialLoading &&
               posts
-                .filter((post) => !isSuppressedByArchive(post))
+                .filter((post) => shouldRenderPost(post))
                 .map((post) => (
-                  <LazyItem key={post.id} placeholderHeight={320}>
-                    <PostCard
-                      post={post}
-                      isOwner={String(post.userId) === String(currentUserId)}
-                      onDelete={(id) =>
-                        setPosts((prev) => prev.filter((p) => p.id !== id))
+                  <div
+                    key={post.id}
+                    ref={(element) => {
+                      if (element) {
+                        postRefs.current.set(String(post.id), element);
+                        return;
                       }
-                      onUpdate={(updated) =>
-                        setPosts((prev) =>
-                          prev.map((p) => (p.id === updated.id ? updated : p)),
-                        )
-                      }
-                      onArchive={(archivedPost) =>
-                        setPosts((prev) =>
-                          prev.filter((candidate) => {
-                            if (candidate.id === archivedPost.id) {
-                              return false;
-                            }
-                            return !isSuppressedByArchive(candidate);
-                          }),
-                        )
-                      }
-                    />
-                  </LazyItem>
+                      postRefs.current.delete(String(post.id));
+                    }}
+                  >
+                    <LazyItem placeholderHeight={320}>
+                      <PostCard
+                        post={post}
+                        isOwner={String(post.userId) === String(currentUserId)}
+                        autoOpenComments={
+                          String(post.id) === String(targetParams.postId) &&
+                          targetParams.open === "comments"
+                        }
+                        onDelete={(id) =>
+                          setPosts((prev) => prev.filter((p) => p.id !== id))
+                        }
+                        onUpdate={(updated) =>
+                          setPosts((prev) =>
+                            prev.map((p) =>
+                              p.id === updated.id ? updated : p,
+                            ),
+                          )
+                        }
+                        onArchive={(archivedPost) =>
+                          setPosts((prev) =>
+                            prev.filter((candidate) => {
+                              if (candidate.id === archivedPost.id) {
+                                return false;
+                              }
+                              return !isSuppressedByArchive(candidate);
+                            }),
+                          )
+                        }
+                      />
+                    </LazyItem>
+                  </div>
                 ))}
 
-            {posts.filter((post) => !isSuppressedByArchive(post)).length >
-              0 && (
+            {posts.filter((post) => shouldRenderPost(post)).length > 0 && (
               <InfiniteScrollTrigger
                 onTrigger={handleLoadMore}
                 hasMore={hasMore}
@@ -246,8 +333,7 @@ export default function GCFeed() {
             )}
 
             {!hasMore &&
-              posts.filter((post) => !isSuppressedByArchive(post)).length >
-                0 && (
+              posts.filter((post) => shouldRenderPost(post)).length > 0 && (
                 <p className="text-center text-xs text-gray-300 py-4 select-none">
                   You've reached the end of your feed.
                 </p>

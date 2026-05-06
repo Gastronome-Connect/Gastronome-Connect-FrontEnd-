@@ -440,7 +440,34 @@ const AuthPage = () => {
         return;
       }
 
-      // Store signup data and navigate to verification to send OTP
+      const registerResponse = await apiFetch("/api/register", {
+        method: "POST",
+        body: JSON.stringify({
+          username: signupUsername.trim(),
+          email: signupEmail,
+          password: signupPassword,
+          confirmPassword,
+        }),
+      });
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        const message = registerData.message || "Failed to start signup";
+        const normalizedMessage = String(message).toLowerCase();
+
+        if (normalizedMessage.includes("username")) {
+          setSignupUsernameError(message);
+          setSignupError("");
+        } else if (normalizedMessage.includes("email")) {
+          setSignupEmailError(message);
+          setSignupError("");
+        } else {
+          setSignupError(message);
+        }
+        setSignupLoading(false);
+        return;
+      }
+
       sessionStorage.setItem("pendingEmail", signupEmail);
       sessionStorage.setItem("sourceFlow", "signup");
       sessionStorage.setItem(

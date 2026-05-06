@@ -249,6 +249,7 @@ const EditPostModal = ({ post, onSave, onClose }) => {
   );
   const [showDiscard, setShowDiscard] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
 
   const hasMultiple = mediaItems.length > 1;
@@ -310,22 +311,29 @@ const EditPostModal = ({ post, onSave, onClose }) => {
     });
   };
 
-  const handleSave = () => {
-    onSave({
-      ...post,
-      title: title.trim() || null,
-      caption,
-      mediaItems,
-      ingredients, // ── persisted back to post
-      image: mediaItems.length > 0 ? mediaItems[0].url : null,
-    });
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      await onSave({
+        ...post,
+        title: title.trim() || null,
+        caption,
+        mediaItems,
+        ingredients, // ── persisted back to post
+        image: mediaItems.length > 0 ? mediaItems[0].url : null,
+      });
 
-    if (!hasChanges) {
-      onClose();
-      return;
+      if (!hasChanges) {
+        onClose();
+        return;
+      }
+
+      setSaveToastVisible(true);
+    } catch (error) {
+      console.error("Error saving post:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setSaveToastVisible(true);
   };
 
   const modalClass =
@@ -383,10 +391,11 @@ const EditPostModal = ({ post, onSave, onClose }) => {
               </button>
               <button
                 onClick={handleSave}
+                disabled={isLoading}
                 className="flex-1 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white
-                           font-bold shadow hover:opacity-90 active:scale-95 transition-all"
+                           font-bold shadow hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Save Changes
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
@@ -591,16 +600,18 @@ const EditPostModal = ({ post, onSave, onClose }) => {
             <div className="flex gap-2 sm:gap-3">
               <button
                 onClick={attemptClose}
-                className="flex-1 py-3 rounded-xl sm:rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
+                className="flex-1 py-3 rounded-xl sm:rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
+                disabled={isLoading}
                 className="flex-1 py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#F57600] to-[#F0AE35] text-white
-                           text-sm font-bold shadow hover:opacity-90 transition-all"
+                           text-sm font-bold shadow hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Save Changes
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

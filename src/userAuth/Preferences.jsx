@@ -35,7 +35,22 @@ const Dropdown = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const inputRef = useRef(null);
+  const wrapperRef = useRef(null);
   const isActive = isOpen || selected.length > 0 || searchTerm.length > 0;
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        isOpen &&
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, setIsOpen]);
 
   const filteredOptions = options
     .slice()
@@ -59,7 +74,7 @@ const Dropdown = ({
   };
 
   return (
-    <div className="relative w-full font-sans mt-2">
+    <div ref={wrapperRef} className="relative w-full font-sans mt-2">
       <div
         className={`group relative border rounded-md px-3 py-1.5 bg-white flex items-center gap-2 min-h-[44px] transition-all duration-200 ${
           isOpen
@@ -301,7 +316,7 @@ const Preferences = () => {
         className={
           mobile
             ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center justify-end pr-[60px] pointer-events-none"
+            : "absolute inset-0 flex items-center justify-center pointer-events-none"
         }
       >
         <div
