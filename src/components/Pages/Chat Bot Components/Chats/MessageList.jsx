@@ -39,14 +39,34 @@ function mapRecipeToViewerPost(recipe = {}) {
   const image = recipe.image || recipe.img || recipe.mediaItems?.[0]?.url || "";
   const description = recipe.description || recipe.caption || "";
   const date = recipe.date || recipe.dateCreate || recipe.dateCreated || "";
+
+  // If procedure exists (web recipe), use it as the caption so the CardViewer
+  // shows the actual steps rather than the short meta description.
+  const captionText = (() => {
+    if (Array.isArray(recipe.procedure) && recipe.procedure.length > 0) {
+      return recipe.procedure.join("\n");
+    }
+    if (typeof recipe.procedure === "string" && recipe.procedure.trim()) {
+      return recipe.procedure.trim();
+    }
+    return description;
+  })();
+
+  // Spoonacular ingredients are structured objects { id, name, amount, unit }.
+  // Web recipe ingredients are plain strings. Normalise both to the same shape
+  // so IngredientList in CardViewer can always render them correctly.
   const ingredients = Array.isArray(recipe.ingredients)
-    ? recipe.ingredients
+    ? recipe.ingredients.map((ing, idx) => {
+        if (ing && typeof ing === "object") return ing;
+        const str = String(ing || "").trim();
+        return { id: idx, name: str, amount: "", unit: "" };
+      })
     : [];
 
   return {
     id: recipe.id || `chatbot-${title.toLowerCase().replace(/\s+/g, "-")}`,
     title,
-    caption: description,
+    caption: captionText,
     author: recipe.author || "Unknown",
     avatar: recipe.avatar || image,
     date,
@@ -55,7 +75,7 @@ function mapRecipeToViewerPost(recipe = {}) {
       Array.isArray(recipe.mediaItems) && recipe.mediaItems.length > 0
         ? recipe.mediaItems
         : image
-          ? [{ type: "image", url: image, title, caption: description }]
+          ? [{ type: "image", url: image, title, caption: captionText }]
           : [],
   };
 }
@@ -277,6 +297,24 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
             <BotMessageBubble
               key={msg.id}
               message={msg.text}
+              time={msg.time}
+              isNew={msg.isNew === true}
+              onTypingDone={() =>
+                dispatch({
+                  type: "MARK_MESSAGE_SEEN",
+                  payload: { sessionId: activeSessionId, messageId: msg.id },
+                })
+              }
+            />
+          );
+        }
+
+        if (msg.type === "web_recipe") {
+          return (
+            <BotMessageBubble
+              key={msg.id}
+              message={msg.text}
+              webRecipe={msg.webRecipe || null}
               time={msg.time}
               isNew={msg.isNew === true}
               onTypingDone={() =>

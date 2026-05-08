@@ -346,8 +346,222 @@ function RecipeMessageLayout({ recipe }) {
   );
 }
 
+// ─── Web Recipe Card ──────────────────────────────────────────────────────────
+// Rendered when the AI found a recipe online (type = "web_recipe").
+// The structured webRecipe object is passed directly — no text-parsing needed.
+
+function WebRecipeCard({ recipe }) {
+  const {
+    title = "Recipe",
+    author = "",
+    sourceSite = "",
+    sourceUrl = "",
+    ingredients = [],
+    procedure = "",
+    otherInfo = "",
+  } = recipe || {};
+
+  const steps = parseProcedureSteps(
+    Array.isArray(procedure) ? procedure.join("\n") : procedure,
+  );
+  const parsedIngredients = ingredients
+    .map((item) =>
+      String(item || "")
+        .replace(/^[-*]\s*/, "")
+        .trim(),
+    )
+    .filter(Boolean);
+  const authorLine = [author, sourceSite !== author ? sourceSite : ""]
+    .filter(Boolean)
+    .join(" · ");
+  const hasLink =
+    sourceUrl && !sourceUrl.toLowerCase().includes("not available");
+
+  return (
+    <div className="rounded-[24px] overflow-hidden shadow-[0_16px_40px_-16px_rgba(245,118,0,0.35)] border border-orange-100 bg-white">
+      {/* Header band */}
+      <div className="bg-gradient-to-r from-[#F57600] to-[#FF9A3C] px-4 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-[10px] font-extrabold tracking-[0.18em] uppercase text-white/80 block mb-0.5">
+            Recipe Found Online
+          </span>
+          <h3 className="text-sm sm:text-base font-black text-white leading-snug break-words">
+            {title}
+          </h3>
+        </div>
+        {/* Decorative fork icon */}
+        <svg
+          className="w-7 h-7 sm:w-8 sm:h-8 text-white/30 shrink-0 mt-0.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+          />
+        </svg>
+      </div>
+
+      <div className="px-4 sm:px-5 py-4 space-y-4">
+        {/* Source line */}
+        {(authorLine || hasLink) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] sm:text-xs">
+            {authorLine && (
+              <span className="text-gray-500">
+                <span className="font-semibold text-gray-700">Source:</span>{" "}
+                {authorLine}
+              </span>
+            )}
+            {hasLink && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-[#0060A9] hover:text-[#F57600] transition-colors break-all"
+              >
+                <svg
+                  className="w-3 h-3 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+                View source
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Ingredients */}
+        <div className="rounded-2xl border border-orange-100 bg-orange-50/60 px-3.5 py-3">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-1.5">
+              {/* Utensils icon */}
+              <svg
+                className="w-3.5 h-3.5 text-[#F57600]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 3v11m0 0a3 3 0 003 3h0a3 3 0 003-3V3m-3 11V21M5 3v4a3 3 0 003 3h0"
+                />
+              </svg>
+              <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#F57600]">
+                Ingredients
+              </span>
+            </div>
+            <span className="text-[10px] font-semibold text-orange-400 bg-orange-100 rounded-full px-2 py-0.5">
+              {parsedIngredients.length} item
+              {parsedIngredients.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {parsedIngredients.length > 0 ? (
+            <ul className="space-y-1.5">
+              {parsedIngredients.map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F57600] shrink-0" />
+                  <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-gray-400 italic">
+              Not available in the source data.
+            </p>
+          )}
+        </div>
+
+        {/* Procedure */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <svg
+              className="w-3.5 h-3.5 text-[#F57600]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#F57600]">
+              Procedure / Description
+            </span>
+          </div>
+
+          {steps.length > 0 ? (
+            <ol className="space-y-2.5">
+              {steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="shrink-0 min-w-[20px] text-center text-[11px] font-extrabold text-white bg-[#F57600] rounded-full w-5 h-5 flex items-center justify-center leading-none mt-0.5">
+                    {i + 1}
+                  </span>
+                  <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                    {step}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-xs text-gray-400 italic">
+              Not available in the source data.
+            </p>
+          )}
+        </div>
+
+        {/* AI tips / other info */}
+        {otherInfo && (
+          <div className="rounded-2xl bg-gradient-to-br from-[#FFF7ED] to-[#FEF3C7] border border-amber-100 px-3.5 py-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <svg
+                className="w-3.5 h-3.5 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                />
+              </svg>
+              <span className="text-[10px] font-extrabold uppercase tracking-wide text-amber-600">
+                Gastro AI Tips
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-amber-900 leading-relaxed">
+              {otherInfo}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function BotMessageBubble({
   message,
+  webRecipe = null,
   time,
   isLoading = false,
   hideActions = false,
@@ -357,7 +571,8 @@ export default function BotMessageBubble({
   const [displayed, setDisplayed] = useState(isNew ? "" : (message ?? ""));
   const [done, setDone] = useState(!isNew);
   const [copied, setCopied] = useState(false);
-  const parsedRecipe = done ? parseRecipeMessage(displayed) : null;
+  const parsedRecipe =
+    done && !webRecipe ? parseRecipeMessage(displayed) : null;
 
   useEffect(() => {
     if (isLoading || !message) return;
@@ -427,6 +642,8 @@ export default function BotMessageBubble({
               />
             ))}
           </span>
+        ) : webRecipe ? (
+          <WebRecipeCard recipe={webRecipe} />
         ) : parsedRecipe ? (
           <div>
             <RecipeMessageLayout recipe={parsedRecipe} />
