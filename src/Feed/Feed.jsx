@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import Sidebar from "../Feed/SideBar";
 import Searchbar from "./Searchbar";
@@ -81,6 +81,7 @@ const InfiniteScrollTrigger = ({ onTrigger, hasMore, isLoading }) => {
 
 export default function GCFeed() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -117,6 +118,10 @@ export default function GCFeed() {
       setPosts((prev) => [posted, ...prev]);
     },
   });
+
+  const handleDiscover = useCallback(() => {
+    navigate("/chatbot");
+  }, [navigate]);
 
   const fetchPage = useCallback(
     async (pageNum) => {
@@ -265,7 +270,7 @@ export default function GCFeed() {
               </button> */}
             </div>
 
-            <HeroBanner />
+            <HeroBanner onDiscover={handleDiscover} onCreate={handleNewPost} />
             <Recommendation />
 
             {initialLoading && <SkeletonPostList count={3} />}
@@ -300,7 +305,12 @@ export default function GCFeed() {
                           targetParams.open === "comments"
                         }
                         onDelete={(id) =>
-                          setPosts((prev) => prev.filter((p) => p.id !== id))
+                          setPosts((prev) =>
+                            prev.filter(
+                              (candidate) =>
+                                String(candidate.id) !== String(id),
+                            ),
+                          )
                         }
                         onUpdate={(updated) =>
                           setPosts((prev) =>

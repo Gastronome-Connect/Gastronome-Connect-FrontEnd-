@@ -393,32 +393,17 @@ const GCProfile = () => {
                 isOwner={isOwner}
                 onDelete={
                   isOwner
-                    ? async (id) => {
-                        try {
-                          const response = await apiFetch(`/api/posts/${id}`, {
-                            method: "DELETE",
-                          });
-                          const data = await response.json();
-
-                          if (!response.ok) {
-                            throw new Error(
-                              data.message || "Failed to delete post",
-                            );
-                          }
-
-                          setPosts((prev) =>
-                            prev.filter((item) => item.id !== id),
-                          );
-                          setProfileData((current) => ({
-                            ...current,
-                            postsCount:
-                              typeof data.postsCount === "number"
-                                ? data.postsCount
-                                : Math.max((current.postsCount || 1) - 1, 0),
-                          }));
-                        } catch (error) {
-                          console.error("Failed to delete post:", error);
-                        }
+                    ? (id, data = {}) => {
+                        setPosts((prev) =>
+                          prev.filter((item) => String(item.id) !== String(id)),
+                        );
+                        setProfileData((current) => ({
+                          ...current,
+                          postsCount:
+                            typeof data.postsCount === "number"
+                              ? data.postsCount
+                              : Math.max((current.postsCount || 1) - 1, 0),
+                        }));
                       }
                     : undefined
                 }

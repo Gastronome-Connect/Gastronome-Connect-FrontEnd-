@@ -7,6 +7,33 @@ import { useUserLibrary } from "../../../../Context/UserLibraryContext";
 
 const PAGE_SIZE = 3;
 
+async function copyTextToClipboard(text = "") {
+  const normalizedText = String(text || "");
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(normalizedText);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = normalizedText;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 function mapRecipeToViewerPost(recipe = {}) {
   const title = recipe.title || recipe.name || "Recipe";
   const image = recipe.image || recipe.img || recipe.mediaItems?.[0]?.url || "";
@@ -173,12 +200,42 @@ function RecipeCarousel({ recipes, onRecipeClick }) {
   );
 }
 
-function ActionBar({ time }) {
+function ActionBar({ time, text }) {
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!copied) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [copied]);
+
+  const handleCopy = async () => {
+    try {
+      const didCopy = await copyTextToClipboard(text);
+      if (didCopy) {
+        setCopied(true);
+      }
+    } catch (error) {
+      console.error("Failed to copy chatbot response:", error);
+    }
+  };
+
   return (
     <div className="flex items-center gap-1 sm:gap-1.5 pl-9 sm:pl-20">
-      {[
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label="Copy AI response"
+        title={copied ? "Copied" : "Copy response"}
+        className={`p-1 transition-colors ${copied ? "text-[#F57600]" : "text-gray-400 hover:text-gray-600"}`}
+      >
         <svg
-          key="copy"
           className="w-3 h-3 sm:w-3.5 sm:h-3.5"
           fill="none"
           stroke="currentColor"
@@ -187,67 +244,8 @@ function ActionBar({ time }) {
         >
           <rect x="9" y="9" width="13" height="13" rx="2" />
           <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-        </svg>,
-        <svg
-          key="up"
-          className="w-3 h-3 sm:w-3.5 sm:h-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"
-          />
-        </svg>,
-        <svg
-          key="down"
-          className="w-3 h-3 sm:w-3.5 sm:h-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"
-          />
-        </svg>,
-        <svg
-          key="regen"
-          className="w-3 h-3 sm:w-3.5 sm:h-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          />
-        </svg>,
-      ].map((icon, i) => (
-        <button
-          key={i}
-          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          {icon}
-        </button>
-      ))}
+        </svg>
+      </button>
       {time && (
         <span className="text-[10px] text-gray-400 ml-1 sm:ml-2">{time}</span>
       )}
@@ -330,7 +328,7 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
                   </p>
                 )}
               </div>
-              <ActionBar time={msg.time} />
+              <ActionBar time={msg.time} text={msg.text} />
             </div>
           );
         }
