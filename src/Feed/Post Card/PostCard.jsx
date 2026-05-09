@@ -248,7 +248,6 @@ const PostCard = ({
     setShowDeleteConfirm(false);
     setExpandedIndex(null);
     setShowCommentModal(false);
-    onDelete?.(post.id);
 
     try {
       const response = await apiFetch(`/api/posts/${post.id}`, {
@@ -259,6 +258,8 @@ const PostCard = ({
       if (!response.ok) {
         throw new Error(data.message || "Failed to delete post");
       }
+
+      onDelete?.(post.id, data);
     } catch (error) {
       console.error("Failed to delete post:", error);
       setPost((currentPost) => normalizePost(currentPost));

@@ -8,6 +8,7 @@ import {
 import CommentList from "./CommentList";
 import CommentInput from "./CommentInput";
 import { apiFetch } from "../../../utils/api";
+import ContentViolationModal from "../../../components/Modals/ContentViolationModal";
 
 /**
  * @param {string}   postId
@@ -18,6 +19,7 @@ import { apiFetch } from "../../../utils/api";
 const CommentSection = forwardRef(
   ({ postId, initialComments = [], hideInput = false, onPostUpdate }, ref) => {
     const [comments, setComments] = useState(initialComments);
+    const [violationError, setViolationError] = useState(null);
     const bottomRef = useRef(null);
 
     useEffect(() => {
@@ -50,6 +52,14 @@ const CommentSection = forwardRef(
           body: JSON.stringify({ text: trimmedText }),
         });
         const data = await response.json();
+
+        if (response.status === 422) {
+          setViolationError({
+            reason: data.reason || null,
+            category: data.category || null,
+          });
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(data.message || "Failed to add comment");
@@ -91,6 +101,14 @@ const CommentSection = forwardRef(
           },
         );
         const data = await response.json();
+
+        if (response.status === 422) {
+          setViolationError({
+            reason: data.reason || null,
+            category: data.category || null,
+          });
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(data.message || "Failed to add reply");
@@ -175,6 +193,14 @@ const CommentSection = forwardRef(
         />
         <div ref={bottomRef} />
         {!hideInput && <CommentInput onSubmit={addComment} />}
+
+        <ContentViolationModal
+          isOpen={!!violationError}
+          onClose={() => setViolationError(null)}
+          reason={violationError?.reason}
+          category={violationError?.category}
+          contentType="comment"
+        />
       </div>
     );
   },

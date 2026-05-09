@@ -24,7 +24,12 @@ export async function sendMessageToBot(
   }
 
   const recipes = Array.isArray(data?.recipes) ? data.recipes : [];
-  const type = data?.type === "recipe" ? "recipe" : "text";
+  const isWebRecipe = data?.type === "web_recipe";
+  const type = isWebRecipe
+    ? "web_recipe"
+    : data?.type === "recipe"
+      ? "recipe"
+      : "text";
 
   return {
     id: Date.now().toString(),
@@ -35,6 +40,7 @@ export async function sendMessageToBot(
       data?.reply ||
       "I can chat freely, and I can also help with recipes, ingredients, and cooking tips whenever you need.",
     recipes: type === "recipe" ? recipes : [],
+    webRecipe: isWebRecipe ? data?.webRecipe || null : null,
     time: formatTime(),
   };
 }

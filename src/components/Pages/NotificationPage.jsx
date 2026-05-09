@@ -22,14 +22,22 @@ import { useNotifications } from "../../Context/NotificationContext";
 const FILTERS = [
   { key: "all", label: "All" },
   { key: "like", label: "Likes" },
-  { key: "dislike", label: "Dislikes" },
   { key: "comment", label: "Comments" },
-  { key: "reply", label: "Replies" },
   { key: "follow", label: "Follows" },
   { key: "repost", label: "Reposts" },
   { key: "report_status", label: "Report Updates" },
   { key: "hidden", label: "Hidden" },
 ];
+
+const COMMENT_FILTER_TYPES = new Set(["comment", "reply", "mention"]);
+
+const matchesNotificationFilter = (notification, activeFilter) => {
+  if (activeFilter === "comment") {
+    return COMMENT_FILTER_TYPES.has(notification.type);
+  }
+
+  return notification.type === activeFilter;
+};
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Recent" },
@@ -206,8 +214,8 @@ export default function NotificationsPage() {
   const baseList = useMemo(() => {
     if (activeFilter === "hidden") return hiddenNotifications;
     if (activeFilter === "all") return visibleNotifications;
-    return visibleNotifications.filter(
-      (notification) => notification.type === activeFilter,
+    return visibleNotifications.filter((notification) =>
+      matchesNotificationFilter(notification, activeFilter),
     );
   }, [activeFilter, hiddenNotifications, visibleNotifications]);
 
@@ -459,7 +467,7 @@ export default function NotificationsPage() {
                 <p className="text-xs sm:text-sm text-gray-400 max-w-xs">
                   {activeFilter === "hidden"
                     ? "Notifications you hide will appear here."
-                    : "Likes, comments, replies, and activity alerts will show up here."}
+                    : "Likes, comments, mentions, and activity alerts will show up here."}
                 </p>
               </div>
             </motion.div>

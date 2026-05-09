@@ -7,6 +7,7 @@ import ComposeStep from "../Modals/Create Post Components/ComposeStep";
 import CaptionsStep from "../Modals/Create Post Components/CaptionsSteps";
 import DraftPromptModal from "../Modals/DraftModal";
 import IngredientPromptModal from "../Modals/IngredientsPromptModal";
+import ContentViolationModal from "../Modals/ContentViolationModal";
 import useDraft from "../Modals/Draft";
 import { apiFetch, resolveAvatarUrl } from "../../utils/api";
 
@@ -25,6 +26,7 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
+  const [violationError, setViolationError] = useState(null);
   const fileInputRef = useRef(null);
 
   const { saveDraft, loadDraft, clearDraft } = useDraft();
@@ -156,7 +158,12 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        alert("User is not authenticated. Please log in again.");
+        setViolationError({
+          message: "User is not authenticated. Please log in again.",
+          reason: null,
+          category: null,
+          isAuthError: true,
+        });
         return;
       }
 
@@ -165,12 +172,22 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
         decoded = jwtDecode(token);
       } catch (error) {
         console.error("Invalid token:", error);
-        alert("Invalid token. Please log in again.");
+        setViolationError({
+          message: "Invalid token. Please log in again.",
+          reason: null,
+          category: null,
+          isAuthError: true,
+        });
         return;
       }
 
       if (!decoded.userId && !decoded.id) {
-        alert("User ID is missing. Please log in again.");
+        setViolationError({
+          message: "User ID is missing. Please log in again.",
+          reason: null,
+          category: null,
+          isAuthError: true,
+        });
         return;
       }
 
@@ -189,7 +206,18 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to create post");
+
+      if (response.status === 422) {
+        setViolationError({
+          message: data.message,
+          reason: data.reason || null,
+          category: data.category || null,
+        });
+        return;
+      }
+
+      if (!response.ok)
+        throw new Error(data.message || "Failed to create post");
 
       if (typeof onPost === "function") {
         onPost({
@@ -210,7 +238,11 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
       onClose();
     } catch (error) {
       console.error("Error submitting post:", error);
-      alert(error.message || "Failed to create post");
+      setViolationError({
+        message: error.message || "Failed to create post",
+        reason: null,
+        category: null,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -313,6 +345,13 @@ export default function CreatePostModal({ isOpen, onClose, onPost }) {
           onDismiss={() => setShowIngredientPrompt(false)}
         />
       )}
+
+      <ContentViolationModal
+        isOpen={!!violationError}
+        onClose={() => setViolationError(null)}
+        reason={violationError?.reason}
+        category={violationError?.category}
+      />
     </>,
     document.body,
   );

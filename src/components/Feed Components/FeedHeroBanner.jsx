@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import ProfileHeader from "../Assets/ProfileHeader.png";
 
 const SLIDES = [
   {
     isFullImage: true,
-    image: ProfileHeader
+    image: ProfileHeader,
   },
   {
     tag: "FEATURED",
@@ -13,7 +13,7 @@ const SLIDES = [
     buttonText: "Discover 🍳",
     gradient: "from-[#F57600] via-[#F0AE35] to-[#F57600]",
     accentColor: "#F57600",
-    image: ""
+    image: "",
   },
   {
     tag: "COMMUNITY",
@@ -21,34 +21,34 @@ const SLIDES = [
     buttonText: "Join Now ✨",
     gradient: "from-[#0060A9] via-[#00B4FA] to-[#0060A9]",
     accentColor: "#0060A9",
-    image: ""
-  }
+    image: "",
+  },
 ];
 
 const AUTOPLAY_DELAY = 5000;
 const TRANSITION_DURATION = 700; // ms
-const SWIPE_THRESHOLD = 40;      // px — minimum horizontal drag to trigger slide
-const SWIPE_VELOCITY = 0.3;      // px/ms — fast flick triggers even below threshold
+const SWIPE_THRESHOLD = 40; // px — minimum horizontal drag to trigger slide
+const SWIPE_VELOCITY = 0.3; // px/ms — fast flick triggers even below threshold
 
 // Cloned list: [last, ...original, first] for seamless looping
 const clonedSlides = [SLIDES[SLIDES.length - 1], ...SLIDES, SLIDES[0]];
 const OFFSET = 1;
 
-export default function HeroBanner() {
-  const [index, setIndex]       = useState(OFFSET);
+export default function HeroBanner({ onDiscover, onCreate }) {
+  const [index, setIndex] = useState(OFFSET);
   const [animated, setAnimated] = useState(true);
-  const trackRef                = useRef(null);
-  const intervalRef             = useRef(null);
-  const isJumpingRef            = useRef(false);
+  const trackRef = useRef(null);
+  const intervalRef = useRef(null);
+  const isJumpingRef = useRef(false);
 
   // ── Touch state ─────────────────────────────────────────────────────────────
-  const touchStartX   = useRef(null);
-  const touchStartY   = useRef(null);
-  const touchStartT   = useRef(null);
-  const dragOffsetX   = useRef(0);        // live drag offset in px
-  const isDragging    = useRef(false);
-  const isScrolling   = useRef(false);    // locked to vertical scroll, ignore swipe
-  const trackWidth    = useRef(0);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const touchStartT = useRef(null);
+  const dragOffsetX = useRef(0); // live drag offset in px
+  const isDragging = useRef(false);
+  const isScrolling = useRef(false); // locked to vertical scroll, ignore swipe
+  const trackWidth = useRef(0);
   // ────────────────────────────────────────────────────────────────────────────
 
   const goTo = useCallback((i, withAnimation = true) => {
@@ -59,7 +59,10 @@ export default function HeroBanner() {
   const startAutoplay = useCallback(() => {
     clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
-      setIndex((prev) => { setAnimated(true); return prev + 1; });
+      setIndex((prev) => {
+        setAnimated(true);
+        return prev + 1;
+      });
     }, AUTOPLAY_DELAY);
   }, []);
 
@@ -72,11 +75,17 @@ export default function HeroBanner() {
     if (isJumpingRef.current) return;
     if (index === clonedSlides.length - 1) {
       isJumpingRef.current = true;
-      setTimeout(() => { goTo(OFFSET, false); isJumpingRef.current = false; }, TRANSITION_DURATION);
+      setTimeout(() => {
+        goTo(OFFSET, false);
+        isJumpingRef.current = false;
+      }, TRANSITION_DURATION);
     }
     if (index === 0) {
       isJumpingRef.current = true;
-      setTimeout(() => { goTo(SLIDES.length, false); isJumpingRef.current = false; }, TRANSITION_DURATION);
+      setTimeout(() => {
+        goTo(SLIDES.length, false);
+        isJumpingRef.current = false;
+      }, TRANSITION_DURATION);
     }
   }, [index, goTo]);
 
@@ -85,7 +94,8 @@ export default function HeroBanner() {
     startAutoplay();
   };
 
-  const activeIndex = ((index - OFFSET) % SLIDES.length + SLIDES.length) % SLIDES.length;
+  const activeIndex =
+    (((index - OFFSET) % SLIDES.length) + SLIDES.length) % SLIDES.length;
 
   // ── Touch handlers (mobile only — pointer-events guard via CSS, but we also
   //    check e.touches to be safe on desktop with touch screens) ───────────────
@@ -95,7 +105,7 @@ export default function HeroBanner() {
     const pct = (offsetPx / trackWidth.current) * 100;
     // Base translateX from current slide index + live drag
     trackRef.current.style.transition = "none";
-    trackRef.current.style.transform  = `translateX(calc(-${index * 100}% + ${pct}px))`;
+    trackRef.current.style.transform = `translateX(calc(-${index * 100}% + ${pct}px))`;
   };
 
   const resetTrackTransform = (withAnim = true) => {
@@ -112,9 +122,9 @@ export default function HeroBanner() {
     touchStartY.current = e.touches[0].clientY;
     touchStartT.current = performance.now();
     dragOffsetX.current = 0;
-    isDragging.current  = false;
+    isDragging.current = false;
     isScrolling.current = false;
-    trackWidth.current  = trackRef.current?.offsetWidth ?? 0;
+    trackWidth.current = trackRef.current?.offsetWidth ?? 0;
     // Pause autoplay while user interacts
     clearInterval(intervalRef.current);
   };
@@ -150,10 +160,10 @@ export default function HeroBanner() {
       return;
     }
 
-    const dx       = dragOffsetX.current;
-    const dt       = performance.now() - touchStartT.current;
+    const dx = dragOffsetX.current;
+    const dt = performance.now() - touchStartT.current;
     const velocity = Math.abs(dx) / dt;
-    const isFlick  = velocity > SWIPE_VELOCITY;
+    const isFlick = velocity > SWIPE_VELOCITY;
 
     if (dx < -SWIPE_THRESHOLD || (isFlick && dx < 0)) {
       // Swipe left → next
@@ -169,14 +179,14 @@ export default function HeroBanner() {
     }
 
     touchStartX.current = null;
-    isDragging.current  = false;
+    isDragging.current = false;
     startAutoplay();
   };
 
   const onTouchCancel = () => {
     if (isDragging.current) resetTrackTransform(true);
     touchStartX.current = null;
-    isDragging.current  = false;
+    isDragging.current = false;
     startAutoplay();
   };
 
@@ -208,7 +218,9 @@ export default function HeroBanner() {
             display: "flex",
             // Initial transform via style prop; subsequent updates via useEffect + inline style
             transform: `translateX(-${index * 100}%)`,
-            transition: animated ? `transform ${TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)` : "none",
+            transition: animated
+              ? `transform ${TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`
+              : "none",
             // Disable default touch-action on the track so our swipe works;
             // vertical scroll still works because we check axis lock in onTouchMove
             touchAction: "pan-y",
@@ -265,10 +277,18 @@ export default function HeroBanner() {
                     </motion.h1>
 
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <button className="bg-white text-gray-900 px-4 py-2 sm:px-6 sm:py-2.5 md:px-8 md:py-3 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] md:text-xs uppercase tracking-widest hover:bg-[#F57600] hover:text-white transition-all shadow-xl shadow-black/10 active:scale-95">
+                      <button
+                        type="button"
+                        onClick={onDiscover}
+                        className="bg-white text-gray-900 px-4 py-2 sm:px-6 sm:py-2.5 md:px-8 md:py-3 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] md:text-xs uppercase tracking-widest hover:bg-[#F57600] hover:text-white transition-all shadow-xl shadow-black/10 active:scale-95"
+                      >
                         {slide.buttonText}
                       </button>
-                      <button className="bg-white/10 backdrop-blur-md border border-white/30 px-4 py-2 sm:px-6 sm:py-2.5 md:px-8 md:py-3 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] md:text-xs uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95">
+                      <button
+                        type="button"
+                        onClick={onCreate}
+                        className="bg-white/10 backdrop-blur-md border border-white/30 px-4 py-2 sm:px-6 sm:py-2.5 md:px-8 md:py-3 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] md:text-xs uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95"
+                      >
                         Create
                       </button>
                     </div>
