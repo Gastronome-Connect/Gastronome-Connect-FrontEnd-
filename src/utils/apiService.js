@@ -17,16 +17,10 @@ export const authAPI = {
   refresh: () =>
     apiFetch("/api/refresh", { method: "POST" }).then((r) => r.json()),
 
-  validateEmail: (email) =>
-    apiFetch("/api/validate", {
+  checkEmail: (email) =>
+    apiFetch("/api/check-email", {
       method: "POST",
       body: JSON.stringify({ email }),
-    }).then((r) => r.json()),
-
-  register: (userData) =>
-    apiFetch("/api/register", {
-      method: "POST",
-      body: JSON.stringify(userData),
     }).then((r) => r.json()),
 
   sendOtp: (email, username, password) =>
@@ -39,6 +33,12 @@ export const authAPI = {
     apiFetch("/api/verify-otp", {
       method: "POST",
       body: JSON.stringify({ email, otp }),
+    }).then((r) => r.json()),
+
+  completeSignup: (email, signupData) =>
+    apiFetch("/api/complete-signup", {
+      method: "POST",
+      body: JSON.stringify({ email, ...signupData }),
     }).then((r) => r.json()),
 
   forgotPassword: (email) =>

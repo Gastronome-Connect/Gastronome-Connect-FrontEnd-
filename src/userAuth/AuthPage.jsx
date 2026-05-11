@@ -429,30 +429,31 @@ const AuthPage = () => {
     }
 
     try {
-      const validateResponse = await apiFetch("/api/validate", {
+      // Step 1: Check email availability
+      const checkEmailResponse = await apiFetch("/api/check-email", {
         method: "POST",
         body: JSON.stringify({ email: signupEmail }),
       });
-      const validateData = await validateResponse.json();
-      if (!validateResponse.ok) {
-        setSignupEmailError(validateData.message || "Email validation failed");
+      const checkEmailData = await checkEmailResponse.json();
+      if (!checkEmailResponse.ok) {
+        setSignupEmailError(checkEmailData.message || "Email validation failed");
         setSignupLoading(false);
         return;
       }
 
-      const registerResponse = await apiFetch("/api/register", {
+      // Step 2: Send OTP (creates PendingUser)
+      const sendOtpResponse = await apiFetch("/api/send-otp", {
         method: "POST",
         body: JSON.stringify({
-          username: signupUsername.trim(),
           email: signupEmail,
+          username: signupUsername.trim(),
           password: signupPassword,
-          confirmPassword,
         }),
       });
-      const registerData = await registerResponse.json();
+      const sendOtpData = await sendOtpResponse.json();
 
-      if (!registerResponse.ok) {
-        const message = registerData.message || "Failed to start signup";
+      if (!sendOtpResponse.ok) {
+        const message = sendOtpData.message || "Failed to start signup";
         const normalizedMessage = String(message).toLowerCase();
 
         if (normalizedMessage.includes("username")) {
@@ -468,7 +469,10 @@ const AuthPage = () => {
         return;
       }
 
+      // Store signup data for later steps
       sessionStorage.setItem("pendingEmail", signupEmail);
+      sessionStorage.setItem("pendingUsername", signupUsername.trim());
+      sessionStorage.setItem("pendingPassword", signupPassword);
       sessionStorage.setItem("sourceFlow", "signup");
       sessionStorage.setItem(
         "tempSignupData",

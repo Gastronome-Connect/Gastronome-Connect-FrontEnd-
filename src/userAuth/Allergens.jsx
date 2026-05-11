@@ -226,6 +226,8 @@ const Allergens = () => {
     sessionStorage.removeItem("tempPreferences");
     sessionStorage.removeItem("sourceFlow");
     sessionStorage.removeItem("pendingEmail");
+    sessionStorage.removeItem("pendingUsername");
+    sessionStorage.removeItem("pendingPassword");
     clearSignupStep();
   };
 
@@ -288,14 +290,12 @@ const Allergens = () => {
       setError("");
       setIsSubmitting(true);
 
-      const signupDataStr = sessionStorage.getItem("tempSignupData");
-      if (!signupDataStr) {
+      const pendingEmail = sessionStorage.getItem("pendingEmail");
+      if (!pendingEmail) {
         setError("Signup session expired. Please sign up again.");
         return;
       }
 
-      const signupData = JSON.parse(signupDataStr);
-      const { email, password, confirmPassword } = signupData;
       const tempPreferencesStr = sessionStorage.getItem("tempPreferences");
       const tempPreferences = tempPreferencesStr
         ? JSON.parse(tempPreferencesStr)
@@ -309,9 +309,7 @@ const Allergens = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
-            password,
-            confirmPassword,
+            email: pendingEmail,
             preferences: {
               flavors: Array.isArray(tempPreferences.flavors)
                 ? tempPreferences.flavors
