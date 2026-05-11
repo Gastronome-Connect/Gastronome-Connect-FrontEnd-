@@ -430,16 +430,48 @@ const AuthPage = () => {
 
     try {
       // Step 1: Check email availability
-      const checkEmailResponse = await apiFetch("/api/check-email", {
-        method: "POST",
-        body: JSON.stringify({ email: signupEmail }),
-      });
-      const checkEmailData = await checkEmailResponse.json();
-      if (!checkEmailResponse.ok) {
-        setSignupEmailError(checkEmailData.message || "Email validation failed");
-        setSignupLoading(false);
-        return;
+      // Backend endpoint name can differ by deployment; try the expected one first,
+      // then fall back to `/api/validate` (used in existing integration tests).
+      const emailPayload = { email: signupEmail };
+
+      let checkEmailResponse;
+      try {
+        checkEmailResponse = await apiFetch("/api/check-email", {
+          method: "POST",
+          body: JSON.stringify(emailPayload),
+        });
+      } catch (err) {
+        checkEmailResponse = null;
       }
+
+      if (!checkEmailResponse || !checkEmailResponse.ok) {
+        // Fallback
+        const fallbackResponse = await apiFetch("/api/validate", {
+          method: "POST",
+          body: JSON.stringify(emailPayload),
+        });
+
+        const fallbackData = await fallbackResponse.json().catch(() => ({}));
+        if (!fallbackResponse.ok) {
+          console.error("Email validation failed (fallback /api/validate):", fallbackData);
+          setSignupEmailError(
+            fallbackData.message || "Email validation failed",
+          );
+          setSignupLoading(false);
+          return;
+        }
+      } else {
+        const checkEmailData = await checkEmailResponse.json().catch(() => ({}));
+        if (!checkEmailResponse.ok) {
+          console.error("Email validation failed (/api/check-email):", checkEmailData);
+          setSignupEmailError(
+            checkEmailData.message || "Email validation failed",
+          );
+          setSignupLoading(false);
+          return;
+        }
+      }
+
 
       // Step 2: Send OTP (creates PendingUser)
       const sendOtpResponse = await apiFetch("/api/send-otp", {

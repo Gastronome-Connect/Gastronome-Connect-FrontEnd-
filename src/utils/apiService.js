@@ -17,11 +17,21 @@ export const authAPI = {
   refresh: () =>
     apiFetch("/api/refresh", { method: "POST" }).then((r) => r.json()),
 
+  // Note: backend route name can differ across deployments.
+  // Try `/api/check-email` first, then fall back to `/api/validate`.
   checkEmail: (email) =>
     apiFetch("/api/check-email", {
       method: "POST",
       body: JSON.stringify({ email }),
-    }).then((r) => r.json()),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .catch(async () =>
+        apiFetch("/api/validate", {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        }).then((r) => r.json()),
+      ),
+
 
   sendOtp: (email, username, password) =>
     apiFetch("/api/send-otp", {
