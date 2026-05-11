@@ -17,7 +17,10 @@ const STYLES = `
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0px); }
   }
-  .content-in { animation: fadeSlideIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .content-in { 
+    animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 1 !important;
+  }
   * { scrollbar-width: none; }
   *::-webkit-scrollbar { display: none; }
   button:focus { outline: none !important; box-shadow: none !important; }
@@ -48,6 +51,16 @@ const VerificationPage = () => {
 
   const sourceFlow = sessionStorage.getItem("sourceFlow");
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 Verification component mounted");
+    console.log("  email:", email);
+    console.log("  sourceFlow:", sourceFlow);
+    if (!email || !sourceFlow) {
+      console.warn("⚠️ Missing sessionStorage values - should have been redirected by FlowRoute!");
+    }
+  }, []);
+
   useBlockBrowserBack(sourceFlow === "signup");
 
   useEffect(() => {
@@ -64,12 +77,8 @@ const VerificationPage = () => {
 
   // Panel position: forgotpassword → left (60px), signup → right
   const getPanelTransform = () => {
-    if (mobile) return undefined; // handled by CSS centering
-    const panelW = Math.min(480, window.innerWidth - 48);
-    const rightX = window.innerWidth - panelW - 60;
-    return sourceFlow === "forgotpassword"
-      ? "translateX(60px)"
-      : `translateX(${rightX}px)`;
+    // For all sizes, use center positioning - simpler and more reliable
+    return undefined;
   };
 
   useEffect(() => {
@@ -283,8 +292,6 @@ const VerificationPage = () => {
     : {
         width: "min(480px, calc(100vw - 48px))",
         height: "calc(100vh - 48px)",
-        marginLeft: "0px",
-        transform: getPanelTransform(),
       };
 
   return (
@@ -293,11 +300,8 @@ const VerificationPage = () => {
       <BackgroundCarousel />
 
       <div
-        className={
-          mobile
-            ? "absolute inset-0 flex items-center justify-center pointer-events-none"
-            : "absolute inset-0 flex items-center justify-center pointer-events-none"
-        }
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ zIndex: 50 }}
       >
         <div
           className="pointer-events-auto bg-white rounded-3xl shadow-2xl overflow-hidden"

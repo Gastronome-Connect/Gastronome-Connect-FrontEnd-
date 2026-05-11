@@ -19,11 +19,20 @@ const FlowRoute = ({ Component }) => {
   const hasFlowState = () => {
     const sourceFlow = sessionStorage.getItem("sourceFlow");
     const pendingEmail = sessionStorage.getItem("pendingEmail");
-    return !!sourceFlow && !!pendingEmail;
+    const hasBoth = !!sourceFlow && !!pendingEmail;
+    
+    // Debug logging
+    console.log("🔐 FlowRoute checking flow state at", location.pathname);
+    console.log("  sourceFlow:", sourceFlow);
+    console.log("  pendingEmail:", pendingEmail);
+    console.log("  hasFlowState:", hasBoth);
+    
+    return hasBoth;
   };
 
   // Not in flow - redirect to login
   if (!hasFlowState()) {
+    console.warn("❌ FlowRoute: No flow state found - redirecting to /login");
     return <Navigate to="/login" replace />;
   }
 
@@ -45,6 +54,7 @@ const FlowRoute = ({ Component }) => {
   }
 
   // User is in the signup/recovery flow - allow access
+  console.log("✅ FlowRoute: Rendering component");
   return <Component />;
 };
 
