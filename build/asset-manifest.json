@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/static/css/main.0d916ff1.css",
-    "main.js": "/static/js/main.62913760.js",
-    "static/js/453.ab7e3297.chunk.js": "/static/js/453.ab7e3297.chunk.js",
+    "main.css": "/static/css/main.eb960344.css",
+    "main.js": "/static/js/main.a4c3df28.js",
+    "static/js/453.b2847f9c.chunk.js": "/static/js/453.b2847f9c.chunk.js",
     "static/media/top-view-table-full-food.png": "/static/media/top-view-table-full-food.966b1d1aaffdc1a4fdee.png",
     "static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.png": "/static/media/stew-chicken-with-vegetables-mushrooms-cream-sauce.de8a2ec12507d2335e38.png",
     "static/media/GoalsBackground.png": "/static/media/GoalsBackground.a3738bc8a9303df72f74.png",
@@ -35,12 +35,12 @@
     "static/media/GastroLogo.png": "/static/media/GastroLogo.66062a3e7c594f67e816.png",
     "static/media/Lince.jpg": "/static/media/Lince.bc32cd03b60dd2a5d6fd.jpg",
     "index.html": "/index.html",
-    "main.0d916ff1.css.map": "/static/css/main.0d916ff1.css.map",
-    "main.62913760.js.map": "/static/js/main.62913760.js.map",
-    "453.ab7e3297.chunk.js.map": "/static/js/453.ab7e3297.chunk.js.map"
+    "main.eb960344.css.map": "/static/css/main.eb960344.css.map",
+    "main.a4c3df28.js.map": "/static/js/main.a4c3df28.js.map",
+    "453.b2847f9c.chunk.js.map": "/static/js/453.b2847f9c.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.0d916ff1.css",
-    "static/js/main.62913760.js"
+    "static/css/main.eb960344.css",
+    "static/js/main.a4c3df28.js"
   ]
 }
