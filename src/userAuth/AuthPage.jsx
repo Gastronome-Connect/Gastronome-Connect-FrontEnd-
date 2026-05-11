@@ -480,6 +480,11 @@ const AuthPage = () => {
         }),
       );
 
+      // Debug logging
+      console.log("✓ Signup successful - Setting sessionStorage values");
+      console.log("  pendingEmail:", sessionStorage.getItem("pendingEmail"));
+      console.log("  sourceFlow:", sessionStorage.getItem("sourceFlow"));
+
       navigate("/verification", { replace: true });
     } catch (error) {
       console.error("Sign up preparation error:", error);
