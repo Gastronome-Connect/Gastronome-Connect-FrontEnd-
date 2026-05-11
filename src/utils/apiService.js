@@ -2,86 +2,173 @@
 import { apiFetch } from "./api";
 
 /**
+ * Helper function to handle API responses with better error reporting
+ */
+async function handleApiResponse(responsePromise, endpoint, operationName) {
+  try {
+    const response = await responsePromise;
+    
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const error = new Error(
+        data.message || `${operationName} failed with status ${response.status}`
+      );
+      error.status = response.status;
+      error.data = data;
+      error.endpoint = endpoint;
+      console.error(`[API Error] ${endpoint} (${operationName}):`, {
+        status: response.status,
+        statusText: response.statusText,
+        message: data.message,
+        data,
+      });
+      throw error;
+    }
+    
+    return response.json().catch(() => ({}));
+  } catch (error) {
+    if (error instanceof Error && error.status) {
+      throw error;
+    }
+    console.error(`[Network Error] ${endpoint} (${operationName}):`, error);
+    throw new Error(
+      `${operationName} failed: ${error.message || "Network error"}`
+    );
+  }
+}
+
+/**
  * Authentication API
  */
 export const authAPI = {
   login: (email, password) =>
-    apiFetch("/api/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      }),
+      "/api/login",
+      "Login"
+    ),
 
   logout: () =>
-    apiFetch("/api/logout", { method: "POST" }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/logout", { method: "POST" }),
+      "/api/logout",
+      "Logout"
+    ),
 
   refresh: () =>
-    apiFetch("/api/refresh", { method: "POST" }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/refresh", { method: "POST" }),
+      "/api/refresh",
+      "Token refresh"
+    ),
 
   // Note: backend route name can differ across deployments.
   // Try `/api/check-email` first, then fall back to `/api/validate`.
-  checkEmail: (email) =>
-    apiFetch("/api/check-email", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .catch(async () =>
+  checkEmail: async (email) => {
+    try {
+      const response = await apiFetch("/api/check-email", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      if (response.ok) {
+        return response.json();
+      }
+      throw response;
+    } catch (err) {
+      console.warn("[API] /api/check-email failed, trying fallback /api/validate");
+      return handleApiResponse(
         apiFetch("/api/validate", {
           method: "POST",
           body: JSON.stringify({ email }),
-        }).then((r) => r.json()),
-      ),
-
+        }),
+        "/api/validate (fallback)",
+        "Email validation"
+      );
+    }
+  },
 
   sendOtp: (email, username, password) =>
-    apiFetch("/api/send-otp", {
-      method: "POST",
-      body: JSON.stringify({ email, username, password }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, username, password }),
+      }),
+      "/api/send-otp",
+      "Send OTP"
+    ),
 
   verifyOtp: (email, otp) =>
-    apiFetch("/api/verify-otp", {
-      method: "POST",
-      body: JSON.stringify({ email, otp }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, otp }),
+      }),
+      "/api/verify-otp",
+      "Verify OTP"
+    ),
 
   completeSignup: (email, signupData) =>
-    apiFetch("/api/complete-signup", {
-      method: "POST",
-      body: JSON.stringify({ email, ...signupData }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/complete-signup", {
+        method: "POST",
+        body: JSON.stringify({ email, ...signupData }),
+      }),
+      "/api/complete-signup",
+      "Complete signup"
+    ),
 
   forgotPassword: (email) =>
-    apiFetch("/api/forgot-password", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+      "/api/forgot-password",
+      "Forgot password"
+    ),
 
   resetPassword: (token, password) =>
-    apiFetch(`/api/reset-password/${token}`, {
-      method: "POST",
-      body: JSON.stringify({ password }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch(`/api/reset-password/${token}`, {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      }),
+      "/api/reset-password",
+      "Reset password"
+    ),
 
   updateAvatar: (file) => {
     const formData = new FormData();
     formData.append("avatar", file);
-    return apiFetch("/api/avatar", { method: "PUT", body: formData }).then((r) =>
-      r.json()
+    return handleApiResponse(
+      apiFetch("/api/avatar", { method: "PUT", body: formData }),
+      "/api/avatar",
+      "Update avatar"
     );
   },
 
   updateBio: (bio) =>
-    apiFetch("/api/bio", {
-      method: "PUT",
-      body: JSON.stringify({ bio }),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch("/api/bio", {
+        method: "PUT",
+        body: JSON.stringify({ bio }),
+      }),
+      "/api/bio",
+      "Update bio"
+    ),
 
   updatePreferences: (id, preferences) =>
-    apiFetch(`/api/user/preferences/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(preferences),
-    }).then((r) => r.json()),
+    handleApiResponse(
+      apiFetch(`/api/user/preferences/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(preferences),
+      }),
+      "/api/user/preferences",
+      "Update preferences"
+    ),
 
   updatePassword: (oldPassword, newPassword) =>
     apiFetch("/api/update-password", {

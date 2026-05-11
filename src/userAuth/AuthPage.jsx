@@ -430,32 +430,40 @@ const AuthPage = () => {
 
     try {
       // Step 1: Check email availability
-      // Backend endpoint name can differ by deployment; try the expected one first,
-      // then fall back to `/api/validate` (used in existing integration tests).
       const emailPayload = { email: signupEmail };
 
       let checkEmailResponse;
+      let checkEmailError = null;
+      
       try {
         checkEmailResponse = await apiFetch("/api/check-email", {
           method: "POST",
           body: JSON.stringify(emailPayload),
         });
       } catch (err) {
-        checkEmailResponse = null;
+        checkEmailError = err;
+        console.error("Check email request failed:", err);
       }
 
       if (!checkEmailResponse || !checkEmailResponse.ok) {
-        // Fallback
-        const fallbackResponse = await apiFetch("/api/validate", {
-          method: "POST",
-          body: JSON.stringify(emailPayload),
-        });
+        try {
+          const fallbackResponse = await apiFetch("/api/validate", {
+            method: "POST",
+            body: JSON.stringify(emailPayload),
+          });
 
-        const fallbackData = await fallbackResponse.json().catch(() => ({}));
-        if (!fallbackResponse.ok) {
-          console.error("Email validation failed (fallback /api/validate):", fallbackData);
+          const fallbackData = await fallbackResponse.json().catch(() => ({}));
+          if (!fallbackResponse.ok) {
+            console.error("Email validation failed (fallback /api/validate):", fallbackData, fallbackResponse.status);
+            const errorMsg = fallbackData.message || `Backend error: ${fallbackResponse.status}`;
+            setSignupEmailError(errorMsg);
+            setSignupLoading(false);
+            return;
+          }
+        } catch (fallbackErr) {
+          console.error("Both email validation attempts failed:", checkEmailError, fallbackErr);
           setSignupEmailError(
-            fallbackData.message || "Email validation failed",
+            checkEmailError?.message || "Email check failed - backend may be down",
           );
           setSignupLoading(false);
           return;
@@ -463,10 +471,9 @@ const AuthPage = () => {
       } else {
         const checkEmailData = await checkEmailResponse.json().catch(() => ({}));
         if (!checkEmailResponse.ok) {
-          console.error("Email validation failed (/api/check-email):", checkEmailData);
-          setSignupEmailError(
-            checkEmailData.message || "Email validation failed",
-          );
+          console.error("Email validation failed (/api/check-email):", checkEmailData, checkEmailResponse.status);
+          const errorMsg = checkEmailData.message || `Backend error: ${checkEmailResponse.status}`;
+          setSignupEmailError(errorMsg);
           setSignupLoading(false);
           return;
         }
@@ -474,19 +481,30 @@ const AuthPage = () => {
 
 
       // Step 2: Send OTP (creates PendingUser)
-      const sendOtpResponse = await apiFetch("/api/send-otp", {
-        method: "POST",
-        body: JSON.stringify({
-          email: signupEmail,
-          username: signupUsername.trim(),
-          password: signupPassword,
-        }),
-      });
-      const sendOtpData = await sendOtpResponse.json();
+      let sendOtpResponse;
+      try {
+        sendOtpResponse = await apiFetch("/api/send-otp", {
+          method: "POST",
+          body: JSON.stringify({
+            email: signupEmail,
+            username: signupUsername.trim(),
+            password: signupPassword,
+          }),
+        });
+      } catch (err) {
+        console.error("Send OTP request failed:", err);
+        setSignupError(`Network error: ${err.message || "Failed to send OTP"}`);
+        setSignupLoading(false);
+        return;
+      }
+
+      const sendOtpData = await sendOtpResponse.json().catch(() => ({}));
 
       if (!sendOtpResponse.ok) {
-        const message = sendOtpData.message || "Failed to start signup";
+        const message = sendOtpData.message || `Backend error ${sendOtpResponse.status}: Failed to send OTP`;
         const normalizedMessage = String(message).toLowerCase();
+
+        console.error("Send OTP failed:", message, sendOtpResponse.status);
 
         if (normalizedMessage.includes("username")) {
           setSignupUsernameError(message);
