@@ -57,7 +57,7 @@ const VerificationPage = () => {
     if (!email || !sourceFlow) {
       console.warn("⚠️ Missing sessionStorage values - should have been redirected by FlowRoute!");
     }
-  }, []);
+  }, [email, sourceFlow]);
 
   useBlockBrowserBack(sourceFlow === "signup");
 
@@ -72,12 +72,6 @@ const VerificationPage = () => {
       setSignupStep(SIGNUP_STEPS.VERIFICATION);
     }
   }, [sourceFlow]);
-
-  // Panel position: forgotpassword → left (60px), signup → right
-  const getPanelTransform = () => {
-    // For all sizes, use center positioning - simpler and more reliable
-    return undefined;
-  };
 
   useEffect(() => {
     const sendOTP = async () => {
