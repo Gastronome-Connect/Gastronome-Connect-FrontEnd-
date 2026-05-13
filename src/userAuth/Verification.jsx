@@ -61,7 +61,6 @@ const VerificationPage = () => {
     }
   }, [email, sourceFlow]);
 
-
   useBlockBrowserBack(sourceFlow === "signup");
 
   useEffect(() => {
@@ -75,8 +74,6 @@ const VerificationPage = () => {
       setSignupStep(SIGNUP_STEPS.VERIFICATION);
     }
   }, [sourceFlow]);
-
-
 
   useEffect(() => {
     const sendOTP = async () => {
