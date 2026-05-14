@@ -436,7 +436,7 @@ const AuthPage = () => {
       let checkEmailError = null;
       
       try {
-        checkEmailResponse = await apiFetch("/api/check-email", {
+        checkEmailResponse = await apiFetch("/api/validate", {
           method: "POST",
           body: JSON.stringify(emailPayload),
         });
@@ -471,7 +471,7 @@ const AuthPage = () => {
       } else {
         const checkEmailData = await checkEmailResponse.json().catch(() => ({}));
         if (!checkEmailResponse.ok) {
-          console.error("Email validation failed (/api/check-email):", checkEmailData, checkEmailResponse.status);
+          console.error("Email validation failed (/api/validate):", checkEmailData, checkEmailResponse.status);
           const errorMsg = checkEmailData.message || `Backend error: ${checkEmailResponse.status}`;
           setSignupEmailError(errorMsg);
           setSignupLoading(false);
