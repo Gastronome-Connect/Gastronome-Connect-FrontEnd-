@@ -77,10 +77,12 @@ const VerificationPage = () => {
   }, [sourceFlow]);
 
   useEffect(() => {
+    if (otpSentRef.current) return;
+    if (!(email && sourceFlow === "signup")) return;
+    
+    otpSentRef.current = true;
+    
     const sendOTP = async () => {
-      if (otpSentRef.current) return;
-      otpSentRef.current = true;
-      
       try {
         const endpoint =
           sourceFlow === "forgotpassword"
@@ -99,7 +101,8 @@ const VerificationPage = () => {
         setError(error.message);
       }
     };
-    if (email && sourceFlow === "signup") sendOTP();
+    
+    sendOTP();
   }, [email, sourceFlow, username, password]);
 
   useEffect(() => {
