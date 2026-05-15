@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import BackgroundCarousel from "../components/Carousel Background/BackgroundCarousel";
 import LogoImage from "../components/Assets/Gastro.png";
@@ -48,6 +48,7 @@ const VerificationPage = () => {
   const email = sessionStorage.getItem("pendingEmail");
   const username = sessionStorage.getItem("pendingUsername");
   const password = sessionStorage.getItem("pendingPassword");
+  const otpSentRef = useRef(false);
 
   const sourceFlow = sessionStorage.getItem("sourceFlow");
 
@@ -77,6 +78,9 @@ const VerificationPage = () => {
 
   useEffect(() => {
     const sendOTP = async () => {
+      if (otpSentRef.current) return;
+      otpSentRef.current = true;
+      
       try {
         const endpoint =
           sourceFlow === "forgotpassword"
@@ -96,7 +100,7 @@ const VerificationPage = () => {
       }
     };
     if (email && sourceFlow === "signup") sendOTP();
-  }, [email, sourceFlow, username, password]);
+  }, [email, sourceFlow]);
 
   useEffect(() => {
     if (!isTimerRunning || timer === 0) return;
