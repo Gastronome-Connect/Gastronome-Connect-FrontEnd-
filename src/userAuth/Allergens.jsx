@@ -291,6 +291,7 @@ const Allergens = () => {
       setIsSubmitting(true);
 
       const pendingEmail = sessionStorage.getItem("pendingEmail");
+      const pendingUsername = sessionStorage.getItem("pendingUsername");
       if (!pendingEmail) {
         setError("Signup session expired. Please sign up again.");
         return;
@@ -310,6 +311,7 @@ const Allergens = () => {
           },
           body: JSON.stringify({
             email: pendingEmail,
+            username: pendingUsername,
             preferences: {
               flavors: Array.isArray(tempPreferences.flavors)
                 ? tempPreferences.flavors
