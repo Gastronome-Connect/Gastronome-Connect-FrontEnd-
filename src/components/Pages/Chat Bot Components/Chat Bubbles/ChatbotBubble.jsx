@@ -356,6 +356,8 @@ function WebRecipeCard({ recipe }) {
     author = "",
     sourceSite = "",
     sourceUrl = "",
+    image = "",
+    images = [],
     ingredients = [],
     procedure = "",
     otherInfo = "",
@@ -376,6 +378,11 @@ function WebRecipeCard({ recipe }) {
     .join(" · ");
   const hasLink =
     sourceUrl && !sourceUrl.toLowerCase().includes("not available");
+  const previewImages = (Array.isArray(images) ? images : [])
+    .filter(Boolean)
+    .concat(image ? [image] : [])
+    .filter((value, index, list) => list.indexOf(value) === index)
+    .slice(0, 2);
 
   return (
     <div className="rounded-[24px] overflow-hidden shadow-[0_16px_40px_-16px_rgba(245,118,0,0.35)] border border-orange-100 bg-white">
@@ -438,6 +445,26 @@ function WebRecipeCard({ recipe }) {
                 View source
               </a>
             )}
+          </div>
+        )}
+
+        {previewImages.length > 0 && (
+          <div
+            className={`grid gap-2 ${previewImages.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+          >
+            {previewImages.map((previewImage, index) => (
+              <div
+                key={`${previewImage}-${index}`}
+                className="overflow-hidden rounded-2xl border border-orange-100 bg-orange-50"
+              >
+                <img
+                  src={previewImage}
+                  alt={`${title} preview ${index + 1}`}
+                  className="h-40 w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            ))}
           </div>
         )}
 
