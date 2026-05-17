@@ -38,7 +38,7 @@ export async function sendMessageToBot(
     type,
     text:
       data?.reply ||
-      "I can chat freely, and I can also help with recipes, ingredients, and cooking tips whenever you need.",
+      "I'm Gastro AI 🍗 — I can help with recipes, ingredients, cooking tips, meal ideas, and food discovery. What are you craving today?",
     recipes: type === "recipe" ? recipes : [],
     webRecipe: isWebRecipe ? data?.webRecipe || null : null,
     time: formatTime(),

@@ -1,11 +1,18 @@
 import DefaultAvatar from "../components/Assets/Silhouette ni ano.png";
 
 // Centralized fetch wrapper that attaches access token and handles refresh.
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3000";
+const API_BASE = (
+  process.env.REACT_APP_API_BASE || "http://localhost:3000"
+).replace(/\/+$/, "");
 const AUTH_STATE_EVENT = "auth-state-changed";
 
 function buildApiUrl(path) {
-  return path.startsWith("http") ? path : `${API_BASE}${path}`;
+  if (path.startsWith("http")) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${normalizedPath}`;
 }
 
 function resolveUploadUrl(value) {

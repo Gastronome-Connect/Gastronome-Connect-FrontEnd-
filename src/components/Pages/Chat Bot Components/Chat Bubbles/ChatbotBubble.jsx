@@ -77,7 +77,36 @@ const parseIngredients = (value = "") =>
     .map((line) => line.replace(/^[-*]\s*/, "").trim())
     .filter(Boolean);
 
+const formatIngredientItem = (item) => {
+  if (!item) {
+    return "";
+  }
+
+  if (typeof item === "string") {
+    return String(item)
+      .replace(/^[-*]\s*/, "")
+      .trim();
+  }
+
+  const amount = String(item.amount || "").trim();
+  const unit = String(item.unit || "").trim();
+  const name = String(item.name || item.original || "").trim();
+  const note = String(item.note || "").trim();
+
+  return [amount, unit, name, note].filter(Boolean).join(" ").trim();
+};
+
 const parseProcedureSteps = (value = "") => {
+  if (Array.isArray(value)) {
+    return value
+      .map((step) =>
+        String(
+          typeof step === "string" ? step : step?.text || step?.name || "",
+        ).trim(),
+      )
+      .filter(Boolean);
+  }
+
   const normalized = String(value || "").trim();
 
   if (!normalized) {
@@ -92,6 +121,15 @@ const parseProcedureSteps = (value = "") => {
 
   if (numbered.length > 1) {
     return numbered;
+  }
+
+  const sentenceSteps = normalized
+    .split(/(?<=[.!?])\s+(?=[A-Z])/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (sentenceSteps.length > 1) {
+    return sentenceSteps;
   }
 
   return normalized
@@ -267,17 +305,24 @@ function RecipeMessageLayout({ recipe }) {
 
         {ingredients.length > 0 ? (
           <ul className="space-y-1.5">
-            {ingredients.map((item, index) => (
-              <li
-                key={`${index}-${item.slice(0, 18)}`}
-                className="flex items-start gap-2"
-              >
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F57600] shrink-0" />
-                <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                  {item}
-                </span>
-              </li>
-            ))}
+            {ingredients.map((item, index) => {
+              const formattedItem = formatIngredientItem(item);
+              if (!formattedItem) {
+                return null;
+              }
+
+              return (
+                <li
+                  key={`${index}-${formattedItem.slice(0, 18)}`}
+                  className="flex items-start gap-2"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F57600] shrink-0" />
+                  <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                    {formattedItem}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="text-xs sm:text-sm text-gray-500">
@@ -356,6 +401,8 @@ function WebRecipeCard({ recipe }) {
     author = "",
     sourceSite = "",
     sourceUrl = "",
+    image = "",
+    images = [],
     ingredients = [],
     procedure = "",
     otherInfo = "",
@@ -365,17 +412,16 @@ function WebRecipeCard({ recipe }) {
     Array.isArray(procedure) ? procedure.join("\n") : procedure,
   );
   const parsedIngredients = ingredients
-    .map((item) =>
-      String(item || "")
-        .replace(/^[-*]\s*/, "")
-        .trim(),
-    )
+    .map(formatIngredientItem)
     .filter(Boolean);
   const authorLine = [author, sourceSite !== author ? sourceSite : ""]
     .filter(Boolean)
     .join(" · ");
   const hasLink =
     sourceUrl && !sourceUrl.toLowerCase().includes("not available");
+  const previewImage = [image, ...(Array.isArray(images) ? images : [])].find(
+    Boolean,
+  );
 
   return (
     <div className="rounded-[24px] overflow-hidden shadow-[0_16px_40px_-16px_rgba(245,118,0,0.35)] border border-orange-100 bg-white">
@@ -438,6 +484,17 @@ function WebRecipeCard({ recipe }) {
                 View source
               </a>
             )}
+          </div>
+        )}
+
+        {previewImage && (
+          <div className="overflow-hidden rounded-2xl border border-orange-100 bg-orange-50">
+            <img
+              src={previewImage}
+              alt={`${title} preview`}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           </div>
         )}
 
