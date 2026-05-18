@@ -3,6 +3,7 @@ import { fetchChatSessions } from "../Services/ChatAPI";
 import { hasUserSession } from "../utils/api";
 
 const STORAGE_KEY = "gastro_chat_sessions";
+const PREFERENCE_STORAGE_KEY = "gastro_chat_use_saved_preferences";
 const AUTH_STATE_EVENT = "auth-state-changed";
 const DEFAULT_STORAGE_OWNER = "guest";
 
@@ -16,6 +17,10 @@ function getStorageOwner() {
 
 function getScopedStorageKey(owner = getStorageOwner()) {
   return `${STORAGE_KEY}:${owner}`;
+}
+
+function getPreferenceStorageKey(owner = getStorageOwner()) {
+  return `${PREFERENCE_STORAGE_KEY}:${owner}`;
 }
 
 function loadSessions(owner = getStorageOwner()) {
@@ -38,6 +43,18 @@ function loadSessions(owner = getStorageOwner()) {
   }
 }
 
+function loadUseSavedPreferences(owner = getStorageOwner()) {
+  try {
+    const raw = localStorage.getItem(getPreferenceStorageKey(owner));
+
+    if (raw !== null) {
+      return JSON.parse(raw) === true;
+    }
+  } catch {}
+
+  return hasUserSession();
+}
+
 function saveSessions(owner, sessions) {
   try {
     const nonEmptySessions = sessions.filter(
@@ -50,12 +67,22 @@ function saveSessions(owner, sessions) {
   } catch {}
 }
 
+function saveUseSavedPreferences(owner, value) {
+  try {
+    localStorage.setItem(
+      getPreferenceStorageKey(owner),
+      JSON.stringify(Boolean(value)),
+    );
+  } catch {}
+}
+
 function buildInitialState(owner = getStorageOwner()) {
   const sessions = loadSessions(owner);
   return {
     storageOwner: owner,
     sessions,
     activeSessionId: sessions.length > 0 ? sessions[0].id : null,
+    useSavedPreferences: loadUseSavedPreferences(owner),
   };
 }
 
@@ -68,6 +95,10 @@ function reducer(state, action) {
       const sessions = Array.isArray(action.payload?.sessions)
         ? action.payload.sessions
         : loadSessions(owner);
+      const useSavedPreferences =
+        typeof action.payload?.useSavedPreferences === "boolean"
+          ? action.payload.useSavedPreferences
+          : loadUseSavedPreferences(owner);
       const nextActiveSessionId = sessions.some(
         (session) => session.id === state.activeSessionId,
       )
@@ -78,6 +109,7 @@ function reducer(state, action) {
         storageOwner: owner,
         sessions,
         activeSessionId: nextActiveSessionId,
+        useSavedPreferences,
       };
     }
 
@@ -98,6 +130,9 @@ function reducer(state, action) {
 
     case "SET_ACTIVE_SESSION":
       return { ...state, activeSessionId: action.payload };
+
+    case "SET_USE_SAVED_PREFERENCES":
+      return { ...state, useSavedPreferences: Boolean(action.payload) };
 
     case "ADD_MESSAGE": {
       const sessions = state.sessions.map((session) => {
@@ -163,6 +198,10 @@ export function ChatProvider({ children }) {
   }, [state.sessions, state.storageOwner]);
 
   useEffect(() => {
+    saveUseSavedPreferences(state.storageOwner, state.useSavedPreferences);
+  }, [state.storageOwner, state.useSavedPreferences]);
+
+  useEffect(() => {
     let ignore = false;
 
     const hydrate = async () => {
@@ -175,7 +214,11 @@ export function ChatProvider({ children }) {
           if (!ignore) {
             dispatch({
               type: "HYDRATE_SESSIONS",
-              payload: { owner, sessions },
+              payload: {
+                owner,
+                sessions,
+                useSavedPreferences: loadUseSavedPreferences(owner),
+              },
             });
           }
           return;
@@ -187,7 +230,11 @@ export function ChatProvider({ children }) {
       if (!ignore) {
         dispatch({
           type: "HYDRATE_SESSIONS",
-          payload: { owner, sessions: loadSessions(owner) },
+          payload: {
+            owner,
+            sessions: loadSessions(owner),
+            useSavedPreferences: loadUseSavedPreferences(owner),
+          },
         });
       }
     };
@@ -196,7 +243,8 @@ export function ChatProvider({ children }) {
       if (
         event?.key &&
         event.key !== "userId" &&
-        !event.key.startsWith(STORAGE_KEY)
+        !event.key.startsWith(STORAGE_KEY) &&
+        !event.key.startsWith(PREFERENCE_STORAGE_KEY)
       ) {
         return;
       }

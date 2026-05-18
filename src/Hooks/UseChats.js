@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useChatContext } from "../Context/ChatContext";
 import { deleteChatSession, sendMessageToBot } from "../Services/ChatAPI";
+import { hasUserSession } from "../utils/api";
 
 function formatTime() {
   return new Date().toLocaleTimeString([], {
@@ -10,7 +11,8 @@ function formatTime() {
 }
 
 export function useChat() {
-  const { activeSessionId, activeSession, dispatch } = useChatContext();
+  const { activeSessionId, activeSession, useSavedPreferences, dispatch } =
+    useChatContext();
   const [isBotTyping, setIsBotTyping] = useState(false);
   const abortControllerRef = useRef(null);
 
@@ -43,6 +45,13 @@ export function useChat() {
       } catch (error) {
         console.error("Failed to delete chat session:", error);
       }
+    },
+    [dispatch],
+  );
+
+  const setUseSavedPreferences = useCallback(
+    (value) => {
+      dispatch({ type: "SET_USE_SAVED_PREFERENCES", payload: value });
     },
     [dispatch],
   );
@@ -90,6 +99,9 @@ export function useChat() {
           sessionId,
           history,
           abortController.signal,
+          {
+            useSavedPreferences,
+          },
         );
 
         dispatch({
@@ -130,11 +142,20 @@ export function useChat() {
         setIsBotTyping(false);
       }
     },
-    [activeSession?.messages, activeSessionId, dispatch, isBotTyping],
+    [
+      activeSession?.messages,
+      activeSessionId,
+      dispatch,
+      isBotTyping,
+      useSavedPreferences,
+    ],
   );
 
   return {
     messages: activeSession?.messages || [],
+    useSavedPreferences,
+    canUseSavedPreferences: hasUserSession(),
+    setUseSavedPreferences,
     isBotTyping,
     sendMessage,
     startNewSession,
