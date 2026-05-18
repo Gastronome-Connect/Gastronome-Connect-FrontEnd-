@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import AILogo from "../../../Assets/AILogo.png";
 import { Heart, Archive, Volume2, AlertCircle } from "lucide-react";
 import { useUserLibrary } from "../../../../Context/UserLibraryContext";
@@ -289,15 +289,18 @@ function RecipeMessageLayout({ recipe }) {
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = React.useRef(null);
 
-  const recipeData = {
-    id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
-    title,
-    author,
-    caption: steps.join("\n"),
-    description: ingredients.join("\n"),
-    image: "",
-    ingredients,
-  };
+  const recipeData = useMemo(
+    () => ({
+      id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
+      title,
+      author,
+      caption: steps.join("\n"),
+      description: ingredients.join("\n"),
+      image: "",
+      ingredients,
+    }),
+    [title, author, steps, ingredients]
+  );
 
   useEffect(() => {
     setIsFav(isFavorited(recipeData));
@@ -582,15 +585,18 @@ function WebRecipeCard({ recipe }) {
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = React.useRef(null);
 
-  const recipeData = {
-    id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
-    title,
-    author,
-    caption: steps.join("\n"),
-    description: parsedIngredients.join("\n"),
-    image: previewImage || "",
-    ingredients: parsedIngredients,
-  };
+  const recipeData = useMemo(
+    () => ({
+      id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
+      title,
+      author,
+      caption: steps.join("\n"),
+      description: parsedIngredients.join("\n"),
+      image: previewImage || "",
+      ingredients: parsedIngredients,
+    }),
+    [title, author, steps, parsedIngredients, previewImage]
+  );
 
   useEffect(() => {
     setIsFav(isFavorited(recipeData));
