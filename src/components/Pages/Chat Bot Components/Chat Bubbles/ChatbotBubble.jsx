@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import AILogo from "../../../Assets/AILogo.png";
+import { Heart, Archive, Volume2, AlertCircle } from "lucide-react";
+import { useUserLibrary } from "../../../../Context/UserLibraryContext";
+import ReportModal from "../ReportModal";
 
 const copyTextToClipboard = async (text = "") => {
   const normalizedText = String(text || "");
@@ -278,16 +281,158 @@ function RecipeMessageLayout({ recipe }) {
   const otherInfo = recipe["Other information or AI's chat"] || "";
   const hasLink =
     websiteLink && websiteLink !== "Not available in the source data.";
+  
+  const { addToFavorites, removeFromFavorites, isFavorited, addToArchives, removeFromArchives, isArchived } = useUserLibrary();
+  const [isFav, setIsFav] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = React.useRef(null);
+
+  const recipeData = {
+    id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
+    title,
+    author,
+    caption: steps.join("\n"),
+    description: ingredients.join("\n"),
+    image: "",
+    ingredients,
+  };
+
+  useEffect(() => {
+    setIsFav(isFavorited(recipeData));
+  }, [recipeData, isFavorited]);
+
+  useEffect(() => {
+    return () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        setIsPaused(false);
+      }
+    };
+  }, [isSpeaking]);
+
+  const handleToggleFavorite = () => {
+    if (isFav) {
+      removeFromFavorites(recipeData.id);
+    } else {
+      addToFavorites(recipeData);
+    }
+    setIsFav(!isFav);
+  };
+
+  const handleArchive = () => {
+    if (isArchived(recipeData.id)) {
+      removeFromArchives(recipeData.id);
+    } else {
+      addToArchives(recipeData);
+    }
+  };
+
+  const handleTextToSpeech = () => {
+    const textToSpeak = `${title}. Ingredients: ${ingredients.join(", ")}. Steps: ${steps.join(" ")}`;
+    
+    if ("speechSynthesis" in window) {
+      if (isSpeaking) {
+        if (isPaused) {
+          window.speechSynthesis.resume();
+          setIsPaused(false);
+        } else {
+          window.speechSynthesis.pause();
+          setIsPaused(true);
+        }
+      } else {
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          setIsPaused(false);
+        };
+        
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+        };
+        
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+        };
+        
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+  };
+
+  const handleReportSubmit = async (reportData) => {
+    console.log("Report submitted:", reportData);
+  };
 
   return (
-    <div className="space-y-4 rounded-[22px] border border-orange-100 bg-white/95 p-4 sm:p-5 shadow-[0_12px_30px_-20px_rgba(245,118,0,0.45)]">
+    <div className="space-y-4 rounded-[22px] border border-orange-100 bg-white/95 p-4 sm:p-5 shadow-[0_12px_30px_-20px_rgba(245,118,0,0.45)] relative">
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#F57600]">
-          Recipe Result
-        </p>
-        <h3 className="mt-1 text-sm sm:text-base font-black text-gray-900 leading-snug">
-          {title}
-        </h3>
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#F57600]">
+              Recipe Result
+            </p>
+            <h3 className="mt-1 text-sm sm:text-base font-black text-gray-900 leading-snug">
+              {title}
+            </h3>
+          </div>
+          
+          {/* Action buttons in header */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={handleToggleFavorite}
+              title={isFav ? "Remove from favorites" : "Add to favorites"}
+              className={`p-1.5 rounded-lg transition-all ${
+                isFav
+                  ? "bg-red-100 text-red-600"
+                  : "bg-red-50 text-red-500 hover:bg-red-100"
+              }`}
+            >
+              <Heart size={14} fill={isFav ? "currentColor" : "none"} />
+            </button>
+
+            <button
+              onClick={handleArchive}
+              title={isArchived(recipeData.id) ? "Remove from archive" : "Add to archive"}
+              className={`p-1.5 rounded-lg transition-all ${
+                isArchived(recipeData.id)
+                  ? "bg-orange-100 text-orange-600"
+                  : "bg-orange-50 text-orange-500 hover:bg-orange-100"
+              }`}
+            >
+              <Archive size={14} />
+            </button>
+
+            <button
+              onClick={handleTextToSpeech}
+              title={isSpeaking ? (isPaused ? "Resume reading" : "Pause reading") : "Read aloud"}
+              className={`p-1.5 rounded-lg transition-all ${
+                isSpeaking && !isPaused
+                  ? "bg-blue-100 text-blue-600"
+                  : "bg-blue-50 text-blue-500 hover:bg-blue-100"
+              }`}
+            >
+              <Volume2 size={14} />
+            </button>
+
+            <button
+              onClick={() => setShowReportModal(true)}
+              title="Report recipe"
+              className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-all"
+            >
+              <AlertCircle size={14} />
+            </button>
+          </div>
+        </div>
         <p className="mt-2 text-[11px] sm:text-xs text-gray-500 leading-5">
           <span className="font-bold text-gray-700">Author:</span> {author}
         </p>
@@ -387,6 +532,13 @@ function RecipeMessageLayout({ recipe }) {
           }
         />
       </div>
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        recipeName={title}
+        onSubmit={handleReportSubmit}
+      />
     </div>
   );
 }
@@ -423,10 +575,101 @@ function WebRecipeCard({ recipe }) {
     Boolean,
   );
 
+  const { addToFavorites, removeFromFavorites, isFavorited, addToArchives, removeFromArchives, isArchived } = useUserLibrary();
+  const [isFav, setIsFav] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = React.useRef(null);
+
+  const recipeData = {
+    id: `recipe-${title.toLowerCase().replace(/\s+/g, "-")}`,
+    title,
+    author,
+    caption: steps.join("\n"),
+    description: parsedIngredients.join("\n"),
+    image: previewImage || "",
+    ingredients: parsedIngredients,
+  };
+
+  useEffect(() => {
+    setIsFav(isFavorited(recipeData));
+  }, [recipeData, isFavorited]);
+
+  useEffect(() => {
+    return () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        setIsPaused(false);
+      }
+    };
+  }, [isSpeaking]);
+
+  const handleToggleFavorite = () => {
+    if (isFav) {
+      removeFromFavorites(recipeData.id);
+    } else {
+      addToFavorites(recipeData);
+    }
+    setIsFav(!isFav);
+  };
+
+  const handleArchive = () => {
+    if (isArchived(recipeData.id)) {
+      removeFromArchives(recipeData.id);
+    } else {
+      addToArchives(recipeData);
+    }
+  };
+
+  const handleTextToSpeech = () => {
+    const textToSpeak = `${title}. Ingredients: ${parsedIngredients.join(", ")}. Steps: ${steps.join(" ")}`;
+    
+    if ("speechSynthesis" in window) {
+      if (isSpeaking) {
+        if (isPaused) {
+          window.speechSynthesis.resume();
+          setIsPaused(false);
+        } else {
+          window.speechSynthesis.pause();
+          setIsPaused(true);
+        }
+      } else {
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          setIsPaused(false);
+        };
+        
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+        };
+        
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+        };
+        
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+  };
+
+  const handleReportSubmit = async (reportData) => {
+    console.log("Report submitted:", reportData);
+  };
+
   return (
     <div className="rounded-[24px] overflow-hidden shadow-[0_16px_40px_-16px_rgba(245,118,0,0.35)] border border-orange-100 bg-white">
       {/* Header band */}
-      <div className="bg-gradient-to-r from-[#F57600] to-[#FF9A3C] px-4 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-3">
+      <div className="relative bg-gradient-to-r from-[#F57600] to-[#FF9A3C] px-4 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="text-[10px] font-extrabold tracking-[0.18em] uppercase text-white/80 block mb-0.5">
             Recipe Found Online
@@ -435,20 +678,53 @@ function WebRecipeCard({ recipe }) {
             {title}
           </h3>
         </div>
-        {/* Decorative fork icon */}
-        <svg
-          className="w-7 h-7 sm:w-8 sm:h-8 text-white/30 shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-          />
-        </svg>
+
+        {/* Action buttons in header */}
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
+          <button
+            onClick={handleToggleFavorite}
+            title={isFav ? "Remove from favorites" : "Add to favorites"}
+            className={`p-2 rounded-lg transition-all hover:scale-110 ${
+              isFav
+                ? "bg-red-500/50 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+          >
+            <Heart size={16} fill={isFav ? "currentColor" : "none"} />
+          </button>
+
+          <button
+            onClick={handleArchive}
+            title={isArchived(recipeData.id) ? "Remove from archive" : "Add to archive"}
+            className={`p-2 rounded-lg transition-all hover:scale-110 ${
+              isArchived(recipeData.id)
+                ? "bg-orange-500/50 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+          >
+            <Archive size={16} />
+          </button>
+
+          <button
+            onClick={handleTextToSpeech}
+            title={isSpeaking ? (isPaused ? "Resume reading" : "Pause reading") : "Read aloud"}
+            className={`p-2 rounded-lg transition-all hover:scale-110 ${
+              isSpeaking && !isPaused
+                ? "bg-blue-500/50 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+          >
+            <Volume2 size={16} />
+          </button>
+
+          <button
+            onClick={() => setShowReportModal(true)}
+            title="Report recipe"
+            className="p-2 rounded-lg bg-white/20 text-white hover:bg-red-400/50 transition-all hover:scale-110"
+          >
+            <AlertCircle size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 sm:px-5 py-4 space-y-4">
@@ -612,6 +888,13 @@ function WebRecipeCard({ recipe }) {
           </div>
         )}
       </div>
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        recipeName={title}
+        onSubmit={handleReportSubmit}
+      />
     </div>
   );
 }
