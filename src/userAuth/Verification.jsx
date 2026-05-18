@@ -40,7 +40,7 @@ const VerificationPage = () => {
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); 
   const [showPorm] = useState(false);
   const [showResendPopup, setShowResendPopup] = useState(false);
   const [mobile, setMobile] = useState(isMobile());

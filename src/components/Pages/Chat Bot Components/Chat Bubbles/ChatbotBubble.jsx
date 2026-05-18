@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AILogo from "../../../Assets/AILogo.png";
+import { Heart, Archive, Volume2, AlertCircle } from "lucide-react";
 
 const copyTextToClipboard = async (text = "") => {
   const normalizedText = String(text || "");
@@ -280,14 +281,49 @@ function RecipeMessageLayout({ recipe }) {
     websiteLink && websiteLink !== "Not available in the source data.";
 
   return (
-    <div className="space-y-4 rounded-[22px] border border-orange-100 bg-white/95 p-4 sm:p-5 shadow-[0_12px_30px_-20px_rgba(245,118,0,0.45)]">
+    <div className="space-y-4 rounded-[22px] border border-orange-100 bg-white/95 p-4 sm:p-5 shadow-[0_12px_30px_-20px_rgba(245,118,0,0.45)] relative">
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#F57600]">
-          Recipe Result
-        </p>
-        <h3 className="mt-1 text-sm sm:text-base font-black text-gray-900 leading-snug">
-          {title}
-        </h3>
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#F57600]">
+              Recipe Result
+            </p>
+            <h3 className="mt-1 text-sm sm:text-base font-black text-gray-900 leading-snug">
+              {title}
+            </h3>
+          </div>
+          
+          {/* Action buttons in header */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              title="Add to favorites"
+              className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-all"
+            >
+              <Heart size={14} />
+            </button>
+
+            <button
+              title="Add to archive"
+              className="p-1.5 rounded-lg bg-orange-50 text-orange-500 hover:bg-orange-100 transition-all"
+            >
+              <Archive size={14} />
+            </button>
+
+            <button
+              title="Read aloud"
+              className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all"
+            >
+              <Volume2 size={14} />
+            </button>
+
+            <button
+              title="Report recipe"
+              className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-all"
+            >
+              <AlertCircle size={14} />
+            </button>
+          </div>
+        </div>
         <p className="mt-2 text-[11px] sm:text-xs text-gray-500 leading-5">
           <span className="font-bold text-gray-700">Author:</span> {author}
         </p>
@@ -426,7 +462,7 @@ function WebRecipeCard({ recipe }) {
   return (
     <div className="rounded-[24px] overflow-hidden shadow-[0_16px_40px_-16px_rgba(245,118,0,0.35)] border border-orange-100 bg-white">
       {/* Header band */}
-      <div className="bg-gradient-to-r from-[#F57600] to-[#FF9A3C] px-4 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-3">
+      <div className="relative bg-gradient-to-r from-[#F57600] to-[#FF9A3C] px-4 sm:px-5 py-3 sm:py-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="text-[10px] font-extrabold tracking-[0.18em] uppercase text-white/80 block mb-0.5">
             Recipe Found Online
@@ -435,20 +471,37 @@ function WebRecipeCard({ recipe }) {
             {title}
           </h3>
         </div>
-        {/* Decorative fork icon */}
-        <svg
-          className="w-7 h-7 sm:w-8 sm:h-8 text-white/30 shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-          />
-        </svg>
+
+        {/* Action buttons in header */}
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
+          <button
+            title="Add to favorites"
+            className="p-2 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all hover:scale-110"
+          >
+            <Heart size={16} />
+          </button>
+
+          <button
+            title="Add to archive"
+            className="p-2 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all hover:scale-110"
+          >
+            <Archive size={16} />
+          </button>
+
+          <button
+            title="Read aloud"
+            className="p-2 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all hover:scale-110"
+          >
+            <Volume2 size={16} />
+          </button>
+
+          <button
+            title="Report recipe"
+            className="p-2 rounded-lg bg-white/20 text-white hover:bg-red-400/50 transition-all hover:scale-110"
+          >
+            <AlertCircle size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 sm:px-5 py-4 space-y-4">
