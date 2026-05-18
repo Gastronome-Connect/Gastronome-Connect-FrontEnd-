@@ -3,10 +3,17 @@ import { apiFetch } from "../utils/api";
 export async function sendMessageToBot(
   userText,
   formatTime,
-  sessionId,
-  history = [],
-  signal,
+  sessionIdOrHistory,
+  historyOrSignal = [],
+  signalOrOptions,
+  maybeOptions,
 ) {
+  const legacyCallShape = Array.isArray(sessionIdOrHistory);
+  const sessionId = legacyCallShape ? null : sessionIdOrHistory;
+  const history = legacyCallShape ? sessionIdOrHistory : historyOrSignal;
+  const signal = legacyCallShape ? historyOrSignal : signalOrOptions;
+  const options = legacyCallShape ? signalOrOptions || {} : maybeOptions || {};
+
   const response = await apiFetch("/api/chatbot/message", {
     method: "POST",
     signal,
@@ -14,6 +21,10 @@ export async function sendMessageToBot(
       sessionId,
       message: userText,
       history,
+      useSavedPreferences:
+        typeof options?.useSavedPreferences === "boolean"
+          ? options.useSavedPreferences
+          : undefined,
     }),
   });
 

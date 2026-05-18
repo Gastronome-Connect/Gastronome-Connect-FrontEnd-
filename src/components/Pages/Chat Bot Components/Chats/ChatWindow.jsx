@@ -4,7 +4,14 @@ import ChatInput from "./ChatInput";
 import { useChat } from "../../../../Hooks/UseChats";
 
 export default function ChatWindow({ className = "" }) {
-  const { messages, isBotTyping, sendMessage } = useChat();
+  const {
+    messages,
+    isBotTyping,
+    sendMessage,
+    useSavedPreferences,
+    canUseSavedPreferences,
+    setUseSavedPreferences,
+  } = useChat();
   const [inputValue, setInputValue] = useState("");
   const bottomRef = useRef(null);
 
@@ -53,6 +60,9 @@ export default function ChatWindow({ className = "" }) {
             onChange={setInputValue}
             onSend={handleSend}
             disabled={isBotTyping}
+            showSavedPreferencesToggle={canUseSavedPreferences}
+            useSavedPreferences={useSavedPreferences}
+            onToggleSavedPreferences={setUseSavedPreferences}
           />
         </div>
       </div>

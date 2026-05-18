@@ -6,6 +6,9 @@ export default function ChatInput({
   onSend,
   placeholder = "Ask me about recipes...",
   disabled = false,
+  showSavedPreferencesToggle = false,
+  useSavedPreferences = false,
+  onToggleSavedPreferences,
 }) {
   const textareaRef = useRef(null);
 
@@ -30,6 +33,34 @@ export default function ChatInput({
 
   return (
     <div className="w-full">
+      {showSavedPreferencesToggle ? (
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div>
+            <p className="text-xs font-semibold text-gray-700">
+              Use my saved preferences
+            </p>
+            <p className="text-[11px] text-gray-400">
+              Personalize recipes using your saved profile
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleSavedPreferences?.(!useSavedPreferences)}
+            aria-pressed={useSavedPreferences}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              useSavedPreferences ? "bg-[#0060A9]" : "bg-gray-300"
+            } ${disabled ? "opacity-70" : ""}`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                useSavedPreferences ? "translate-x-5" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+      ) : null}
+
       <div
         className={`flex items-end gap-1.5 sm:gap-2 bg-white rounded-2xl sm:rounded-[1.75rem] border
                    ${disabled ? "border-gray-200" : "border-gray-300 focus-within:border-blue-400"}

@@ -14,7 +14,12 @@ import PostUnderReviewPopup from "../Popups/PostUnderReviewPopup";
 import { useChat } from "../../Hooks/UseChats";
 
 function EmptyStateWithInput({ initialValue = "", isBotTyping }) {
-  const { sendMessage } = useChat();
+  const {
+    sendMessage,
+    useSavedPreferences,
+    canUseSavedPreferences,
+    setUseSavedPreferences,
+  } = useChat();
   const [inputValue, setInputValue] = useState(initialValue);
 
   useEffect(() => {
@@ -53,6 +58,9 @@ function EmptyStateWithInput({ initialValue = "", isBotTyping }) {
             onChange={setInputValue}
             onSend={handleSend}
             disabled={isBotTyping}
+            showSavedPreferencesToggle={canUseSavedPreferences}
+            useSavedPreferences={useSavedPreferences}
+            onToggleSavedPreferences={setUseSavedPreferences}
           />
         </div>
       </div>

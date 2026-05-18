@@ -70,6 +70,7 @@ function mapRecipeToViewerPost(recipe = {}) {
     author: recipe.author || "Unknown",
     avatar: recipe.avatar || image,
     date,
+    sourceLabel: recipe.sourceSite || recipe.sourceName || "",
     ingredients,
     mediaItems:
       Array.isArray(recipe.mediaItems) && recipe.mediaItems.length > 0
@@ -87,13 +88,18 @@ function SmallRecipeCard({ recipe, onClick }) {
     author = "Unknown",
     dateCreate = "",
     description = "",
+    procedure = "",
   } = recipe || {};
+
+  const previewText = Array.isArray(procedure)
+    ? procedure.join(" ")
+    : procedure || description;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="bg-white text-left rounded-[16px] sm:rounded-[20px] shadow-md border border-gray-100 p-2.5 sm:p-3 w-[140px] sm:w-[160px] flex-shrink-0 hover:scale-[1.02] hover:border-orange-200 transition-transform transition-colors"
+      className="bg-white text-left rounded-[16px] sm:rounded-[20px] shadow-md border border-gray-100 p-2.5 sm:p-3 w-[180px] sm:w-[220px] flex-shrink-0 hover:scale-[1.02] hover:border-orange-200 transition-all"
     >
       <div className="w-full h-16 sm:h-20 rounded-xl overflow-hidden mb-2 bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center">
         {image ? (
@@ -115,7 +121,7 @@ function SmallRecipeCard({ recipe, onClick }) {
         )}
       </div>
       <div className="w-2/3 h-[2px] bg-orange-500 rounded-full mb-1.5" />
-      <h4 className="font-black text-[11px] sm:text-xs text-gray-900 leading-tight mb-1 truncate">
+      <h4 className="font-black text-[11px] sm:text-xs text-gray-900 leading-tight mb-1 break-words whitespace-normal">
         {title}
       </h4>
       <p className="text-[9px] sm:text-[10px] font-semibold text-gray-700">
@@ -124,8 +130,8 @@ function SmallRecipeCard({ recipe, onClick }) {
       <p className="text-[9px] sm:text-[10px] font-semibold text-gray-700 mb-1">
         Date: <span className="font-medium">{dateCreate}</span>
       </p>
-      <p className="text-[9px] sm:text-[10px] text-gray-400 line-clamp-2 leading-snug">
-        {description}
+      <p className="text-[9px] sm:text-[10px] text-gray-400 leading-snug whitespace-normal break-words max-h-28 overflow-y-auto pr-1">
+        {previewText}
       </p>
       <p className="mt-2 text-[9px] sm:text-[10px] font-bold text-[#F57600]">
         Tap to view recipe
