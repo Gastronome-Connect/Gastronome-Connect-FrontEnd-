@@ -334,7 +334,8 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
         }
 
         if (msg.type === "recipe") {
-          const visibleRecipes = msg.recipes.filter(
+          const allRecipes = Array.isArray(msg.recipes) ? msg.recipes : [];
+          const visibleRecipes = allRecipes.filter(
             (recipe) => !isArchived(mapRecipeToViewerPost(recipe).id),
           );
 
@@ -366,6 +367,10 @@ export default function MessageList({ messages, isBotTyping, bottomRef }) {
                     recipes={visibleRecipes}
                     onRecipeClick={(recipe) => setSelectedRecipe(recipe)}
                   />
+                ) : allRecipes.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    No recipe cards were attached to this message.
+                  </p>
                 ) : (
                   <p className="text-sm text-gray-400">
                     All recipe cards from this message are archived.
